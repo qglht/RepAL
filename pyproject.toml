@@ -1,0 +1,30 @@
+[tool.poetry]
+name = "multitask-rnn"
+version = "0.1.0"
+description = "Similarity of multitask RNNs regarding to learning rules, tasks"
+authors = ["qglht <quentin.guilhot@student-cs.fr>"]
+readme = "README.md"
+packages = [{include = "multitask_rnn"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+dsa = {git = "https://github.com/mitchellostrow/DSA.git"}
+# torch = "^2.2.1"
+six = "^1.16.0"
+matplotlib = "^3.8.3"
+pandas = "^2.2.1"
+pyyaml = "^6.0.1"
+ipdb = "^0.13.13"
+seaborn = "^0.13.2"
+jupyterlab = "^4.1.5"
+ipykernel = "^6.29.3"
+plotly = "^5.20.0"
+similarity-repository = {git = "https://github.com/nacloos/similarity-repository.git"}
+rsatoolbox = "^0.1.5"
+pytorch-lightning = "^2.2.2"
+neurogym = "^0.0.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
