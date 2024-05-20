@@ -1,5 +1,6 @@
 from neurogym.envs.perceptualdecisionmaking import PerceptualDecisionMaking
 from neurogym.envs.perceptualdecisionmaking import PerceptualDecisionMakingDelayResponse
 from main.task import AntiPerceptualDecisionMaking, AntiPerceptualDecisionMakingDelayResponse
+from main.dataset import Dataset, get_class_instance
 
 tasks = ['AntiPerceptualDecisionMaking', 'PerceptualDecisionMaking', 'PerceptualDecisionMakingDelayResponse', 'AntiPerceptualDecisionMakingDelayResponse']
