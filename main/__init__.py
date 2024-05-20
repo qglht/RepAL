@@ -1,2 +1,5 @@
 from neurogym.envs.perceptualdecisionmaking import PerceptualDecisionMaking
-from main.task import AntiPerceptualDecisionMaking
+from neurogym.envs.perceptualdecisionmaking import PerceptualDecisionMakingDelayResponse
+from main.task import AntiPerceptualDecisionMaking, AntiPerceptualDecisionMakingDelayResponse
+
+tasks = ['AntiPerceptualDecisionMaking', 'PerceptualDecisionMaking', 'PerceptualDecisionMakingDelayResponse', 'AntiPerceptualDecisionMakingDelayResponse']

@@ -2,14 +2,14 @@ import neurogym as ngym
 import numpy as np
 import matplotlib.pyplot as plt
 import ipdb 
-from main import AntiPerceptualDecisionMaking, PerceptualDecisionMaking
+from main import AntiPerceptualDecisionMaking, PerceptualDecisionMaking, PerceptualDecisionMakingDelayResponse, AntiPerceptualDecisionMakingDelayResponse, tasks
+
 
 class Dataset:
     def __init__(self, env, batch_size, seq_len):
         self.batch_size = batch_size
         self.seq_len = seq_len
         self.env = env
-
     
     # Make supervised dataset
         self.dataset = ngym.Dataset(
@@ -27,10 +27,12 @@ def get_class_instance(class_name, **kwargs):
     return instance
         
 if __name__ == '__main__':
-    envid = "PerceptualDecisionMaking"
-    env_kwargs = {'dt': 100}
-    env = get_class_instance(envid, **env_kwargs)
-    batch_size = 32
-    seq_len = 100
-    dataset = Dataset(env, batch_size, seq_len)
-    ipdb.set_trace()
+    for task in tasks:
+        envid = task
+        env_kwargs = {'dt': 100}
+        env = get_class_instance(envid, **env_kwargs)
+        batch_size = 32
+        seq_len = 100
+        dataset = Dataset(env, batch_size, seq_len)
+        ipdb.set_trace()
+        # for training etc modify timing and noise of the task
