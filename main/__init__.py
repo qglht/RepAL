@@ -1,0 +1,2 @@
+from neurogym.envs.perceptualdecisionmaking import PerceptualDecisionMaking
+from main.task import AntiPerceptualDecisionMaking
