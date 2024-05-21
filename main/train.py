@@ -156,7 +156,7 @@ def set_hyperparameters(
         # Set default as 1.
         rule_prob = np.array([rule_prob_map.get(r, 1.0) for r in hp["rule_trains"]])
         hp["rule_probs"] = list(rule_prob / np.sum(rule_prob))
-        
+
     # penalty on deviation from initial weight
     if hp["l2_weight_init"] > 0:
         raise NotImplementedError
@@ -262,13 +262,12 @@ def do_eval(run_model, log, rule_train):
 
             # Calculate performance using PyTorch
             perf_test = get_perf(y_hat_test, labels)
-            perf_test = perf_test.mean()
             perf_tmp.append(perf_test)
 
         # Convert lists of tensors to single tensors and compute mean
         clsq_mean = torch.mean(torch.stack(clsq_tmp))
         creg_mean = torch.mean(torch.stack(creg_tmp))
-        perf_mean = torch.mean(torch.stack(perf_tmp))
+        perf_mean = torch.mean(torch.tensor(perf_tmp))
 
         # Append to log dictionary (transfer to CPU and convert to numpy for logging purposes only)
         log["cost_" + rule_test].append(clsq_mean.item())
@@ -307,37 +306,26 @@ def do_eval(run_model, log, rule_train):
 
     return log
 
+def accuracy(logits, true_class_indices):
+    # Reshape logits to shape [(batch * images), classes]
+    logits_flat = logits.view(-1, logits.size(-1))
 
-##################     copied from network.py     ######################
+    # Reshape true class indices to shape [(batch * images)]
+    true_class_indices_flat = true_class_indices.flatten()
 
+    # Get the predicted classes by taking the argmax over the classes dimension
+    predicted_classes = torch.argmax(logits_flat, dim=1)
 
-def popvec(y):
-    """Population vector readout using PyTorch."""
-    # Assuming y is a PyTorch tensor
-    prefs = torch.linspace(0, 2 * np.pi, y.shape[-1], device=y.device)  # preferences
-    y_sum = y.sum(dim=-1)
-    y_cos = torch.sum(y * torch.cos(prefs), dim=-1) / y_sum
-    y_sin = torch.sum(y * torch.sin(prefs), dim=-1) / y_sum
-    loc = torch.atan2(y_sin, y_cos)
-    return loc % (2 * np.pi)
+    # Compare predicted classes with true class indices
+    correct_predictions = (predicted_classes == true_class_indices_flat).sum().item()
 
+    # Calculate accuracy
+    total_predictions = true_class_indices_flat.size(0)
+    accuracy = correct_predictions / total_predictions
 
-def get_perf(y_hat, y_loc):
+    return accuracy
+
+def get_perf(outputs, true_labels):
     """Compute performance using PyTorch."""
-    y_loc = y_loc[-1]
-    y_hat = y_hat[-1]
-
-    y_hat_fix = y_hat[..., 0]
-    y_hat_loc = popvec(y_hat[..., 1:])
-
-    fixating = y_hat_fix > 0.5
-
-    original_dist = torch.abs(y_loc - y_hat_loc)
-    dist = torch.min(original_dist, 2 * np.pi - original_dist)
-    corr_loc = dist < 0.2 * np.pi
-
-    should_fix = y_loc < 0
-
-    perf = (should_fix * fixating) + (~should_fix * corr_loc * (~fixating))
-    perf = perf.float()
-    return perf
+    # Assuming outputs and true_labels are PyTorch tensors
+    return accuracy(outputs, true_labels)

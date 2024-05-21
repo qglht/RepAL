@@ -29,7 +29,7 @@ def train_model(activation, hidden_size, lr, freeze, mode, device):
     # Load configuration and set hyperparameters
     config = load_config("config.yaml")
     ruleset = config["rnn"][mode]["ruleset"]
-
+    all_rules = config["rnn"]["train"]["ruleset"] + config["rnn"]["pretrain"]["ruleset"]
     hp = {
         "activation": activation,
         "n_rnn": hidden_size,
@@ -38,7 +38,7 @@ def train_model(activation, hidden_size, lr, freeze, mode, device):
         "l2_weight": 0.000001,
     }
     hp, log, optimizer = main.set_hyperparameters(
-        model_dir="debug", hp=hp, ruleset="all", rule_trains=ruleset
+        model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=ruleset
     )
 
     if mode == "train":
