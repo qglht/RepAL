@@ -12,51 +12,16 @@ import torch
 import math
 import numpy as np
 import ipdb
-from . import task
+from neurogym import TrialEnv
+from typing import List
+from main import get_class_instance
 
 
 print_flag = False
-
-
-def _gen_feed_dict(trial, hp, device):
-    # Ensure all data is already on the correct device
-    trial.x = torch.as_tensor(trial.x, device=device)
-    trial.y = torch.as_tensor(trial.y, device=device)
-    trial.c_mask = torch.as_tensor(trial.c_mask, device=device)
-    trial.y_loc = torch.as_tensor(trial.y_loc, device=device)
-
-    n_time, batch_size = trial.x.shape[:2]
-
-    if hp["in_type"] == "multi":
-        new_shape = [n_time, batch_size, hp["rule_start"] * hp["n_rule"]]
-        x = torch.zeros(new_shape, dtype=torch.float32, device=device)
-
-        for i in range(batch_size):
-            ind_rule = torch.argmax(trial.x[0, i, hp["rule_start"] :]).item()
-            i_start = ind_rule * hp["rule_start"]
-            x[:, i, i_start : i_start + hp["rule_start"]] = trial.x[
-                :, i, : hp["rule_start"]
-            ]
-
-        trial.x = x
-
-    trial.c_mask = trial.c_mask.view(n_time, batch_size, -1)
-    return trial
-
-
-def generate_trials(rule, hp, mode, batch_size, device):
-    if batch_size is None:
-        trial = task.generate_trials(rule, hp, mode=mode)
-    else:
-        trial = task.generate_trials(rule, hp, mode=mode, batch_size=batch_size)
-    trial = _gen_feed_dict(trial, hp, device)
-    return trial
-
-
 ######## mostly untouched ###############
 
 
-def get_default_hp(ruleset):
+def get_default_hp(ruleset: List[str]):
     """Get a default hp.
 
     Useful for debugging.
@@ -64,11 +29,10 @@ def get_default_hp(ruleset):
     Returns:
         hp : a dictionary containing training hpuration
     """
-    num_ring = task.get_num_ring(ruleset)
-    n_rule = task.get_num_rule(ruleset)
-
-    n_eachring = 32
-    n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_eachring + 1
+    basic_kwargs = {'dt':20}
+    env = get_class_instance(ruleset[0],**basic_kwargs)
+    n_rule = len(ruleset)
+    n_input, n_output = env.observation_space.shape[0] + n_rule, env.action_space.n
     hp = {
         # batch size for training
         "batch_size_train": 64,
@@ -81,7 +45,7 @@ def get_default_hp(ruleset):
         # whether rule and stimulus inputs are represented separately
         "use_separate_input": False,
         # Type of loss functions
-        "loss_type": "lsq",
+        "loss_type": "crossentropy",
         # Optimizer
         "optimizer": "adam",
         # Type of activation runctions, relu, softplus, tanh, elu
@@ -112,14 +76,10 @@ def get_default_hp(ruleset):
         "p_weight_train": None,
         # Stopping performance
         "target_perf": 0.95,
-        # number of units each ring
-        "n_eachring": n_eachring,
-        # number of rings
-        "num_ring": num_ring,
         # number of rules
         "n_rule": n_rule,
         # first input index for rule units
-        "rule_start": 1 + num_ring * n_eachring,
+        "rule_start": env.observation_space.shape[0],
         # number of input units
         "n_input": n_input,
         # number of output units
@@ -140,28 +100,16 @@ def get_default_hp(ruleset):
     return hp
 
 
-def display_rich_output(model, step, log, model_dir):
-    """Display step by step outputs during training."""
-    variance._compute_variance_bymodel(model)
-    rule_pair = ["contextdm1", "contextdm2"]
-    save_name = "_atstep" + str(step)
-    title = "Step " + str(step) + " Perf. {:0.2f}".format(log["perf_avg"][-1])
-    variance.plot_hist_varprop(
-        model_dir, rule_pair, figname_extra=save_name, title=title
-    )
-    plt.close("all")
-
 
 def set_hyperparameters(
     model_dir,
     hp=None,
     max_steps=1e7,
     display_step=500,
-    ruleset="mante",
-    rule_trains=None,
+    ruleset: List[str] = None,
+    rule_trains: List[str] = None,
     rule_prob_map=None,
     seed=0,
-    rich_output=False,
     load_dir=None,
     trainables=None,
 ):
@@ -194,16 +142,9 @@ def set_hyperparameters(
     hp["model_dir"] = model_dir
     hp["max_steps"] = max_steps
     hp["display_step"] = display_step
-    hp["rich_output"] = rich_output
     hp["decay"] = math.exp(-hp["dt"] / hp["tau"])  # 1 - hp['dt']/hp['tau']
-
-    # Rules to train and test. Rules in a set are trained together
-    if rule_trains is None:
-        # By default, training all rules available to this ruleset
-        hp["rule_trains"] = task.rules_dict[ruleset]
-    else:
-        hp["rule_trains"] = rule_trains
-    hp["rules"] = hp["rule_trains"]
+    hp["rule_trains"] = rule_trains
+    hp["rules"] = rule_trains
 
     # Assign probabilities for rule_trains.
     if rule_prob_map is None:
@@ -215,19 +156,7 @@ def set_hyperparameters(
         # Set default as 1.
         rule_prob = np.array([rule_prob_map.get(r, 1.0) for r in hp["rule_trains"]])
         hp["rule_probs"] = list(rule_prob / np.sum(rule_prob))
-
-    #     tools.save_hp(hp, model_dir)     # saving model: not implemented
-
-    #     ##### Build the model #####
-    #     model = Model(model_dir, hp=hp)  # model is defined outside.
-
-    if print_flag:  # Display hp
-        for key, val in hp.items():
-            print("{:20s} = ".format(key) + str(val))
-
-    if load_dir is not None:
-        raise NotImplementedError  # loading saved model: not implemented
-
+        
     # penalty on deviation from initial weight
     if hp["l2_weight_init"] > 0:
         raise NotImplementedError
@@ -284,9 +213,6 @@ def train(run_model, optimizer, hp, log, freeze=False):
                         )
                         break
 
-                if hp["rich_output"]:
-                    display_rich_output(run_model, step, log, hp["model_dir"])
-
             # Training
             rule_train_now = hp["rng"].choice(hp["rule_trains"], p=hp["rule_probs"])
 
@@ -326,7 +252,7 @@ def do_eval(run_model, log, rule_train):
 
         for i_rep in range(n_rep):
             with torch.no_grad():
-                c_lsq, c_reg, y_hat_test, _, trial = run_model(
+                c_lsq, c_reg, y_hat_test, _, labels = run_model(
                     rule=rule_test, batch_size=batch_size_test_rep
                 )
 
@@ -335,7 +261,7 @@ def do_eval(run_model, log, rule_train):
             creg_tmp.append(c_reg)
 
             # Calculate performance using PyTorch
-            perf_test = get_perf(y_hat_test, trial.y_loc)
+            perf_test = get_perf(y_hat_test, labels)
             perf_test = perf_test.mean()
             perf_tmp.append(perf_test)
 

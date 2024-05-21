@@ -2,8 +2,7 @@ import neurogym as ngym
 import numpy as np
 import matplotlib.pyplot as plt
 import ipdb 
-from main import AntiPerceptualDecisionMaking, PerceptualDecisionMaking, PerceptualDecisionMakingDelayResponse, AntiPerceptualDecisionMakingDelayResponse, tasks
-
+import importlib
 
 class Dataset:
     def __init__(self, env, batch_size, seq_len):
@@ -22,17 +21,8 @@ class Dataset:
         plt.show()
 
 def get_class_instance(class_name, **kwargs):
-    class_ = globals()[class_name]
+    module = importlib.import_module('main')
+    class_ = getattr(module, class_name)
     instance = class_(**kwargs)
     return instance
-        
-if __name__ == '__main__':
-    for task in tasks:
-        envid = task
-        env_kwargs = {'dt': 100}
-        env = get_class_instance(envid, **env_kwargs)
-        batch_size = 32
-        seq_len = 100
-        dataset = Dataset(env, batch_size, seq_len)
-        ipdb.set_trace()
-        # for training etc modify timing and noise of the task
+    
