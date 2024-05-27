@@ -29,11 +29,12 @@ def get_default_hp(ruleset: List[str]):
     Returns:
         hp : a dictionary containing training hpuration
     """
-    basic_kwargs = {'dt':20}
-    env = get_class_instance(ruleset[0],**basic_kwargs)
+    basic_kwargs = {'dt':20, "mode":"train", "rng":np.random.RandomState(0)}
+    env = get_class_instance(ruleset[0],config=basic_kwargs)
     n_rule = len(ruleset)
     n_input, n_output = env.observation_space.shape[0] + n_rule, env.action_space.n
     hp = {
+        "mode":"train",
         # batch size for training
         "batch_size_train": 64,
         # batch_size for testing

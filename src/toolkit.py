@@ -94,6 +94,7 @@ def compute_dissimilarity(activation, hidden_size, lr, freeze, device):
     # Load configuration and set hyperparameters
     config = load_config("config.yaml")
     ruleset = config["rnn"]["train"]["ruleset"]
+    all_rules = config["rnn"]["train"]["ruleset"] + config["rnn"]["pretrain"]["ruleset"]
 
     hp = {
         "activation": activation,
@@ -101,9 +102,10 @@ def compute_dissimilarity(activation, hidden_size, lr, freeze, device):
         "learning_rate": lr,
         "l2_h": 0.00001,
         "l2_weight": 0.00001,
+        "mode": "test",
     }
     hp, _, _ = main.set_hyperparameters(
-        model_dir="debug", hp=hp, ruleset="all", rule_trains=ruleset
+        model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=ruleset
     )
     run_model = main.load_model(
         f"models/{activation}_{hidden_size}_{lr}__{freeze}_train.pth",
@@ -113,10 +115,11 @@ def compute_dissimilarity(activation, hidden_size, lr, freeze, device):
     )
     h = main.representation(run_model, config["rnn"]["train"]["ruleset"])
     h_trans, explained_variance = main.compute_pca(h)
-    for key, value in h_trans.items():
-        for i in range(value.shape[0]):
-            h_trans[key][i] = value[i]
+    ipdb.set_trace()
+    # for key, value in h_trans.items():
+    #     for i in range(value.shape[0]):
+    #         h_trans[key][i] = value[i]
             # h_trans[key][i] = normalize_within_unit_volume(value[i])
     # ipdb.set_trace()
     # CHANGE HERE FOR OTHER TASKS!
-    return h_trans[("delayanti", "stim1")].detach().numpy(), explained_variance
+    return h_trans[("AntiPerceptualDecisionMakingDelayResponseT", "stimulus")].detach().numpy(), explained_variance

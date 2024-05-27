@@ -5,8 +5,23 @@ import matplotlib.pyplot as plt
 import ipdb
 import torch
 from torch import linalg as LA
+from main.dataset import Dataset, get_class_instance
 
 #### Not modified for neurogym yet!!
+
+def get_indexes(dt, timing, seq_length):
+    indexes = {key:None for key in timing.keys()}
+    timing = {k: int(v/dt) for k,v in timing.items()}
+    current_index = 0
+    for e_name, e_time in timing.items():
+        if current_index>=seq_length:
+            return indexes
+        else : 
+            e_time_start = current_index
+            e_time_end = current_index + e_time
+            indexes[e_name] = (e_time_start, e_time_end)
+            current_index += e_time
+    return indexes  
 
 def representation(model, rules):
     h_byepoch = OrderedDict()
@@ -17,16 +32,16 @@ def representation(model, rules):
         rules = hp["rules"]
 
     for rule in rules:
-        _, _, _, h, trial = model(rule=rule, mode="test")
-        t_start = int(500 / hp["dt"])  # Important: Ignore the initial transition
-        h = h[t_start:, :, :]
-        for e_name, e_time in trial.epochs.items():
-            if "fix" in e_name:
-                continue
-            # Take epoch
-            e_time_start = e_time[0] - 1 if e_time[0] > 0 else 0
-            h_byepoch[(rule, e_name)] = h[e_time_start : e_time[1], :, :]
-
+        env = get_class_instance(rule, config=hp)
+        timing = env.timing
+        # seq leng is the length of the cumulated timing
+        seq_length = int(sum([v for k,v in timing.items()])/hp["dt"])
+        _, _, _, h, trial = model(rule=rule, batch_size= hp["batch_size_test"], seq_len=seq_length)
+        # t_start = int(500 / hp["dt"])  # Important: Ignore the initial transition
+        indexes = get_indexes(hp['dt'], timing, seq_length)
+        for key, value in indexes.items():
+            if value is not None:
+                h_byepoch[(rule,key)] = h[value[0]:value[1], :, :]
     return h_byepoch
 
 
@@ -47,7 +62,7 @@ def compute_pca(h):
     h_trans = OrderedDict()
     i_start = 0
     for key, val in h.items():
-        i_end = i_start + val.shape[1]
+        i_end = i_start + val.shape[0]
         h_trans[key] = data_trans[i_start:i_end, :, :]
         i_start = i_end
 

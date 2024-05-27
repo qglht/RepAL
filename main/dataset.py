@@ -17,7 +17,7 @@ class Dataset:
         self.act_size = self.env.action_space.n
 
     def plot_env(self):
-        fig = ngym.utils.plot_env(self.env, num_trials=2)
+        fig = ngym.utils.plot_env(self.env, num_trials=3)
         plt.show()
 
 def get_class_instance(class_name, **kwargs):

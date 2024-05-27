@@ -4,6 +4,7 @@ import torch
 from torch import nn, jit
 from main.dataset import Dataset, get_class_instance
 import numpy as np
+import ipdb
 # from main import *
 
 
@@ -66,10 +67,10 @@ class Run_Model(nn.Module):  # (jit.ScriptModule):
             nn.MSELoss() if hp["loss_type"] == "lsq" else nn.CrossEntropyLoss()
         )
 
-    def generate_trials(self, rule:str, hp, mode, batch_size, seq_len):
+    def generate_trials(self, rule:str, hp, batch_size, seq_len):
         # return gen_trials(rule, hp, mode, batch_size, self.device)
         # TO DO : richer rule
-        env = get_class_instance(rule, **{'dt': hp['dt']})
+        env = get_class_instance(rule, config=hp)
         return Dataset(env, batch_size, seq_len).dataset
 
     def calculate_loss(self, output, hidden, labels, hp):
@@ -85,9 +86,11 @@ class Run_Model(nn.Module):  # (jit.ScriptModule):
         return loss, loss_reg
 
     #     @jit.script_method
-    def forward(self, rule, batch_size=None, mode="random"):  # , **kwargs):
+    def forward(self, rule, batch_size=None, seq_len=100):  # , **kwargs):
         hp = self.hp
-        trial = self.generate_trials(rule, hp, mode, batch_size, seq_len=100)
+        if batch_size is None:
+            batch_size = hp["batch_size_test"]
+        trial = self.generate_trials(rule, hp, batch_size, seq_len=seq_len)
         inputs, labels = trial()
         inputs, labels = _gen_feed_dict(inputs, labels, rule, hp, self.device)
         # why labels isn't it of good size???

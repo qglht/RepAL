@@ -1,6 +1,4 @@
-from neurogym.envs.perceptualdecisionmaking import PerceptualDecisionMaking
-from neurogym.envs.perceptualdecisionmaking import PerceptualDecisionMakingDelayResponse
-from .task import AntiPerceptualDecisionMaking, AntiPerceptualDecisionMakingDelayResponse
+from .task import PerceptualDecisionMakingT, AntiPerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT, AntiPerceptualDecisionMakingDelayResponseT
 from .dataset import get_class_instance, Dataset
 from .train import train, set_hyperparameters
 from .model import Run_Model, load_model
