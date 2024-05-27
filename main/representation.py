@@ -9,7 +9,8 @@ from main.dataset import Dataset, get_class_instance
 
 #### Not modified for neurogym yet!!
 
-def get_indexes(dt, timing, seq_length):
+def get_indexes(dt, timing, seq_length, h, rule):
+    h_byepoch = OrderedDict()
     indexes = {key:None for key in timing.keys()}
     timing = {k: int(v/dt) for k,v in timing.items()}
     current_index = 0
@@ -21,10 +22,16 @@ def get_indexes(dt, timing, seq_length):
             e_time_end = current_index + e_time
             indexes[e_name] = (e_time_start, e_time_end)
             current_index += e_time
-    return indexes  
+    t_start = int(500 / dt)  # Important: Ignore the initial transition
+    for key, value in indexes.items():
+        if value is not None:
+            if value[1]>=t_start:
+                value = (value[0]-t_start if value[0]-t_start>=0 else 0, value[1]-t_start)
+            h_byepoch[(rule,key)] = h[value[0]:value[1], :, :]
+    return h_byepoch 
 
 def representation(model, rules):
-    h_byepoch = OrderedDict()
+   
     hp = model.hp
     if isinstance(rules, str):
         rules = [rules]
@@ -38,14 +45,16 @@ def representation(model, rules):
         seq_length = int(sum([v for k,v in timing.items()])/hp["dt"])
         _, _, _, h, trial = model(rule=rule, batch_size= hp["batch_size_test"], seq_len=seq_length)
         # t_start = int(500 / hp["dt"])  # Important: Ignore the initial transition
-        indexes = get_indexes(hp['dt'], timing, seq_length)
-        for key, value in indexes.items():
-            if value is not None:
-                h_byepoch[(rule,key)] = h[value[0]:value[1], :, :]
+        h_byepoch = get_indexes(hp['dt'], timing, seq_length, h, rule)
+
     return h_byepoch
 
 
 def compute_pca(h):
+
+    # only keep the stimulus period for dsa computation
+    h = {k: v for k, v in h.items() if k[1] == 'stimulus'}
+
     # Concatenate across rules and epochs to create dataset
     data = torch.cat(list(h.values()), dim=0)
     data_2d = data.reshape(-1, data.shape[-1])
