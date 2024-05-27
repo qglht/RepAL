@@ -92,7 +92,7 @@ def get_dynamics(activation, hidden_size, lr, freeze, device):
 
 def compute_dissimilarity(activation, hidden_size, lr, freeze, device):
     # Load configuration and set hyperparameters
-    config = load_config("config.yaml")
+    config = load_config("../config.yaml")
     ruleset = config["rnn"]["train"]["ruleset"]
     all_rules = config["rnn"]["train"]["ruleset"] + config["rnn"]["pretrain"]["ruleset"]
 
@@ -108,14 +108,13 @@ def compute_dissimilarity(activation, hidden_size, lr, freeze, device):
         model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=ruleset
     )
     run_model = main.load_model(
-        f"models/{activation}_{hidden_size}_{lr}__{freeze}_train.pth",
+        f"../models/{activation}_{hidden_size}_{lr}__{freeze}_train.pth",
         hp,
         RNNLayer,
         device=device,
     )
     h = main.representation(run_model, config["rnn"]["train"]["ruleset"])
     h_trans, explained_variance = main.compute_pca(h)
-    ipdb.set_trace()
     # for key, value in h_trans.items():
     #     for i in range(value.shape[0]):
     #         h_trans[key][i] = value[i]
