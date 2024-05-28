@@ -309,6 +309,7 @@ def do_eval(run_model, log, rule_train):
 
 def accuracy(logits, true_class_indices):
     # Reshape logits to shape [(batch * images), classes]
+    ipdb.set_trace()
     logits_flat = logits.view(-1, logits.size(-1))
 
     # Reshape true class indices to shape [(batch * images)]
@@ -317,14 +318,21 @@ def accuracy(logits, true_class_indices):
     # Get the predicted classes by taking the argmax over the classes dimension
     predicted_classes = torch.argmax(logits_flat, dim=1)
 
+    # Apply mask to consider only non-zero values in true_class_indices_flat
+    non_zero_mask = true_class_indices_flat != 0
+    filtered_predicted_classes = predicted_classes[non_zero_mask]
+    filtered_true_class_indices_flat = true_class_indices_flat[non_zero_mask]
+
     # Compare predicted classes with true class indices
-    correct_predictions = (predicted_classes == true_class_indices_flat).sum().item()
+    correct_predictions = (filtered_predicted_classes == filtered_true_class_indices_flat).sum().item()
 
     # Calculate accuracy
-    total_predictions = true_class_indices_flat.size(0)
-    accuracy = correct_predictions / total_predictions
+    total_predictions = filtered_true_class_indices_flat.size(0)
+    ipdb.set_trace()
+    accuracy = correct_predictions / total_predictions if total_predictions > 0 else 0.0
 
     return accuracy
+
 
 def get_perf(outputs, true_labels):
     """Compute performance using PyTorch."""

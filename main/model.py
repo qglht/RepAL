@@ -70,6 +70,7 @@ class Run_Model(nn.Module):  # (jit.ScriptModule):
     def generate_trials(self, rule:str, hp, batch_size, seq_len):
         # return gen_trials(rule, hp, mode, batch_size, self.device)
         # TO DO : richer rule
+        # want to genertate 
         env = get_class_instance(rule, config=hp)
         return Dataset(env, batch_size, seq_len).dataset
 
