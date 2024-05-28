@@ -1,25 +1,25 @@
 from neurogym.envs.perceptualdecisionmaking import PerceptualDecisionMaking, PerceptualDecisionMakingDelayResponse
 
 timing_without_delay_training = {
-            'fixation': [100, 200,300],
-            'stimulus':  [1000, 2000,3000],
+            'fixation': [100,200,300],
+            'stimulus':  [3000,4000,5000],
             'delay': 0,
-            'decision': [100, 200,300]}
+            'decision':  [100,200,300]}
 timing_without_delay_testing = {
-            'fixation': 100,
-            'stimulus': 2000,
+            'fixation': 200,
+            'stimulus': 4000,
             'delay': 0,
-            'decision': 100}
+            'decision': 200}
 timing_with_delay_training = {
             'fixation': [100, 200,300],
-            'stimulus':  [1000, 2000,3000],
-            'delay': [300, 500, 700, 900, 1200, 2000, 3200, 4000],
-            'decision': [100, 200,300]}
+            'stimulus':  [3000,4000,5000],
+            'delay': [500, 1000,1500],
+            'decision':  [100,200,300]}
 timing_with_delay_testing = {
-            'fixation': 100,
-            'stimulus': 2000,
-            'delay': 1200,
-            'decision': 100}
+            'fixation': 500,
+            'stimulus': 4000,
+            'delay': 2000,
+            'decision': 500}
 
 class PerceptualDecisionMakingT(PerceptualDecisionMaking):
     def __init__(self, config, dt=100, **kwargs):

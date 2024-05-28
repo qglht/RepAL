@@ -86,7 +86,7 @@ class Run_Model(nn.Module):  # (jit.ScriptModule):
         return loss, loss_reg
 
     #     @jit.script_method
-    def forward(self, rule, batch_size=None, seq_len=100):  # , **kwargs):
+    def forward(self, rule, batch_size=None, seq_len=400):  # , **kwargs):
         hp = self.hp
         if batch_size is None:
             batch_size = hp["batch_size_test"]

@@ -50,7 +50,7 @@ def representation(model, rules):
     return h_byepoch
 
 
-def compute_pca(h):
+def compute_pca(h, n_components=3):
 
     # only keep the stimulus period for dsa computation
     h = {k: v for k, v in h.items() if k[1] == 'stimulus'}
@@ -61,11 +61,11 @@ def compute_pca(h):
 
     # Reduce to 3 components for visualization
     U, S, V = LA.svd(data_2d, full_matrices=False)
-    data_trans_2d = U[:, :3] @ torch.diag(S[:3])
-    data_trans = data_trans_2d.reshape(data.shape[0], data.shape[1], 3)
+    data_trans_2d = U[:, :n_components] @ torch.diag(S[:n_components])
+    data_trans = data_trans_2d.reshape(data.shape[0], data.shape[1], n_components)
 
     # Compute explained variance for the reduction step
-    explained_variance_ratio = (S[:3] ** 2) / (S**2).sum()
+    explained_variance_ratio = (S[:n_components] ** 2) / (S**2).sum()
 
     # Package back to dictionary
     h_trans = OrderedDict()

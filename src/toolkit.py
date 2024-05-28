@@ -56,41 +56,11 @@ def train_model(activation, hidden_size, lr, freeze, mode, device):
         run_model.save(f"models/{activation}_{hidden_size}_{lr}_{mode}.pth")
     return run_model
 
-
-def get_dynamics(activation, hidden_size, lr, freeze, device):
-    # Load configuration and set hyperparameters
-    config = load_config("config.yaml")
-    ruleset = config["rnn"]["train"]["ruleset"]
-
-    hp = {
-        "activation": activation,
-        "n_rnn": hidden_size,
-        "learning_rate": lr,
-        "l2_h": 0.000001,
-        "l2_weight": 0.000001,
-    }
-    hp, _, _ = main.set_hyperparameters(
-        model_dir="debug", hp=hp, ruleset="all", rule_trains=ruleset
-    )
-    run_model = main.load_model(
-        f"models/{activation}_{hidden_size}_{lr}__{freeze}_train.pth",
-        hp,
-        RNNLayer,
-        device=device,
-    )
-    h = main.representation(run_model, config["rnn"]["train"]["ruleset"])
-    h_trans = main.compute_pca(h)
-    for key, value in h_trans.items():
-        for i in range(value.shape[0]):
-            h_trans[key][i] = normalize_within_unit_volume(value[i])
-    with open(
-        f"models/{activation}_{hidden_size}_{lr}_{freeze}_representation.pkl",
-        "wb",
-    ) as f:
-        pickle.dump(h_trans, f)
+def task_relevant_variables():
+    return NotImplementedError
 
 
-def compute_dissimilarity(activation, hidden_size, lr, freeze, device):
+def compute_dissimilarity(activation, hidden_size, lr, freeze, device, n_components=3):
     # Load configuration and set hyperparameters
     config = load_config("../config.yaml")
     ruleset = config["rnn"]["train"]["ruleset"]
@@ -114,7 +84,7 @@ def compute_dissimilarity(activation, hidden_size, lr, freeze, device):
         device=device,
     )
     h = main.representation(run_model, config["rnn"]["train"]["ruleset"])
-    h_trans, explained_variance = main.compute_pca(h)
+    h_trans, explained_variance = main.compute_pca(h, n_components=n_components)
     # for key, value in h_trans.items():
     #     for i in range(value.shape[0]):
     #         h_trans[key][i] = value[i]

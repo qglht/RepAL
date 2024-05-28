@@ -39,8 +39,8 @@ analysis:
 #   rank: 50
 #   device: cuda
 dsa:
-  n_delays: 10
-  delay_interval: 5
+  n_delays: 50
+  delay_interval: 1
   rank: 50
   device: cuda
 simulations:
