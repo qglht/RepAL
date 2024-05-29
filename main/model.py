@@ -8,10 +8,11 @@ import ipdb
 # from main import *
 
 
-def _gen_feed_dict(inputs, labels, rule, hp, device):
+def _gen_feed_dict(inputs, labels, mask, rule, hp, device):
     # Ensure all data is already on the correct device
     inputs = torch.as_tensor(inputs, device=device)
     labels = torch.as_tensor(labels, device=device)
+    mask = torch.as_tensor(mask, device=device)
     n_time, batch_size = inputs.shape[:2]
 
     new_shape = [n_time, batch_size, hp["rule_start"] + hp["n_rule"]]
@@ -20,7 +21,11 @@ def _gen_feed_dict(inputs, labels, rule, hp, device):
     x[:, :, :hp["rule_start"]] = inputs
     x[:, :, hp["rule_start"] + ind_rule] = 1
     inputs = x
-    return inputs, labels
+
+    mask = mask.flatten()
+    labels = labels.flatten()
+
+    return inputs, labels, mask
 
 class Model(nn.Module):
     def __init__(self, hp, RNNLayer):
@@ -64,17 +69,20 @@ class Run_Model(nn.Module):  # (jit.ScriptModule):
         self.device = device
         self.model.to(self.device)
         self.loss_fnc = (
-            nn.MSELoss() if hp["loss_type"] == "lsq" else nn.CrossEntropyLoss()
+            nn.MSELoss() if hp["loss_type"] == "lsq" else nn.CrossEntropyLoss(reduction="none")
         )
 
     def generate_trials(self, rule:str, hp, batch_size, seq_len):
         # return gen_trials(rule, hp, mode, batch_size, self.device)
         # TO DO : richer rule
+        # want to genertate 
         env = get_class_instance(rule, config=hp)
-        return Dataset(env, batch_size, seq_len).dataset
+        return Dataset(env, batch_size, seq_len)
 
-    def calculate_loss(self, output, hidden, labels, hp):
-        loss = self.loss_fnc(output, labels)
+    def calculate_loss(self, output, mask, labels,  hidden, hp):
+        # use mask to calculate loss of crossentropyloss
+        loss = self.loss_fnc(output,labels)
+        loss = (loss * mask).mean()
         loss_reg = (
             hidden.abs().mean() * hp["l1_h"] + hidden.norm() * hp["l2_h"]
         )  #    Regularization cost  (L1 and L2 cost) on hidden activity
@@ -86,19 +94,15 @@ class Run_Model(nn.Module):  # (jit.ScriptModule):
         return loss, loss_reg
 
     #     @jit.script_method
-    def forward(self, rule, batch_size=None, seq_len=400):  # , **kwargs):
+    def forward(self, rule, batch_size=64, seq_len=400):  # , **kwargs):
         hp = self.hp
-        if batch_size is None:
-            batch_size = hp["batch_size_test"]
-        trial = self.generate_trials(rule, hp, batch_size, seq_len=seq_len)
-        inputs, labels = trial()
-        inputs, labels = _gen_feed_dict(inputs, labels, rule, hp, self.device)
-        # why labels isn't it of good size???
-        # check that they are on the good device
+        dataset = self.generate_trials(rule, hp, batch_size, seq_len=seq_len)
+        inputs, labels = dataset.dataset()
+        mask = dataset.mask
+        inputs, labels, mask = _gen_feed_dict(inputs, labels, mask, rule, hp, self.device)
         output, hidden = self.model(inputs)
         output = output.view(-1, hp["n_output"])
-        labels = labels.flatten()
-        loss, loss_reg = self.calculate_loss(output, hidden, labels, hp)
+        loss, loss_reg = self.calculate_loss(output, mask, labels, hidden,hp)
         return (
             loss,
             loss_reg,

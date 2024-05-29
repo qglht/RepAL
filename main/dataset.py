@@ -2,6 +2,7 @@ import neurogym as ngym
 import numpy as np
 import matplotlib.pyplot as plt
 import ipdb 
+import torch
 import importlib
 
 class Dataset:
@@ -9,6 +10,7 @@ class Dataset:
         self.batch_size = batch_size
         self.seq_len = seq_len
         self.env = env
+        self._mask = None
     
     # Make supervised dataset
         self.dataset = ngym.Dataset(
@@ -19,6 +21,22 @@ class Dataset:
     def plot_env(self):
         fig = ngym.utils.plot_env(self.env, num_trials=3)
         plt.show()
+
+    @property
+    def mask(self):
+        if self._mask is None:
+            inputs, labels = self.dataset()
+            n_time, _, _ = inputs.shape
+            
+            # Identify response period indexes where inputs are all zeros
+            mask = np.where(labels != 0, 5, 1)
+    
+            self._mask = mask
+
+        return mask
+
+
+
 
 def get_class_instance(class_name, **kwargs):
     module = importlib.import_module('main')

@@ -1,7 +1,7 @@
 from dsa_analysis import load_config, visualize
 import torch
 import multiprocessing
-from src.toolkit import compute_dissimilarity
+from src.toolkit import compute_dissimilarity, train_model
 import DSA
 # import similarity
 import pickle
@@ -28,21 +28,22 @@ if __name__ == "__main__":
         for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
             for lr in config["rnn"]["parameters"]["learning_rate"]:
                 for freeze in config["rnn"]["parameters"]["freeze"]:
-                    curve, explained_variance = compute_dissimilarity(
-                        activation, hidden_size, lr, freeze, "cpu"
-                    )
-                    if freeze:
-                        curves_frozen.append(curve)
-                        curves_frozen_names.append(
-                            f"{activation}_{hidden_size}_{lr}"
-                        )
-                        explained_variances_frozen.append(explained_variance)
-                    else:
-                        curves_unfrozen.append(curve)
-                        curves_unfrozen_names.append(
-                            f"{activation}_{hidden_size}_{lr}"
-                        )
-                        explained_variances_unfrozen.append(explained_variance)
+                    # curve, explained_variance = compute_dissimilarity(
+                    #     activation, hidden_size, lr, freeze, "cpu"
+                    # )
+                    train_model(activation, hidden_size, lr, freeze, "pretrain", "cpu")
+                    # if freeze:
+                    #     curves_frozen.append(curve)
+                    #     curves_frozen_names.append(
+                    #         f"{activation}_{hidden_size}_{lr}"
+                    #     )
+                    #     explained_variances_frozen.append(explained_variance)
+                    # else:
+                    #     curves_unfrozen.append(curve)
+                    #     curves_unfrozen_names.append(
+                    #         f"{activation}_{hidden_size}_{lr}"
+                    #     )
+                    #     explained_variances_unfrozen.append(explained_variance)
 
     # create a dataset from main.dataset import Dataset, get_class_instance
 
