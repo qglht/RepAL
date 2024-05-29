@@ -26,7 +26,7 @@ if __name__ == "__main__":
         for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
             for lr in config["rnn"]["parameters"]["learning_rate"]:
                 device = devices[i % len(devices)]  # Cycle through available devices
-                tasks.append((activation, hidden_size, lr, False, "pretrain", device))
+                tasks.append((activation, hidden_size, lr, False, "pretrain", False, device))
                 i += 1
 
     processes = [

@@ -31,7 +31,7 @@ if __name__ == "__main__":
                     # curve, explained_variance = compute_dissimilarity(
                     #     activation, hidden_size, lr, freeze, "cpu"
                     # )
-                    train_model(activation, hidden_size, lr, freeze, "pretrain", "cpu")
+                    train_model(activation, hidden_size, lr, freeze, "pretrain", True, "cpu")
                     # if freeze:
                     #     curves_frozen.append(curve)
                     #     curves_frozen_names.append(

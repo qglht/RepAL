@@ -11,9 +11,9 @@ rnn:
     freeze:
       - True 
       - False
-    # learning_strategy:
-    #   - interleaved
-    #   - continual
+    pretrain:
+      - True
+      - False
     n_rnn:
       - 128
       - 256
