@@ -26,11 +26,25 @@ class Dataset:
     def mask(self):
         if self._mask is None:
             inputs, labels = self.dataset()
-            n_time, _, _ = inputs.shape
+            n_time, batch_size, _ = inputs.shape
             
             # Identify response period indexes where inputs are all zeros
-            mask = np.where(labels != 0, 5, 1)
-    
+            zero_mask = np.all(inputs == 0 , axis=2)
+
+            # Identify response period indexes where inputs are all zeros
+            mask = np.where(zero_mask, 5, 1)
+
+            # Modify mask for continuous sequences of fives
+            for b in range(batch_size):
+                count = 0
+                for i in range(n_time):
+                    if mask[i, b] == 5:
+                        if count < 4:
+                            mask[i, b] = 2 + count
+                        count += 1
+                    else:
+                        count = 0  # Reinitialize the count when a non-five value is encountered
+
             self._mask = mask
 
         return mask

@@ -24,8 +24,8 @@ timing_with_delay_testing = {
             'decision': 500}
 
 class PerceptualDecisionMakingT(PerceptualDecisionMaking):
-    def __init__(self, config, dt=100, **kwargs):
-        super().__init__(dt=dt, **kwargs)
+    def __init__(self, config, **kwargs):
+        super().__init__(dt=config["dt"], **kwargs)
         self.mode = config["mode"]
         self.rng = config["rng"]
         if self.mode == 'train':  # set a random timing for each of the periods of the tasks
@@ -38,8 +38,8 @@ class PerceptualDecisionMakingT(PerceptualDecisionMaking):
     
 class AntiPerceptualDecisionMakingT(PerceptualDecisionMaking):
     """Only change groundtruth to anti-response"""
-    def __init__(self, config, dt=100, **kwargs):
-        super().__init__(dt=dt, **kwargs)
+    def __init__(self, config, **kwargs):
+        super().__init__(dt=config["dt"], **kwargs)
         self.mode = config["mode"]
         self.rng = config["rng"]
         if self.mode == 'train':  # set a random timing for each of the periods of the tasks
@@ -53,8 +53,8 @@ class AntiPerceptualDecisionMakingT(PerceptualDecisionMaking):
         return trial
 
 class PerceptualDecisionMakingDelayResponseT(PerceptualDecisionMakingDelayResponse):
-    def __init__(self, config, dt=100, **kwargs):
-        super().__init__(dt=dt, **kwargs)
+    def __init__(self, config, **kwargs):
+        super().__init__(dt=config["dt"], **kwargs)
         self.mode = config["mode"]
         self.rng = config["rng"]
         if self.mode == 'train':  # set a random timing for each of the periods of the tasks
@@ -68,8 +68,8 @@ class PerceptualDecisionMakingDelayResponseT(PerceptualDecisionMakingDelayRespon
     
 class AntiPerceptualDecisionMakingDelayResponseT(PerceptualDecisionMakingDelayResponse):
     """Only change groundtruth to anti-response"""
-    def __init__(self, config, dt=100, **kwargs):
-        super().__init__(dt=dt, **kwargs)
+    def __init__(self, config, **kwargs):
+        super().__init__(dt=config["dt"], **kwargs)
         self.mode = config["mode"]
         self.rng = config["rng"]
         if self.mode == 'train':  # set a random timing for each of the periods of the tasks
@@ -83,8 +83,8 @@ class AntiPerceptualDecisionMakingDelayResponseT(PerceptualDecisionMakingDelayRe
         return trial
     
 class GoNogoT(GoNogo):
-    def __init__(self, config, dt=100, **kwargs):
-        super().__init__(dt=dt, **kwargs)
+    def __init__(self, config, **kwargs):
+        super().__init__(dt=config["dt"], **kwargs)
         self.mode = config["mode"]
         self.rng = config["rng"]
         if self.mode == 'train':  # set a random timing for each of the periods of the tasks
@@ -98,8 +98,8 @@ class GoNogoT(GoNogo):
     
 class AntiGoNogoT(GoNogo):
     """Only change groundtruth to anti-response"""
-    def __init__(self, config, dt=100, **kwargs):
-        super().__init__(dt=dt, **kwargs)
+    def __init__(self, config, **kwargs):
+        super().__init__(dt=config["dt"], **kwargs)
         self.mode = config["mode"]
         self.rng = config["rng"]
         if self.mode == 'train':  # set a random timing for each of the periods of the tasks
@@ -113,8 +113,8 @@ class AntiGoNogoT(GoNogo):
         return trial
     
 class GoNogoDelayResponseT(GoNogo):
-    def __init__(self, config, dt=100, **kwargs):
-        super().__init__(dt=dt, **kwargs)
+    def __init__(self, config, **kwargs):
+        super().__init__(dt=config["dt"], **kwargs)
         self.mode = config["mode"]
         self.rng = config["rng"]
         if self.mode == 'train':  # set a random timing for each of the periods of the tasks
@@ -128,8 +128,8 @@ class GoNogoDelayResponseT(GoNogo):
     
 class AntiGoNogoDelayResponseT(GoNogo):
     """Only change groundtruth to anti-response"""
-    def __init__(self, config, dt=100, **kwargs):
-        super().__init__(dt=dt, **kwargs)
+    def __init__(self, config, **kwargs):
+        super().__init__(dt=config["dt"], **kwargs)
         self.mode = config["mode"]
         self.rng = config["rng"]
         if self.mode == 'train':  # set a random timing for each of the periods of the tasks
@@ -143,8 +143,8 @@ class AntiGoNogoDelayResponseT(GoNogo):
         return trial
     
 class ReachingDelayResponseT(ReachingDelayResponse):
-    def __init__(self, config, dt=100, **kwargs):
-        super().__init__(dt=dt, **kwargs)
+    def __init__(self, config,**kwargs):
+        super().__init__(dt=config["dt"], **kwargs)
         self.mode = config["mode"]
         self.rng = config["rng"]
         if self.mode == 'train':  # set a random timing for each of the periods of the tasks
@@ -158,8 +158,8 @@ class ReachingDelayResponseT(ReachingDelayResponse):
     
 class AntiReachingDelayResponseT(ReachingDelayResponse):
     """Only change groundtruth to anti-response"""
-    def __init__(self, config, dt=100, **kwargs):
-        super().__init__(dt=dt, **kwargs)
+    def __init__(self, config, **kwargs):
+        super().__init__(dt=config["dt"], **kwargs)
         self.mode = config["mode"]
         self.rng = config["rng"]
         if self.mode == 'train':  # set a random timing for each of the periods of the tasks
@@ -173,8 +173,8 @@ class AntiReachingDelayResponseT(ReachingDelayResponse):
         return trial
     
 class ReachingDelayResponseDelayResponseT(ReachingDelayResponse):
-    def __init__(self, config, dt=100, **kwargs):
-        super().__init__(dt=dt, **kwargs)
+    def __init__(self, config, **kwargs):
+        super().__init__(dt=config["dt"], **kwargs)
         self.mode = config["mode"]
         self.rng = config["rng"]
         if self.mode == 'train':  # set a random timing for each of the periods of the tasks
@@ -188,8 +188,8 @@ class ReachingDelayResponseDelayResponseT(ReachingDelayResponse):
     
 class AntiReachingDelayResponseDelayResponseT(ReachingDelayResponse):
     """Only change groundtruth to anti-response"""
-    def __init__(self, config, dt=100, **kwargs):
-        super().__init__(dt=dt, **kwargs)
+    def __init__(self, config, **kwargs):
+        super().__init__(dt=config["dt"], **kwargs)
         self.mode = config["mode"]
         self.rng = config["rng"]
         if self.mode == 'train':  # set a random timing for each of the periods of the tasks
