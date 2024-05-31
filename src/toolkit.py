@@ -45,7 +45,7 @@ def train_model(activation, hidden_size, lr, freeze, mode, no_pretraining, devic
         if no_pretraining:
             run_model = main.Run_Model(hp, RNNLayer, device)
             main.train(run_model, optimizer, hp, log, freeze=freeze)
-            run_model.save(f"models/{activation}_{hidden_size}_{lr}_{mode}_nopretrain.pth")
+            run_model.save(f"models/{activation}_{hidden_size}_{lr}__{freeze}_{mode}_nopretrain.pth")
         else: 
             run_model = main.load_model(
                 f"models/{activation}_{hidden_size}_{lr}_pretrain.pth",
