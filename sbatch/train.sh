@@ -26,20 +26,5 @@ module load python/anaconda3
 source activate dsa  # If necessary, depends on cluster setup
 poetry install  # Install additional Python packages as needed
 
-# Check GPU status before running the application
-echo "Checking GPU status before running the application:"
-nvidia-smi
-
 # Run the application and monitor GPU status in parallel
 poetry run python -m src.train
-# (poetry run python -m src.train) &
-
-# # PID of the application
-# APP_PID=$!
-
-# # Monitor GPU status every 5 minutes until the application finishes
-# while kill -0 $APP_PID 2>/dev/null; do
-#     echo "Checking GPU status during the application run:"
-#     nvidia-smi
-#     sleep 300
-# done
