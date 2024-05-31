@@ -36,9 +36,9 @@ nvidia-smi
 # PID of the application
 APP_PID=$!
 
-# Monitor GPU status every 60 seconds until the application finishes
+# Monitor GPU status every 5 minutes until the application finishes
 while kill -0 $APP_PID 2>/dev/null; do
     echo "Checking GPU status during the application run:"
     nvidia-smi
-    sleep 60
+    sleep 300
 done
