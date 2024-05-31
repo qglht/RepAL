@@ -31,6 +31,7 @@ echo "Checking GPU status before running the application:"
 nvidia-smi
 
 # Run the application and monitor GPU status in parallel
+(poetry run python -m src.pretrain) &
 (poetry run python -m src.train) &
 
 # PID of the application
