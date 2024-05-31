@@ -61,6 +61,27 @@ def train_model(activation, hidden_size, lr, freeze, mode, no_pretraining, devic
         run_model.save(f"models/{activation}_{hidden_size}_{lr}_{mode}.pth")
     return run_model
 
+def test_model(activation, hidden_size, lr, freeze, mode, no_pretraining, device):
+    # Load configuration and set hyperparameters
+    config = load_config("config.yaml")
+    ruleset = config["rnn"][mode]["ruleset"]
+    all_rules = config["rnn"]["train"]["ruleset"] + config["rnn"]["pretrain"]["ruleset"]
+    hp = {
+        "activation": activation,
+        "n_rnn": hidden_size,
+        "learning_rate": lr,
+        "l2_h": 0.000001,
+        "l2_weight": 0.000001,
+    }
+    hp, log, optimizer = main.set_hyperparameters(
+        model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=ruleset
+    )
+
+    run_model = main.Run_Model(hp, RNNLayer, device)
+    main.train(run_model, optimizer, hp, log, freeze=freeze)
+    
+    return run_model
+
 def task_relevant_variables():
     return NotImplementedError
 

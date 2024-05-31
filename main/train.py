@@ -188,7 +188,7 @@ def train(run_model, optimizer, hp, log, freeze=False):
     step = 0
     t_start = time.time()
     losses = []
-    loss_change_threshold = 1e-4  # Threshold for change in loss to consider stopping
+    loss_change_threshold = 1e-3  # Threshold for change in loss to consider stopping
     if freeze:
         optim = optimizer(
             [run_model.model.rnn.rnncell.weight_ih], lr=hp["learning_rate"]

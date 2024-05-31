@@ -15,7 +15,22 @@ from main.dataset import Dataset, get_class_instance
 
 if __name__ == "__main__":
 
+    multiprocessing.set_start_method(
+        "spawn", force=True
+    )  # Set multiprocessing to use 'spawn'
     config = load_config("config.yaml")
+
+    # Create a list of all tasks to run
+    tasks = []
+    num_gpus = torch.cuda.device_count()  # Get the number of GPUs available
+    devices = (
+        [torch.device(f"cuda:{i}") for i in range(num_gpus)]
+        if num_gpus > 0
+        else [torch.device("cpu")]
+    )
+    print(f'devices used : {devices}')
+
+    i = 0  # Index to cycle through available devices
 
     curves_frozen = []
     curves_frozen_names = []
@@ -31,6 +46,7 @@ if __name__ == "__main__":
                     # curve, explained_variance = compute_dissimilarity(
                     #     activation, hidden_size, lr, freeze, "cpu"
                     # )
+                    device = devices[i % len(devices)]  # Cycle through available devices
                     train_model(activation, hidden_size, lr, freeze, "pretrain", True, "cpu")
                     # if freeze:
                     #     curves_frozen.append(curve)

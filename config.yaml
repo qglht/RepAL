@@ -21,11 +21,13 @@ rnn:
       - 0.0001
       - 0.001
   pretrain:
-    ruleset: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT]
+    # ruleset: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT]
+    ruleset: [GoNogoT, AntiGoNogoT, GoNogoDelayResponseT]
     T: 1000
     batch: 64
   train:
-    ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+    # ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+    ruleset: [AntiGoNogoDelayResponseT]
     T: 1000
     batch: 64
 analysis:
