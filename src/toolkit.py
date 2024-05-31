@@ -41,11 +41,12 @@ def train_model(activation, hidden_size, lr, freeze, mode, no_pretraining, devic
         model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=ruleset
     )
 
+
     if mode == "train":
         if no_pretraining:
             run_model = main.Run_Model(hp, RNNLayer, device)
             main.train(run_model, optimizer, hp, log, freeze=freeze)
-            run_model.save(f"models/{activation}_{hidden_size}_{lr}_{mode}_nopretrain.pth")
+            run_model.save(f"models/{activation}_{hidden_size}_{lr}__{freeze}_{mode}_nopretrain.pth")
         else: 
             run_model = main.load_model(
                 f"models/{activation}_{hidden_size}_{lr}_pretrain.pth",
@@ -86,7 +87,7 @@ def task_relevant_variables():
     return NotImplementedError
 
 
-def compute_dissimilarity(activation, hidden_size, lr, freeze, device, n_components=3):
+def compute_dissimilarity(activation, hidden_size, lr, freeze, nopretrain ,device, n_components=3):
     # Load configuration and set hyperparameters
     config = load_config("../config.yaml")
     ruleset = config["rnn"]["train"]["ruleset"]
@@ -103,8 +104,9 @@ def compute_dissimilarity(activation, hidden_size, lr, freeze, device, n_compone
     hp, _, _ = main.set_hyperparameters(
         model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=ruleset
     )
+    nopretrain = "nopretrain" if nopretrain else "pretrain"
     run_model = main.load_model(
-        f"../models/{activation}_{hidden_size}_{lr}__{freeze}_train.pth",
+        f"../models/{activation}_{hidden_size}_{lr}__{freeze}_train_{nopretrain}.pth",
         hp,
         RNNLayer,
         device=device,
