@@ -15,7 +15,11 @@ import ipdb
 from neurogym import TrialEnv
 from typing import List
 from main import get_class_instance
-from main import Dataset
+from main import CustomDataset
+import torch
+import time
+import numpy as np
+from torch.utils.data import DataLoader
 
 
 print_flag = False
@@ -202,9 +206,7 @@ def set_hyperparameters(
 
     return hp, log, optimizer  # , model
 
-
 def train(run_model, optimizer, hp, log, freeze=False):
-
     step = 0
     t_start = time.time()
     losses = []
@@ -217,7 +219,9 @@ def train(run_model, optimizer, hp, log, freeze=False):
         optim = optimizer(run_model.model.parameters(), lr=hp["learning_rate"])
     
     envs = {rule: get_class_instance(rule, config=hp) for rule in hp['rule_trains']}
-    datasets = {rule: Dataset(env, hp['batch_size_train']) for rule, env in zip(envs.keys(), envs.values())}
+    datasets = {rule: CustomDataset(env, hp['batch_size_train']) for rule, env in zip(envs.keys(), envs.values())}
+    dataloaders = {rule: DataLoader(dataset, batch_size=hp['batch_size_train'], shuffle=True, num_workers=4, pin_memory=True) for rule, dataset in datasets.items()}
+
     while step * hp["batch_size_train"] <= hp["max_steps"]:
         try:
             # Validation
@@ -230,7 +234,6 @@ def train(run_model, optimizer, hp, log, freeze=False):
                 if log["perf_min"][-1] > hp["target_perf"]:
                     # Check if the average decrease in loss is below a certain threshold
                     recent_losses = losses[-hp["batch_size_train"] * 2 :]
-                    # TODO : change to batch_size_test
                     avg_loss_change = np.mean(np.diff(recent_losses))
                     if abs(avg_loss_change) < loss_change_threshold:
                         print(
@@ -240,19 +243,18 @@ def train(run_model, optimizer, hp, log, freeze=False):
 
             # Training
             rule_train_now = hp["rng"].choice(hp["rule_trains"], p=hp["rule_probs"])
-            dataset = datasets[rule_train_now]
-            inputs, labels = dataset.dataset()
-            mask = dataset.mask
-            inputs, labels, mask = _gen_feed_dict(inputs, labels, mask, rule_train_now, hp, run_model.device)
-            optim.zero_grad()
-            c_lsq, c_reg, _, _, _ = run_model(
-                inputs, labels, mask
-            )
-            loss = c_lsq + c_reg
-            losses.append(loss.item())
-            loss.backward()
-            optim.step()
-            step += 1
+            dataloader = dataloaders[rule_train_now]
+            for inputs, labels, mask in dataloader:
+                inputs, labels, mask = _gen_feed_dict(inputs, labels, mask, rule_train_now, hp, run_model.device)
+                optim.zero_grad()
+                c_lsq, c_reg, _, _, _ = run_model(
+                    inputs, labels, mask
+                )
+                loss = c_lsq + c_reg
+                losses.append(loss.item())
+                loss.backward()
+                optim.step()
+                step += 1
 
         except KeyboardInterrupt:
             print("Optimization interrupted by user")
@@ -278,11 +280,14 @@ def do_eval(run_model, log, rule_train):
         batch_size_test_rep = hp["batch_size_test"] // n_rep
         clsq_tmp, creg_tmp, perf_tmp = [], [], []
         env = get_class_instance(rule_test, config=hp)
-        dataset = Dataset(env, batch_size_test_rep)
-        for i_rep in range(n_rep):
+        dataset = CustomDataset(env, batch_size_test_rep)
+        dataloader = DataLoader(dataset, batch_size=batch_size_test_rep, shuffle=True, num_workers=4, pin_memory=True)
+
+        for i_rep, (inputs, labels, mask) in enumerate(dataloader):
+            if i_rep >= n_rep:
+                break
             with torch.no_grad():
-                inputs, labels = dataset.dataset()
-                mask = dataset.mask
+                inputs, labels, mask = inputs[0], labels[0], mask[0]  # Remove batch dimension from DataLoader
                 inputs, labels, mask = _gen_feed_dict(inputs, labels, mask, rule_test, hp, run_model.device)
                 c_lsq, c_reg, y_hat_test, _, labels = run_model(
                     inputs, labels, mask
@@ -337,6 +342,7 @@ def do_eval(run_model, log, rule_train):
     log["perf_min"].append(perf_tests_min.item())
 
     return log
+
 
 # def accuracy(logits, true_class_indices):
 #     # Reshape logits to shape [(batch * images), classes]
