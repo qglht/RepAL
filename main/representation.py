@@ -6,6 +6,7 @@ import ipdb
 import torch
 from torch import linalg as LA
 from main.dataset import Dataset, get_class_instance
+from main.train import _gen_feed_dict
 
 #### Not modified for neurogym yet!!
 
@@ -38,12 +39,17 @@ def representation(model, rules):
     elif rules is None:
         rules = hp["rules"]
 
+
     for rule in rules:
         env = get_class_instance(rule, config=hp)
         timing = env.timing
         # seq leng is the length of the cumulated timing
         seq_length = int(sum([v for k,v in timing.items()])/hp["dt"])
-        _, _, _, h, trial = model(rule=rule, batch_size= hp["batch_size_test"], seq_len=seq_length)
+        dataset = Dataset(env, hp["batch_size_test"], seq_len=seq_length)
+        inputs, labels = dataset.dataset()
+        mask = dataset.mask
+        inputs, labels, mask = _gen_feed_dict(inputs, labels, mask, rule, hp, model.device)
+        _, _, _, h, _ = model(inputs, labels, mask)
         # t_start = int(500 / hp["dt"])  # Important: Ignore the initial transition
         h_byepoch = get_indexes(hp['dt'], timing, seq_length, h, rule)
 

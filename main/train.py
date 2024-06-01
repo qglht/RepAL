@@ -56,7 +56,7 @@ def get_default_hp(ruleset: List[str]):
     hp = {
         "mode":"train",
         # batch size for training
-        "batch_size_train": 64,
+        "batch_size_train": 128,
         # batch_size for testing
         "batch_size_test": 512,
         # input type: normal, multi
