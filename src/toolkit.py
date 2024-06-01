@@ -106,7 +106,7 @@ def compute_dissimilarity(activation, hidden_size, lr, freeze, nopretrain ,devic
     )
     nopretrain = "nopretrain" if nopretrain else "pretrain"
     run_model = main.load_model(
-        f"models/{activation}_{hidden_size}_{lr}__{freeze}_train_{nopretrain}.pth",
+        f"../models/{activation}_{hidden_size}_{lr}__{freeze}_train_{nopretrain}.pth",
         hp,
         RNNLayer,
         device=device,
