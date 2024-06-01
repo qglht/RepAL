@@ -15,10 +15,30 @@ import ipdb
 from neurogym import TrialEnv
 from typing import List
 from main import get_class_instance
+from main import Dataset
 
 
 print_flag = False
 ######## mostly untouched ###############
+
+def _gen_feed_dict(inputs, labels, mask, rule, hp, device):
+    # Ensure all data is already on the correct device
+    inputs = torch.as_tensor(inputs, device=device)
+    labels = torch.as_tensor(labels, device=device)
+    mask = torch.as_tensor(mask, device=device)
+    n_time, batch_size = inputs.shape[:2]
+
+    new_shape = [n_time, batch_size, hp["rule_start"] + hp["n_rule"]]
+    x = torch.zeros(new_shape, dtype=torch.float32, device=device)
+    ind_rule = hp["rules"].index(rule)
+    x[:, :, :hp["rule_start"]] = inputs
+    x[:, :, hp["rule_start"] + ind_rule] = 1
+    inputs = x
+
+    mask = mask.flatten()
+    labels = labels.flatten()
+
+    return inputs, labels, mask
 
 
 def get_default_hp(ruleset: List[str]):
@@ -195,6 +215,9 @@ def train(run_model, optimizer, hp, log, freeze=False):
         )
     else:
         optim = optimizer(run_model.model.parameters(), lr=hp["learning_rate"])
+    
+    envs = {rule: get_class_instance(rule, config=hp) for rule in hp['rule_trains']}
+    datasets = {rule: Dataset(env, hp['batch_size_train']) for rule, env in zip(envs.keys(), envs.values())}
     while step * hp["batch_size_train"] <= hp["max_steps"]:
         try:
             # Validation
@@ -217,10 +240,13 @@ def train(run_model, optimizer, hp, log, freeze=False):
 
             # Training
             rule_train_now = hp["rng"].choice(hp["rule_trains"], p=hp["rule_probs"])
-
+            dataset = datasets[rule_train_now]
+            inputs, labels = dataset.dataset()
+            mask = dataset.mask
+            inputs, labels, mask = _gen_feed_dict(inputs, labels, mask, rule_train_now, hp, run_model.device)
             optim.zero_grad()
             c_lsq, c_reg, _, _, _ = run_model(
-                rule=rule_train_now, batch_size=hp["batch_size_train"]
+                inputs, labels, mask
             )
             loss = c_lsq + c_reg
             losses.append(loss.item())
@@ -251,11 +277,15 @@ def do_eval(run_model, log, rule_train):
         n_rep = 16
         batch_size_test_rep = hp["batch_size_test"] // n_rep
         clsq_tmp, creg_tmp, perf_tmp = [], [], []
-
+        env = get_class_instance(rule_test, config=hp)
+        dataset = Dataset(env, batch_size_test_rep)
         for i_rep in range(n_rep):
             with torch.no_grad():
+                inputs, labels = dataset.dataset()
+                mask = dataset.mask
+                inputs, labels, mask = _gen_feed_dict(inputs, labels, mask, rule_test, hp, run_model.device)
                 c_lsq, c_reg, y_hat_test, _, labels = run_model(
-                    rule=rule_test, batch_size=batch_size_test_rep
+                    inputs, labels, mask
                 )
 
             # Store costs directly as tensors to avoid multiple GPU to CPU transfers

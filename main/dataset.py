@@ -6,7 +6,7 @@ import torch
 import importlib
 
 class Dataset:
-    def __init__(self, env, batch_size, seq_len):
+    def __init__(self, env, batch_size, seq_len=400):
         self.batch_size = batch_size
         self.seq_len = seq_len
         self.env = env

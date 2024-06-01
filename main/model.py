@@ -5,27 +5,6 @@ from torch import nn, jit
 from main.dataset import Dataset, get_class_instance
 import numpy as np
 import ipdb
-# from main import *
-
-
-def _gen_feed_dict(inputs, labels, mask, rule, hp, device):
-    # Ensure all data is already on the correct device
-    inputs = torch.as_tensor(inputs, device=device)
-    labels = torch.as_tensor(labels, device=device)
-    mask = torch.as_tensor(mask, device=device)
-    n_time, batch_size = inputs.shape[:2]
-
-    new_shape = [n_time, batch_size, hp["rule_start"] + hp["n_rule"]]
-    x = torch.zeros(new_shape, dtype=torch.float32, device=device)
-    ind_rule = hp["rules"].index(rule)
-    x[:, :, :hp["rule_start"]] = inputs
-    x[:, :, hp["rule_start"] + ind_rule] = 1
-    inputs = x
-
-    mask = mask.flatten()
-    labels = labels.flatten()
-
-    return inputs, labels, mask
 
 class Model(nn.Module):
     def __init__(self, hp, RNNLayer):
@@ -72,13 +51,6 @@ class Run_Model(nn.Module):  # (jit.ScriptModule):
             nn.MSELoss() if hp["loss_type"] == "lsq" else nn.CrossEntropyLoss(reduction="none")
         )
 
-    def generate_trials(self, rule:str, hp, batch_size, seq_len):
-        # return gen_trials(rule, hp, mode, batch_size, self.device)
-        # TO DO : richer rule
-        # want to genertate 
-        env = get_class_instance(rule, config=hp)
-        return Dataset(env, batch_size, seq_len)
-
     def calculate_loss(self, output, mask, labels,  hidden, hp):
         # use mask to calculate loss of crossentropyloss
         loss = self.loss_fnc(output,labels)
@@ -94,12 +66,8 @@ class Run_Model(nn.Module):  # (jit.ScriptModule):
         return loss, loss_reg
 
     #     @jit.script_method
-    def forward(self, rule, batch_size=64, seq_len=400):  # , **kwargs):
+    def forward(self, inputs, labels, mask):  # , **kwargs):
         hp = self.hp
-        dataset = self.generate_trials(rule, hp, batch_size, seq_len=seq_len)
-        inputs, labels = dataset.dataset()
-        mask = dataset.mask
-        inputs, labels, mask = _gen_feed_dict(inputs, labels, mask, rule, hp, self.device)
         output, hidden = self.model(inputs)
         output = output.view(-1, hp["n_output"])
         loss, loss_reg = self.calculate_loss(output, mask, labels, hidden,hp)
