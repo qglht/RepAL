@@ -51,9 +51,14 @@ class NeuroGymDataset(Dataset):
         target_sample = self.current_targets[:, batch_idx, ...]
         mask_sample = self._create_mask(input_sample)
 
-        input_sample = torch.as_tensor(input_sample, device=self.device)
-        label_sample = torch.as_tensor(target_sample, device=self.device)
-        mask_sample = torch.as_tensor(mask_sample, device=self.device)
+        input_sample = torch.as_tensor(input_sample)
+        label_sample = torch.as_tensor(target_sample)
+        mask_sample = torch.as_tensor(mask_sample)
+
+        # Ensure tensors are on the correct device after they are created
+        input_sample = input_sample.to(self.device)
+        label_sample = label_sample.to(self.device)
+        mask_sample = mask_sample.to(self.device)
 
         return input_sample, label_sample, mask_sample
 
