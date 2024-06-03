@@ -218,7 +218,6 @@ def train(run_model, optimizer, hp, log, freeze=False):
     dataloaders = {rule: get_dataloader(env=rule, batch_size=hp["batch_size_train"], device=run_model.device, num_workers=4, hp=hp) for rule in hp["rule_trains"]}
 
     while step * hp["batch_size_train"] <= hp["max_steps"]:
-        print(step)
         try:
             # Validation
             if step % hp["display_step"] == 0:
