@@ -13,6 +13,17 @@ def get_class_instance(class_name, **kwargs):
     instance = class_(**kwargs)
     return instance
 
+class DatasetSingleton:
+    _instances = {}
+
+    @classmethod
+    def get_instance(cls, env, batch_size, seq_len, hp, **kwargs):
+        key = (env, batch_size, seq_len, frozenset(kwargs.items()))
+        if key not in cls._instances:
+            env_instance = get_class_instance(env, config=hp)
+            cls._instances[key] = ngym.Dataset(env_instance, batch_size=batch_size, seq_len=seq_len)
+        return cls._instances[key]
+
 class NeuroGymDataset(Dataset):
     def __init__(self, env, batch_size, device, hp, seq_len=400):
         self.num_samples = int(hp["max_steps"])
@@ -21,15 +32,11 @@ class NeuroGymDataset(Dataset):
         self.batch_size = batch_size
         self.seq_len = seq_len
         self.hp = hp
-        self.__init__env()
         self.current_inputs, self.current_targets = self._generate_data()
-        
-
-    def __init__env(self):
-        self.env = get_class_instance(self.env, config=self.hp)
     
     def _generate_data(self):
-        return ngym.Dataset(self.env, batch_size=self.batch_size, seq_len=self.seq_len)()
+        dataset = DatasetSingleton.get_instance(self.env, self.batch_size, self.seq_len, self.hp)
+        return dataset()
     
     def __len__(self):
         return self.num_samples
@@ -47,8 +54,6 @@ class NeuroGymDataset(Dataset):
         input_sample = torch.as_tensor(input_sample, device=self.device)
         label_sample = torch.as_tensor(target_sample, device=self.device)
         mask_sample = torch.as_tensor(mask_sample, device=self.device)
-
-    
 
         return input_sample, label_sample, mask_sample
 
