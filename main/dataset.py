@@ -82,7 +82,7 @@ def worker_init_fn(worker_id):
 
 def get_dataloader(env, batch_size, device, num_workers, hp, seq_len = 400):
     dataset = NeuroGymDataset(env, batch_size, device, hp, seq_len=seq_len)
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=True, worker_init_fn=worker_init_fn)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=False, worker_init_fn=worker_init_fn)
     return dataloader
 
     
