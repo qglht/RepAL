@@ -10,7 +10,7 @@
 #SBATCH --job-name=job123
 
 # set number of GPUs
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:8
 
 # mail alert at start, end and abortion of execution
 #SBATCH --mail-type=ALL
@@ -27,4 +27,15 @@ source activate dsa  # If necessary, depends on cluster setup
 poetry install  # Install additional Python packages as needed
 
 # Run the application and monitor GPU status in parallel
-poetry run python -m src.train
+(poetry run python -m src.pretrain) &
+(poetry run python -m src.train) &
+
+# PID of the application
+APP_PID=$!
+
+# Monitor GPU status every 60 seconds until the application finishes
+while kill -0 $APP_PID 2>/dev/null; do
+    echo "Checking GPU status during the application run:"
+    nvidia-smi
+    sleep 300
+done
