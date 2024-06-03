@@ -55,11 +55,6 @@ class NeuroGymDataset(Dataset):
         label_sample = torch.as_tensor(target_sample)
         mask_sample = torch.as_tensor(mask_sample)
 
-        # Ensure tensors are on the correct device after they are created
-        input_sample = input_sample.to(self.device)
-        label_sample = label_sample.to(self.device)
-        mask_sample = mask_sample.to(self.device)
-
         return input_sample, label_sample, mask_sample
 
     def _create_mask(self, inputs):
@@ -82,7 +77,7 @@ def worker_init_fn(worker_id):
 
 def get_dataloader(env, batch_size, device, num_workers, hp, seq_len = 400):
     dataset = NeuroGymDataset(env, batch_size, device, hp, seq_len=seq_len)
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=False, worker_init_fn=worker_init_fn)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=True, worker_init_fn=worker_init_fn)
     return dataloader
 
     

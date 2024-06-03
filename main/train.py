@@ -26,6 +26,10 @@ print_flag = False
 
 def _gen_feed_dict(inputs, labels, mask, rule, hp, device):
     # Ensure all data is already on the correct device
+    inputs = inputs.pin_memory().to(device)
+    labels = labels.pin_memory().to(device)
+    mask = mask.pin_memory().to(device)
+
     batch_size, n_time = inputs.shape[:2]
 
     new_shape = [n_time, batch_size, hp["rule_start"] + hp["n_rule"]]
