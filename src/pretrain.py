@@ -3,8 +3,16 @@ import torch
 import multiprocessing
 from src.toolkit import train_model
 import ipdb
+import warnings
+import logging
+
 
 if __name__ == "__main__":
+    # Suppress warnings
+    warnings.filterwarnings("ignore")
+
+    # Configure logging to show only errors
+    logging.basicConfig(level=logging.ERROR)
     multiprocessing.set_start_method(
         "spawn", force=True
     )  # Set multiprocessing to use 'spawn'
