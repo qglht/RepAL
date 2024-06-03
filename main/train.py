@@ -15,11 +15,10 @@ import ipdb
 from neurogym import TrialEnv
 from typing import List
 from main import get_class_instance
-from main import CustomDataset
+from main import get_dataloader
 import torch
 import time
 import numpy as np
-from torch.utils.data import DataLoader
 
 
 print_flag = False
@@ -27,18 +26,16 @@ print_flag = False
 
 def _gen_feed_dict(inputs, labels, mask, rule, hp, device):
     # Ensure all data is already on the correct device
-    inputs = torch.as_tensor(inputs, device=device)
-    labels = torch.as_tensor(labels, device=device)
-    mask = torch.as_tensor(mask, device=device)
-    n_time, batch_size = inputs.shape[:2]
+    batch_size, n_time = inputs.shape[:2]
 
     new_shape = [n_time, batch_size, hp["rule_start"] + hp["n_rule"]]
     x = torch.zeros(new_shape, dtype=torch.float32, device=device)
     ind_rule = hp["rules"].index(rule)
-    x[:, :, :hp["rule_start"]] = inputs
+    x[:, :, :hp["rule_start"]] = torch.transpose(inputs, 0, 1)
     x[:, :, hp["rule_start"] + ind_rule] = 1
     inputs = x
-
+    mask = torch.transpose(mask, 0, 1)
+    labels = torch.transpose(labels, 0, 1)
     mask = mask.flatten()
     labels = labels.flatten()
 
@@ -130,7 +127,7 @@ def set_hyperparameters(
     model_dir,
     hp=None,
     max_steps=1e7,
-    display_step=500,
+    display_step=100,
     ruleset: List[str] = None,
     rule_trains: List[str] = None,
     rule_prob_map=None,
@@ -218,11 +215,10 @@ def train(run_model, optimizer, hp, log, freeze=False):
     else:
         optim = optimizer(run_model.model.parameters(), lr=hp["learning_rate"])
     
-    envs = {rule: get_class_instance(rule, config=hp) for rule in hp['rule_trains']}
-    datasets = {rule: CustomDataset(env, hp['batch_size_train']) for rule, env in zip(envs.keys(), envs.values())}
-    dataloaders = {rule: DataLoader(dataset, batch_size=hp['batch_size_train'], shuffle=True, num_workers=4, pin_memory=True) for rule, dataset in datasets.items()}
+    dataloaders = {rule: get_dataloader(env=rule, batch_size=hp["batch_size_train"], device=run_model.device, num_workers=4, hp=hp) for rule in hp["rule_trains"]}
 
     while step * hp["batch_size_train"] <= hp["max_steps"]:
+        print(step)
         try:
             # Validation
             if step % hp["display_step"] == 0:
@@ -231,7 +227,7 @@ def train(run_model, optimizer, hp, log, freeze=False):
                 log = do_eval(run_model, log, hp["rule_trains"])
                 # if loss is not decreasing anymore, stop training
                 # check if minimum performance is above target
-                if log["perf_min"][-1] > hp["target_perf"]:
+                if log["perf_min"][-1] > hp["target_perf"] and len(losses) > hp["batch_size_train"] * 2:
                     # Check if the average decrease in loss is below a certain threshold
                     recent_losses = losses[-hp["batch_size_train"] * 2 :]
                     avg_loss_change = np.mean(np.diff(recent_losses))
@@ -244,17 +240,17 @@ def train(run_model, optimizer, hp, log, freeze=False):
             # Training
             rule_train_now = hp["rng"].choice(hp["rule_trains"], p=hp["rule_probs"])
             dataloader = dataloaders[rule_train_now]
-            for inputs, labels, mask in dataloader:
-                inputs, labels, mask = _gen_feed_dict(inputs, labels, mask, rule_train_now, hp, run_model.device)
-                optim.zero_grad()
-                c_lsq, c_reg, _, _, _ = run_model(
-                    inputs, labels, mask
-                )
-                loss = c_lsq + c_reg
-                losses.append(loss.item())
-                loss.backward()
-                optim.step()
-                step += 1
+            inputs, labels, mask = next(iter(dataloader))
+            inputs, labels, mask = _gen_feed_dict(inputs, labels, mask, rule_train_now, hp, run_model.device)
+            optim.zero_grad()
+            c_lsq, c_reg, _, _, _ = run_model(
+                inputs, labels, mask
+            )
+            loss = c_lsq + c_reg
+            losses.append(loss.item())
+            loss.backward()
+            optim.step()
+            step += 1
 
         except KeyboardInterrupt:
             print("Optimization interrupted by user")
@@ -274,20 +270,15 @@ def do_eval(run_model, log, rule_train):
     print(
         f"Trial {log['trials'][-1]:7d} | Time {log['times'][-1]:0.2f} s | Now training {rule_name_print}"
     )
-
     for rule_test in hp["rules"]:
         n_rep = 16
         batch_size_test_rep = hp["batch_size_test"] // n_rep
         clsq_tmp, creg_tmp, perf_tmp = [], [], []
-        env = get_class_instance(rule_test, config=hp)
-        dataset = CustomDataset(env, batch_size_test_rep)
-        dataloader = DataLoader(dataset, batch_size=batch_size_test_rep, shuffle=True, num_workers=4, pin_memory=True)
-
+        dataloader = get_dataloader(env=rule_test, batch_size=batch_size_test_rep, device=run_model.device, num_workers=4, hp=hp)
         for i_rep, (inputs, labels, mask) in enumerate(dataloader):
             if i_rep >= n_rep:
                 break
             with torch.no_grad():
-                inputs, labels, mask = inputs[0], labels[0], mask[0]  # Remove batch dimension from DataLoader
                 inputs, labels, mask = _gen_feed_dict(inputs, labels, mask, rule_test, hp, run_model.device)
                 c_lsq, c_reg, y_hat_test, _, labels = run_model(
                     inputs, labels, mask
