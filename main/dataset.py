@@ -25,7 +25,7 @@ class DatasetSingleton:
         return cls._instances[key]
 
 class NeuroGymDataset(Dataset):
-    def __init__(self, env, batch_size, device, hp, seq_len=400):
+    def __init__(self, env, batch_size, device, hp, seq_len):
         self.num_samples = int(hp["max_steps"])
         self.device = device
         self.env = env
@@ -75,8 +75,8 @@ class NeuroGymDataset(Dataset):
 def worker_init_fn(worker_id):
     np.random.seed(np.random.get_state()[1][0] + worker_id)
 
-def get_dataloader(env, batch_size, device, num_workers, hp):
-    dataset = NeuroGymDataset(env, batch_size, device, hp, seq_len=400)
+def get_dataloader(env, batch_size, device, num_workers, hp, seq_len = 400):
+    dataset = NeuroGymDataset(env, batch_size, device, hp, seq_len=seq_len)
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=True, worker_init_fn=worker_init_fn)
     return dataloader
 
