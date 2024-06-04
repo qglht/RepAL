@@ -23,7 +23,7 @@ similarity-repository = {git = "https://github.com/nacloos/similarity-repository
 rsatoolbox = "^0.1.5"
 pytorch-lightning = "^2.2.2"
 neurogym = "^0.0.2"
-gym = "^0.23.1"
+gym = {git = "https://github.com/openai/gym.git", branch="0.23.1"}
 
 
 [build-system]
