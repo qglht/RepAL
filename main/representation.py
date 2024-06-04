@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import ipdb
 import torch
 from torch import linalg as LA
-from main.train import _gen_feed_dict
 from main import get_dataloader, get_class_instance
 
 #### Not modified for neurogym yet!!
@@ -48,7 +47,6 @@ def representation(model, rules):
         dataloader = get_dataloader(env=rule, batch_size=hp["batch_size_test"], device=model.device, num_workers=4, hp=hp,seq_len=seq_length)
         inputs, labels, mask = next(iter(dataloader))
         with torch.no_grad():
-            inputs, labels, mask = _gen_feed_dict(inputs, labels, mask, rule, hp, model.device)
             _, _, _, h, _ = model(inputs, labels, mask)
             h_byepoch = get_indexes(hp['dt'], timing, seq_length, h, rule)
 

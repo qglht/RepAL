@@ -24,24 +24,6 @@ import numpy as np
 print_flag = False
 ######## mostly untouched ###############
 
-def _gen_feed_dict(inputs, labels, mask, rule, hp, device):
-    # Ensure all data is already on the correct device
-    batch_size, n_time = inputs.shape[:2]
-
-    new_shape = [n_time, batch_size, hp["rule_start"] + hp["n_rule"]]
-    x = torch.zeros(new_shape, dtype=torch.float32, device=device)
-    ind_rule = hp["rules"].index(rule)
-    x[:, :, :hp["rule_start"]] = torch.transpose(inputs, 0, 1)
-    x[:, :, hp["rule_start"] + ind_rule] = 1
-    inputs = x
-    mask = torch.transpose(mask, 0, 1)
-    labels = torch.transpose(labels, 0, 1)
-    mask = mask.flatten()
-    labels = labels.flatten()
-
-    return inputs, labels, mask
-
-
 def get_default_hp(ruleset: List[str]):
     """Get a default hp.
 
@@ -215,7 +197,7 @@ def train(run_model, optimizer, hp, log, freeze=False):
     else:
         optim = optimizer(run_model.model.parameters(), lr=hp["learning_rate"])
     
-    dataloaders = {rule: get_dataloader(env=rule, batch_size=hp["batch_size_train"], device=run_model.device, num_workers=4, hp=hp) for rule in hp["rule_trains"]}
+    dataloaders = {rule: get_dataloader(env=rule, batch_size=hp["batch_size_train"], device=run_model.device, num_workers=4, shuffle=False, hp=hp) for rule in hp["rule_trains"]}
 
     while step * hp["batch_size_train"] <= hp["max_steps"]:
         try:
@@ -224,10 +206,7 @@ def train(run_model, optimizer, hp, log, freeze=False):
                 log["trials"].append(step * hp["batch_size_train"])
                 log["times"].append(time.time() - t_start)
                 log = do_eval(run_model, log, hp["rule_trains"])
-                # if loss is not decreasing anymore, stop training
-                # check if minimum performance is above target
                 if log["perf_min"][-1] > hp["target_perf"] and len(losses) > hp["batch_size_train"] * 2:
-                    # Check if the average decrease in loss is below a certain threshold
                     recent_losses = losses[-hp["batch_size_train"] * 2 :]
                     avg_loss_change = np.mean(np.diff(recent_losses))
                     if abs(avg_loss_change) < loss_change_threshold:
@@ -240,7 +219,8 @@ def train(run_model, optimizer, hp, log, freeze=False):
             rule_train_now = hp["rng"].choice(hp["rule_trains"], p=hp["rule_probs"])
             dataloader = dataloaders[rule_train_now]
             inputs, labels, mask = next(iter(dataloader))
-            inputs, labels, mask = _gen_feed_dict(inputs, labels, mask, rule_train_now, hp, run_model.device)
+            inputs, labels, mask = inputs.to(run_model.device), labels.to(run_model.device), mask.to(run_model.device)
+            # move that to dataset class of Pytorch before feeding it to dataloader in __getitem__
             optim.zero_grad(set_to_none=True)
             c_lsq, c_reg, _, _, _ = run_model(
                 inputs, labels, mask
@@ -273,15 +253,15 @@ def do_eval(run_model, log, rule_train):
         n_rep = 16
         batch_size_test_rep = hp["batch_size_test"] // n_rep
         clsq_tmp, creg_tmp, perf_tmp = [], [], []
-        dataloader = get_dataloader(env=rule_test, batch_size=batch_size_test_rep, device=run_model.device, num_workers=4, hp=hp)
-        for i_rep, (inputs, labels, mask) in enumerate(dataloader):
-            if i_rep >= n_rep:
-                break
+        dataloader = get_dataloader(env=rule_test, batch_size=batch_size_test_rep, device=run_model.device, num_workers=4, hp=hp, shuffle=False)
+        i_rep = 0
+        while i_rep < n_rep:
             with torch.no_grad():
-                inputs, labels, mask = _gen_feed_dict(inputs, labels, mask, rule_test, hp, run_model.device)
+                inputs, labels, mask = next(iter(dataloader))
                 c_lsq, c_reg, y_hat_test, _, labels = run_model(
                     inputs, labels, mask
                 )
+                i_rep += 1
 
             # Store costs directly as tensors to avoid multiple GPU to CPU transfers
             clsq_tmp.append(c_lsq)

@@ -15,8 +15,6 @@ from main.dataset import Dataset, get_class_instance
 
 if __name__ == "__main__":
 
-    multiprocessing.set_start_method(
-        "spawn", force=True)
     # )  # Set multiprocessing to use 'spawn'
     # config = load_config("config.yaml")
 

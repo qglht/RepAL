@@ -13,71 +13,96 @@ def get_class_instance(class_name, **kwargs):
     instance = class_(**kwargs)
     return instance
 
-class DatasetSingleton:
-    _instances = {}
+# class DatasetSingleton:
+#     _instances = {}
 
-    @classmethod
-    def get_instance(cls, env, batch_size, seq_len, hp, **kwargs):
-        key = (env, batch_size, seq_len, frozenset(kwargs.items()))
-        if key not in cls._instances:
-            env_instance = get_class_instance(env, config=hp)
-            cls._instances[key] = ngym.Dataset(env_instance, batch_size=batch_size, seq_len=seq_len)
-        return cls._instances[key]
-
+#     @classmethod
+#     def get_instance(cls, env, batch_size, seq_len, hp, **kwargs):
+#         key = (env, batch_size, seq_len, frozenset(kwargs.items()))
+#         if key not in cls._instances:
+#             env_instance = get_class_instance(env, config=hp)
+#             cls._instances[key] = ngym.Dataset(env_instance, batch_size=batch_size, seq_len=seq_len)
+#         return cls._instances[key]
+    
+def swap_axes(inputs, targets):
+    return np.swapaxes(inputs, 0, 1), np.swapaxes(targets, 0, 1)
+    
 class NeuroGymDataset(Dataset):
-    def __init__(self, env, batch_size, device, hp, seq_len):
+    def __init__(self, env, batch_size, device, hp, seq_len, num_pregenerated=512):
+        self.num_pregenerated = num_pregenerated
         self.num_samples = int(hp["max_steps"])
         self.device = device
         self.env = env
         self.batch_size = batch_size
         self.seq_len = seq_len
         self.hp = hp
-        self.current_inputs, self.current_targets = self._generate_data()
+        self.dataset = None
+        self._generate_data()
+
+    def gen_feed_data(self, inputs, labels):
+        batch_size, n_time = inputs.shape[:2]
+
+        new_shape = (batch_size, n_time, self.hp["rule_start"] + self.hp["n_rule"])  
+        x = np.zeros(new_shape, dtype=np.float32)  # np.zeros instead of torch.zeros
+        ind_rule = self.hp["rules"].index(self.env)
+        x[:, :, :self.hp["rule_start"]] = inputs  # Slicing works the same
+        x[:, :, self.hp["rule_start"] + ind_rule] = 1  # Setting values
+        inputs = x
+
+        return inputs, labels
     
     def _generate_data(self):
-        dataset = DatasetSingleton.get_instance(self.env, self.batch_size, self.seq_len, self.hp)
-        return dataset()
-    
+        env_instance = get_class_instance(self.env, config=self.hp)
+        dataset = ngym.Dataset(env_instance, batch_size=512, seq_len=self.seq_len)
+        inputs, targets = np.empty((self.num_pregenerated, self.seq_len, self.hp["n_input"])), np.empty((self.num_pregenerated, self.seq_len))
+        for i in range(self.num_pregenerated//512):
+            input_sample, target_sample = dataset()
+            input_sample, target_sample = swap_axes(input_sample, target_sample)
+            input_sample, target_sample = self.gen_feed_data(input_sample, target_sample)
+            inputs[i*512:(i+1)*512] = input_sample
+            targets[i*512:(i+1)*512] = target_sample
+        input_sample, target_sample = dataset()
+        input_sample, target_sample = swap_axes(input_sample, target_sample)
+        input_sample, target_sample = self.gen_feed_data(input_sample, target_sample)
+        inputs[self.num_pregenerated//512*512:] = input_sample[:self.num_pregenerated%512]
+        targets[self.num_pregenerated//512*512:] = target_sample[:self.num_pregenerated%512]
+        masks = self._create_mask(inputs)
+        # convert inputs, targets, masks to torch tensors
+        inputs, targets, masks = torch.tensor(inputs), torch.tensor(targets), torch.tensor(masks)
+        self.dataset = (inputs, targets, masks) if self.dataset is None else (torch.cat((self.dataset[0], inputs), dim=0), torch.cat((self.dataset[1], targets), dim=0), torch.cat((self.dataset[2], masks), dim=0))
+
     def __len__(self):
         return self.num_samples
 
     def __getitem__(self, idx):
-
-        if idx % self.batch_size == 0:
-            self.current_inputs, self.current_targets = self._generate_data()
-
-        batch_idx = idx % self.batch_size
-        input_sample = self.current_inputs[:, batch_idx, ...]
-        target_sample = self.current_targets[:, batch_idx, ...]
-        mask_sample = self._create_mask(input_sample)
-
-        input_sample = torch.as_tensor(input_sample, device=self.device)
-        label_sample = torch.as_tensor(target_sample, device=self.device)
-        mask_sample = torch.as_tensor(mask_sample, device=self.device)
-
-        return input_sample, label_sample, mask_sample
+        try:
+            return self.dataset[0][idx,:,:], self.dataset[1][idx,:,:], self.dataset[2][idx,:,:]
+        except:
+            self._generate_data()
+            return self.__getitem__(idx)
 
     def _create_mask(self, inputs):
-        n_time, _ = inputs.shape
-        zero_mask = np.all(inputs == 0 , axis=1)
+        n_sample, n_time, _ = inputs.shape
+        zero_mask = np.all(inputs == 0 , axis=2)
         mask = np.where(zero_mask, 5, 1)
-        count = 0
-        for i in range(n_time):
-            if mask[i] == 5:
-                if count < 4:
-                    mask[i] = 2 + count
-                count += 1
-            else:
-                count = 0
+        for b in range(n_sample):
+            count = 0
+            for i in range(n_time):
+                if mask[b,i] == 5:
+                    if count < 4:
+                        mask[b,i] = 2 + count
+                    count += 1
+                else:
+                    count = 0
         return mask
     
 
 # def worker_init_fn(worker_id):
 #     np.random.seed(np.random.get_state()[1][0] + worker_id)
 
-def get_dataloader(env, batch_size, device, num_workers, hp, seq_len = 400):
+def get_dataloader(env, batch_size, device, num_workers, hp, shuffle, seq_len = 400):
     dataset = NeuroGymDataset(env, batch_size, device, hp, seq_len=seq_len)
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=False)# worker_init_fn=worker_init_fn)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True)# worker_init_fn=worker_init_fn)
     return dataloader
 
     
