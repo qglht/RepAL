@@ -47,9 +47,10 @@ def representation(model, rules):
         seq_length = int(sum([v for k,v in timing.items()])/hp["dt"])
         dataloader = get_dataloader(env=rule, batch_size=hp["batch_size_test"], device=model.device, num_workers=4, hp=hp,seq_len=seq_length)
         inputs, labels, mask = next(iter(dataloader))
-        inputs, labels, mask = _gen_feed_dict(inputs, labels, mask, rule, hp, model.device)
-        _, _, _, h, _ = model(inputs, labels, mask)
-        h_byepoch = get_indexes(hp['dt'], timing, seq_length, h, rule)
+        with torch.no_grad():
+            inputs, labels, mask = _gen_feed_dict(inputs, labels, mask, rule, hp, model.device)
+            _, _, _, h, _ = model(inputs, labels, mask)
+            h_byepoch = get_indexes(hp['dt'], timing, seq_length, h, rule)
 
     return h_byepoch
 

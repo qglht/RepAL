@@ -51,9 +51,9 @@ class NeuroGymDataset(Dataset):
         target_sample = self.current_targets[:, batch_idx, ...]
         mask_sample = self._create_mask(input_sample)
 
-        input_sample = torch.as_tensor(input_sample)
-        label_sample = torch.as_tensor(target_sample)
-        mask_sample = torch.as_tensor(mask_sample)
+        input_sample = torch.as_tensor(input_sample, device=self.device)
+        label_sample = torch.as_tensor(target_sample, device=self.device)
+        mask_sample = torch.as_tensor(mask_sample, device=self.device)
 
         return input_sample, label_sample, mask_sample
 
@@ -72,12 +72,12 @@ class NeuroGymDataset(Dataset):
         return mask
     
 
-def worker_init_fn(worker_id):
-    np.random.seed(np.random.get_state()[1][0] + worker_id)
+# def worker_init_fn(worker_id):
+#     np.random.seed(np.random.get_state()[1][0] + worker_id)
 
 def get_dataloader(env, batch_size, device, num_workers, hp, seq_len = 400):
     dataset = NeuroGymDataset(env, batch_size, device, hp, seq_len=seq_len)
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=True, worker_init_fn=worker_init_fn)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=False)# worker_init_fn=worker_init_fn)
     return dataloader
 
     

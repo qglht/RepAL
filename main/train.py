@@ -26,10 +26,6 @@ print_flag = False
 
 def _gen_feed_dict(inputs, labels, mask, rule, hp, device):
     # Ensure all data is already on the correct device
-    inputs = inputs.pin_memory().to(device, non_blocking=True)
-    labels = labels.pin_memory().to(device, non_blocking=True)
-    mask = mask.pin_memory().to(device, non_blocking=True)
-
     batch_size, n_time = inputs.shape[:2]
 
     new_shape = [n_time, batch_size, hp["rule_start"] + hp["n_rule"]]
@@ -245,7 +241,7 @@ def train(run_model, optimizer, hp, log, freeze=False):
             dataloader = dataloaders[rule_train_now]
             inputs, labels, mask = next(iter(dataloader))
             inputs, labels, mask = _gen_feed_dict(inputs, labels, mask, rule_train_now, hp, run_model.device)
-            optim.zero_grad()
+            optim.zero_grad(set_to_none=True)
             c_lsq, c_reg, _, _, _ = run_model(
                 inputs, labels, mask
             )

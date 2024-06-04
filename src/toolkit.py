@@ -45,6 +45,7 @@ def train_model(activation, hidden_size, lr, freeze, mode, no_pretraining, devic
     if mode == "train":
         if no_pretraining:
             run_model = main.Run_Model(hp, RNNLayer, device)
+            run_model = torch.compile(run_model,mode="reduce-overhead")
             main.train(run_model, optimizer, hp, log, freeze=freeze)
             run_model.save(f"models/{activation}_{hidden_size}_{lr}__{freeze}_{mode}_nopretrain.pth")
         else: 
@@ -54,10 +55,12 @@ def train_model(activation, hidden_size, lr, freeze, mode, no_pretraining, devic
                 RNNLayer,
                 device=device,
             )
+            run_model = torch.compile(run_model,mode="reduce-overhead")
             main.train(run_model, optimizer, hp, log, freeze=freeze)
             run_model.save(f"models/{activation}_{hidden_size}_{lr}__{freeze}_{mode}_pretrain.pth")
     elif mode == "pretrain":
         run_model = main.Run_Model(hp, RNNLayer, device)
+        run_model = torch.compile(run_model,mode="reduce-overhead")
         main.train(run_model, optimizer, hp, log, freeze=freeze)
         run_model.save(f"models/{activation}_{hidden_size}_{lr}_{mode}.pth")
     return run_model
