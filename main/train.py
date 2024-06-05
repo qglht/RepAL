@@ -219,7 +219,9 @@ def train(run_model, optimizer, hp, log, freeze=False):
             rule_train_now = hp["rng"].choice(hp["rule_trains"], p=hp["rule_probs"])
             dataloader = dataloaders[rule_train_now]
             inputs, labels, mask = next(iter(dataloader))
-            inputs, labels, mask = inputs.to(run_model.device), labels.to(run_model.device), mask.to(run_model.device)
+            # swap axes of inputs and labels to match the shape of the model
+            inputs, labels, mask = inputs.permute(1, 0, 2), labels.permute(1, 0), mask.permute(1, 0)
+            inputs, labels, mask = inputs.to(run_model.device), labels.to(run_model.device).flatten().long(), mask.to(run_model.device).flatten().long()
             # move that to dataset class of Pytorch before feeding it to dataloader in __getitem__
             optim.zero_grad(set_to_none=True)
             c_lsq, c_reg, _, _, _ = run_model(
@@ -258,6 +260,8 @@ def do_eval(run_model, log, rule_train):
         while i_rep < n_rep:
             with torch.no_grad():
                 inputs, labels, mask = next(iter(dataloader))
+                inputs, labels, mask = inputs.permute(1, 0, 2), labels.permute(1, 0), mask.permute(1, 0)
+                inputs, labels, mask = inputs.to(run_model.device), labels.to(run_model.device).flatten().long(), mask.to(run_model.device).flatten().long()
                 c_lsq, c_reg, y_hat_test, _, labels = run_model(
                     inputs, labels, mask
                 )

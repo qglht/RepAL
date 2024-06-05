@@ -68,7 +68,7 @@ class NeuroGymDataset(Dataset):
         targets[self.num_pregenerated//512*512:] = target_sample[:self.num_pregenerated%512]
         masks = self._create_mask(inputs)
         # convert inputs, targets, masks to torch tensors
-        inputs, targets, masks = torch.tensor(inputs), torch.tensor(targets), torch.tensor(masks)
+        inputs, targets, masks = torch.tensor(inputs).to(torch.float32), torch.tensor(targets).to(torch.float32), torch.tensor(masks).to(torch.float32)
         self.dataset = (inputs, targets, masks) if self.dataset is None else (torch.cat((self.dataset[0], inputs), dim=0), torch.cat((self.dataset[1], targets), dim=0), torch.cat((self.dataset[2], masks), dim=0))
 
     def __len__(self):
@@ -76,7 +76,7 @@ class NeuroGymDataset(Dataset):
 
     def __getitem__(self, idx):
         try:
-            return self.dataset[0][idx,:,:], self.dataset[1][idx,:,:], self.dataset[2][idx,:,:]
+            return self.dataset[0][idx,:,:], self.dataset[1][idx,:], self.dataset[2][idx,:]
         except:
             self._generate_data()
             return self.__getitem__(idx)
@@ -84,7 +84,7 @@ class NeuroGymDataset(Dataset):
     def _create_mask(self, inputs):
         n_sample, n_time, _ = inputs.shape
         zero_mask = np.all(inputs == 0 , axis=2)
-        mask = np.where(zero_mask, 5, 1)
+        mask = np.where(zero_mask, 5.0, 1.0).astype(np.float32)
         for b in range(n_sample):
             count = 0
             for i in range(n_time):
