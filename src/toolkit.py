@@ -74,7 +74,7 @@ def generate_data(env):
     hp, _, _ = main.set_hyperparameters(
         model_dir="debug", hp={}, ruleset=all_rules
     )
-    main.generate_data(env, hp, mode="train", num_pregenerated=100000)
+    main.generate_data(env, hp, mode="train", num_pregenerated=10000)
 
     hp, _, _ = main.set_hyperparameters(
         model_dir="debug", hp={"mode": "test"}, ruleset=all_rules

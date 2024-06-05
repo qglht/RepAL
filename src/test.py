@@ -31,7 +31,7 @@ if __name__ == "__main__":
     # i = 0  # Index to cycle through available devices
 
     # device = devices[0]
-    train_model("softplus", 128, 0.001, False, "train", False, "cpu")
+    train_model("softplus", 128, 0.001, False, "pretrain", False, "cpu")
     # curves_frozen = []
     # curves_frozen_names = []
     # curves_unfrozen = []
