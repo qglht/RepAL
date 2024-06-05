@@ -40,10 +40,12 @@ def create_mask(inputs):
                 count = 0
     return mask
 
-def generate_data(env, hp, seq_len=400, num_pregenerated=100000):
+def generate_data(env, hp, mode, seq_len=400, num_pregenerated=100000):
     env_instance = get_class_instance(env, config=hp)
+    if mode == "test":
+        timing = env_instance.timing
+        seq_len = int(sum([v for k,v in timing.items()])/hp["dt"])
     dataset = ngym.Dataset(env_instance, batch_size=32, seq_len=seq_len)
-    
     inputs_list = []
     targets_list = []
     
@@ -74,5 +76,5 @@ def generate_data(env, hp, seq_len=400, num_pregenerated=100000):
     inputs, targets, masks = torch.tensor(inputs).to(torch.float32), torch.tensor(targets).to(torch.float32), torch.tensor(masks).to(torch.float32)
     dataset = {'inputs': inputs, 'targets': targets, 'masks': masks}
     
-    with open(f'data/{env}_data.pkl', 'wb') as f:
+    with open(f'data/{env}_{mode}.pkl', 'wb') as f:
         pickle.dump(dataset, f)

@@ -4,14 +4,15 @@ import pickle
 
     
 class NeuroGymDataset(Dataset):
-    def __init__(self, env):
+    def __init__(self, env, mode):
         self.env = env
         self.dataset = None
+        self.mode = mode
         self.load_data()
     
     def load_data(self):
         # load the pickle data file
-        with open(f'data/{self.env}_data.pkl', 'rb') as f:
+        with open(f'data/{self.env}_{self.mode}.pkl', 'rb') as f:
             self.dataset = pickle.load(f)
     
     def __len__(self):
@@ -20,9 +21,10 @@ class NeuroGymDataset(Dataset):
     def __getitem__(self, idx):
         return self.dataset["inputs"][idx], self.dataset["targets"][idx], self.dataset["masks"][idx]
 
-def get_dataloader(env, batch_size, num_workers, shuffle, train_split=0.8):
-    dataset = NeuroGymDataset(env)
+def get_dataloader(env, batch_size, num_workers, shuffle, mode="train", train_split=0.8):
+    dataset = NeuroGymDataset(env, mode=mode)
     
+    #TODO: Add an argument to be able to be able to generate dataset on the go
     # Determine the size of train and test sets
     total_samples = len(dataset)
     train_size = int(train_split * total_samples)
