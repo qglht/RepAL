@@ -112,6 +112,7 @@ models/
 
 # data
 .npy
+data/
 
 # pickle
 .pickle

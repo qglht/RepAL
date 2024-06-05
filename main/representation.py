@@ -40,6 +40,7 @@ def representation(model, rules):
 
 
     for rule in rules:
+        # TODO : think about taking the good mode for the task otherwise the timing will be wrong
         env = get_class_instance(rule, config=hp)
         timing = env.timing
         # seq leng is the length of the cumulated timing

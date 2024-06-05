@@ -14,15 +14,18 @@ import numpy as np
 import ipdb
 from neurogym import TrialEnv
 from typing import List
-from main import get_class_instance
-from main import get_dataloader
 import torch
 import time
 import numpy as np
-
+import main
+import os
 
 print_flag = False
 ######## mostly untouched ###############
+
+def create_directory_if_not_exists(directory):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
 def get_default_hp(ruleset: List[str]):
     """Get a default hp.
@@ -33,7 +36,7 @@ def get_default_hp(ruleset: List[str]):
         hp : a dictionary containing training hpuration
     """
     basic_kwargs = {'dt':20, "mode":"train", "rng":np.random.RandomState(0)}
-    env = get_class_instance(ruleset[0],config=basic_kwargs)
+    env = main.get_class_instance(ruleset[0],config=basic_kwargs)
     n_rule = len(ruleset)
     n_input, n_output = env.observation_space.shape[0] + n_rule, env.action_space.n
     hp = {
@@ -99,6 +102,7 @@ def get_default_hp(ruleset: List[str]):
         # intelligent synapses parameters, tuple (c, ksi)
         "c_intsyn": 0,
         "ksi_intsyn": 0,
+        "num_epochs": 10,
     }
 
     return hp
@@ -108,7 +112,6 @@ def get_default_hp(ruleset: List[str]):
 def set_hyperparameters(
     model_dir,
     hp=None,
-    max_steps=1e7,
     display_step=10,
     ruleset: List[str] = None,
     rule_trains: List[str] = None,
@@ -122,7 +125,7 @@ def set_hyperparameters(
     Args:
         model_dir: str, training directory
         hp: dictionary of hyperparameters
-        max_steps: int, maximum number of training steps
+        num_epochs: int, maximum number of training steps
         display_step: int, display steps
         ruleset: the set of rules to train
         rule_trains: list of rules to train, if None then all rules possible
@@ -144,7 +147,6 @@ def set_hyperparameters(
     hp["seed"] = seed
     hp["rng"] = np.random.RandomState(seed)
     hp["model_dir"] = model_dir
-    hp["max_steps"] = max_steps
     hp["display_step"] = display_step
     hp["decay"] = math.exp(-hp["dt"] / hp["tau"])  # 1 - hp['dt']/hp['tau']
     hp["rule_trains"] = rule_trains
@@ -153,13 +155,6 @@ def set_hyperparameters(
     # Assign probabilities for rule_trains.
     if rule_prob_map is None:
         rule_prob_map = dict()
-
-    # Turn into rule_trains format
-    hp["rule_probs"] = None
-    if hasattr(hp["rule_trains"], "__iter__"):
-        # Set default as 1.
-        rule_prob = np.array([rule_prob_map.get(r, 1.0) for r in hp["rule_trains"]])
-        hp["rule_probs"] = list(rule_prob / np.sum(rule_prob))
 
     # penalty on deviation from initial weight
     if hp["l2_weight_init"] > 0:
@@ -185,11 +180,11 @@ def set_hyperparameters(
 
     return hp, log, optimizer  # , model
 
-def train(run_model, optimizer, hp, log, freeze=False):
-    step = 0
+def train(run_model, optimizer, hp, log, name, freeze=False):
+
     t_start = time.time()
     losses = []
-    loss_change_threshold = 1e-3  # Threshold for change in loss to consider stopping
+    loss_change_threshold = 1e-2  # Threshold for change in loss to consider stopping
     if freeze:
         optim = optimizer(
             [run_model.model.rnn.rnncell.weight_ih], lr=hp["learning_rate"]
@@ -197,51 +192,66 @@ def train(run_model, optimizer, hp, log, freeze=False):
     else:
         optim = optimizer(run_model.model.parameters(), lr=hp["learning_rate"])
     
-    dataloaders = {rule: get_dataloader(env=rule, batch_size=hp["batch_size_train"], device=run_model.device, num_workers=4, shuffle=False, hp=hp) for rule in hp["rule_trains"]}
-
-    while step * hp["batch_size_train"] <= hp["max_steps"]:
-        try:
-            # Validation
-            if step % hp["display_step"] == 0:
-                log["trials"].append(step * hp["batch_size_train"])
-                log["times"].append(time.time() - t_start)
-                log = do_eval(run_model, log, hp["rule_trains"])
-                if log["perf_min"][-1] > hp["target_perf"] and len(losses) > hp["batch_size_train"] * 2:
-                    recent_losses = losses[-hp["batch_size_train"] * 2 :]
-                    avg_loss_change = np.mean(np.diff(recent_losses))
-                    if abs(avg_loss_change) < loss_change_threshold:
-                        print(
-                            "Perf reached the target: {:0.2f}".format(hp["target_perf"])
-                        )
-                        break
+    dataloaders = {rule: main.get_dataloader(env=rule, batch_size=hp["batch_size_train"], num_workers=4, shuffle=False) for rule in hp["rule_trains"]}
+    
+    for epoch in range(hp["num_epochs"]):
+        epoch_loss = 0.0
+        
+        # Create an iterator for each dataloader
+        dataloader_iterators = {rule: iter(dataloaders[rule]["train"]) for rule in hp["rule_trains"]}
+        
+        # Determine the maximum number of batches (using the longest dataloader)
+        max_batches = max(len(dataloaders[rule]["train"]) for rule in hp["rule_trains"])
+        print(f"Epoch {epoch} | Max batches: {max_batches}")
+        for batch_idx in range(max_batches):
+            # Shuffle the list of rules for each batch
+            shuffled_rules = hp["rng"].permutation(hp["rule_trains"])
             
-            print(step * hp["batch_size_train"])
-            # Training
-            rule_train_now = hp["rng"].choice(hp["rule_trains"], p=hp["rule_probs"])
-            dataloader = dataloaders[rule_train_now]
-            inputs, labels, mask = next(iter(dataloader))
-            # swap axes of inputs and labels to match the shape of the model
-            inputs, labels, mask = inputs.permute(1, 0, 2), labels.permute(1, 0), mask.permute(1, 0)
-            inputs, labels, mask = inputs.to(run_model.device), labels.to(run_model.device).flatten().long(), mask.to(run_model.device).flatten().long()
-            # move that to dataset class of Pytorch before feeding it to dataloader in __getitem__
-            optim.zero_grad(set_to_none=True)
-            c_lsq, c_reg, _, _, _ = run_model(
-                inputs, labels, mask
-            )
-            loss = c_lsq + c_reg
-            losses.append(loss.item())
-            loss.backward()
-            optim.step()
-            step += 1
+            for rule_train_now in shuffled_rules:
+                dataloader = dataloaders[rule_train_now]["train"]
+                try:
+                    inputs, labels, mask = next(dataloader_iterators[rule_train_now])
+                except StopIteration:
+                    # If the iterator is exhausted, reset it
+                    dataloader_iterators[rule_train_now] = iter(dataloader)
+                    inputs, labels, mask = next(dataloader_iterators[rule_train_now])
+                
+                inputs, labels, mask = inputs.permute(1, 0, 2).to(run_model.device), labels.permute(1, 0).to(run_model.device).flatten().long(), mask.permute(1, 0).to(run_model.device).flatten().long()
+                optim.zero_grad(set_to_none=True)
+                c_lsq, c_reg, _, _, _ = run_model(inputs, labels, mask)
+                loss = c_lsq + c_reg
+                loss.backward()
+                optim.step()
+                epoch_loss += loss.item()
+            
+        losses.append(epoch_loss)
 
-        except KeyboardInterrupt:
-            print("Optimization interrupted by user")
-            break
+        log["trials"].append(epoch)
+        log["times"].append(time.time() - t_start)
+        log = do_eval(run_model, log, hp["rule_trains"], dataloaders)
+        if log["perf_min"][-1] > hp["target_perf"] and epoch > 0:
+            if epoch>5:
+                recent_losses = losses[-5:]
+                avg_loss_change = np.mean(np.diff(recent_losses))
+                if abs(avg_loss_change) < loss_change_threshold:
+                    print("Performance reached the target: {:.2f}".format(hp["target_perf"]))
+                    break
+
+        checkpoint_dir = name
+        create_directory_if_not_exists(checkpoint_dir)
+        checkpoint_path = os.path.join(checkpoint_dir, f'epoch_{epoch}_checkpoint.pth')
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': run_model.state_dict(),
+            'optimizer_state_dict': optim.state_dict(),
+            'loss': epoch_loss,
+            'log': log
+        }, checkpoint_path)
 
     print("Optimization finished!")
 
 
-def do_eval(run_model, log, rule_train):
+def do_eval(run_model, log, rule_train, dataloaders):
     """Do evaluation using entirely PyTorch operations to ensure GPU utilization."""
     hp = run_model.hp
     if isinstance(rule_train, str):
@@ -253,12 +263,11 @@ def do_eval(run_model, log, rule_train):
         f"Trial {log['trials'][-1]:7d} | Time {log['times'][-1]:0.2f} s | Now training {rule_name_print}"
     )
     for rule_test in hp["rules"]:
-        n_rep = 16
-        batch_size_test_rep = hp["batch_size_test"] // n_rep
         clsq_tmp, creg_tmp, perf_tmp = [], [], []
-        dataloader = get_dataloader(env=rule_test, batch_size=batch_size_test_rep, device=run_model.device, num_workers=4, hp=hp, shuffle=False)
-        i_rep = 0
-        while i_rep < n_rep:
+        dataloader = dataloaders[rule_test]["test"]
+        num_batches = len(dataloader)
+        print(f"Testing on {rule_test}, {num_batches} batches")
+        for _ in range(num_batches):
             with torch.no_grad():
                 inputs, labels, mask = next(iter(dataloader))
                 inputs, labels, mask = inputs.permute(1, 0, 2), labels.permute(1, 0), mask.permute(1, 0)
@@ -266,7 +275,6 @@ def do_eval(run_model, log, rule_train):
                 c_lsq, c_reg, y_hat_test, _, labels = run_model(
                     inputs, labels, mask
                 )
-                i_rep += 1
 
             # Store costs directly as tensors to avoid multiple GPU to CPU transfers
             clsq_tmp.append(c_lsq)

@@ -2,7 +2,6 @@
 
 import torch
 from torch import nn, jit
-from main.dataset import Dataset, get_class_instance
 import numpy as np
 import ipdb
 

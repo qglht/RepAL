@@ -1,6 +1,6 @@
 from dsa_analysis import load_config, visualize
 import torch
-from src.toolkit import compute_dissimilarity, train_model
+from src.toolkit import compute_dissimilarity, train_model, generate_data
 import DSA
 # import similarity
 import pickle
@@ -10,11 +10,11 @@ import matplotlib.pyplot as plt
 import multiprocessing
 import seaborn as sns
 import main
-from main.dataset import Dataset, get_class_instance
 
 
 if __name__ == "__main__":
 
+    # generate_data("PerceptualDecisionMakingT")
     # )  # Set multiprocessing to use 'spawn'
     # config = load_config("config.yaml")
 

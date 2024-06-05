@@ -4,7 +4,7 @@ from dsa_analysis import load_config, visualize
 import torch
 import pickle
 import ipdb
-
+import os
 
 def normalize_within_unit_volume(tensor):
     # Ensure the input is a PyTorch tensor
@@ -30,25 +30,28 @@ def train_model(activation, hidden_size, lr, freeze, mode, no_pretraining, devic
     config = load_config("config.yaml")
     ruleset = config["rnn"][mode]["ruleset"]
     all_rules = config["rnn"]["train"]["ruleset"] + config["rnn"]["pretrain"]["ruleset"]
+    num_epochs = config["rnn"][mode]["num_epochs"]
     hp = {
         "activation": activation,
         "n_rnn": hidden_size,
         "learning_rate": lr,
         "l2_h": 0.000001,
         "l2_weight": 0.000001,
+        "num_epochs": num_epochs,
     }
     hp, log, optimizer = main.set_hyperparameters(
         model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=ruleset
     )
 
-
+    model_name = f"{activation}_{hidden_size}_{lr}"
     if mode == "train":
         if no_pretraining:
+            name = os.path.join("models", model_name + f"__{freeze}_train_nopretrain")
             run_model = main.Run_Model(hp, RNNLayer, device)
             # run_model = torch.compile(run_model,mode="reduce-overhead")
-            main.train(run_model, optimizer, hp, log, freeze=freeze)
-            run_model.save(f"models/{activation}_{hidden_size}_{lr}__{freeze}_{mode}_nopretrain.pth")
+            main.train(run_model, optimizer, hp, log, name, freeze=freeze)
         else: 
+            name = os.path.join("models", model_name + f"__{freeze}_train_pretrain") 
             run_model = main.load_model(
                 f"models/{activation}_{hidden_size}_{lr}_pretrain.pth",
                 hp,
@@ -56,35 +59,22 @@ def train_model(activation, hidden_size, lr, freeze, mode, no_pretraining, devic
                 device=device,
             )
             # run_model = torch.compile(run_model,mode="reduce-overhead")
-            main.train(run_model, optimizer, hp, log, freeze=freeze)
-            run_model.save(f"models/{activation}_{hidden_size}_{lr}__{freeze}_{mode}_pretrain.pth")
+            main.train(run_model, optimizer, hp, log, name, freeze=freeze)
     elif mode == "pretrain":
+        name = os.path.join("models", model_name + f"_pretrain")
         run_model = main.Run_Model(hp, RNNLayer, device)
         # run_model = torch.compile(run_model,mode="reduce-overhead")
-        main.train(run_model, optimizer, hp, log, freeze=freeze)
-        run_model.save(f"models/{activation}_{hidden_size}_{lr}_{mode}.pth")
+        main.train(run_model, optimizer, hp, log, name, freeze=freeze)
+    run_model.save(name+".pth")
     return run_model
 
-def test_model(activation, hidden_size, lr, freeze, mode, no_pretraining, device):
-    # Load configuration and set hyperparameters
+def generate_data(env):
     config = load_config("config.yaml")
-    ruleset = config["rnn"][mode]["ruleset"]
-    all_rules = config["rnn"]["train"]["ruleset"] + config["rnn"]["pretrain"]["ruleset"]
-    hp = {
-        "activation": activation,
-        "n_rnn": hidden_size,
-        "learning_rate": lr,
-        "l2_h": 0.000001,
-        "l2_weight": 0.000001,
-    }
-    hp, log, optimizer = main.set_hyperparameters(
-        model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=ruleset
+    all_rules = config["rnn"]["rules"]
+    hp, _, _ = main.set_hyperparameters(
+        model_dir="debug", hp={}, ruleset=all_rules
     )
-
-    run_model = main.Run_Model(hp, RNNLayer, device)
-    main.train(run_model, optimizer, hp, log, freeze=freeze)
-    
-    return run_model
+    main.generate_data(env, hp)
 
 def task_relevant_variables():
     return NotImplementedError
