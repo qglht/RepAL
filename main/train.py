@@ -229,13 +229,8 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
         log["trials"].append(epoch)
         log["times"].append(time.time() - t_start)
         log = do_eval(run_model, log, hp["rule_trains"], dataloaders)
-        if log["perf_min"][-1] > hp["target_perf"] and epoch > 0:
-            if epoch>5:
-                recent_losses = losses[-5:]
-                avg_loss_change = np.mean(np.diff(recent_losses))
-                if abs(avg_loss_change) < loss_change_threshold:
-                    print("Performance reached the target: {:.2f}".format(hp["target_perf"]))
-                    break
+        if log["perf_min"][-1] > hp["target_perf"]:
+            break
 
         checkpoint_dir = name
         create_directory_if_not_exists(checkpoint_dir)
