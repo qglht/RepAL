@@ -53,19 +53,19 @@ class NeuroGymDataset(Dataset):
     
     def _generate_data(self):
         env_instance = get_class_instance(self.env, config=self.hp)
-        dataset = ngym.Dataset(env_instance, batch_size=512, seq_len=self.seq_len)
+        dataset = ngym.Dataset(env_instance, batch_size=32, seq_len=self.seq_len)
         inputs, targets = np.empty((self.num_pregenerated, self.seq_len, self.hp["n_input"])), np.empty((self.num_pregenerated, self.seq_len))
-        for i in range(self.num_pregenerated//512):
+        for i in range(self.num_pregenerated//32):
             input_sample, target_sample = dataset()
             input_sample, target_sample = swap_axes(input_sample, target_sample)
             input_sample, target_sample = self.gen_feed_data(input_sample, target_sample)
-            inputs[i*512:(i+1)*512] = input_sample
-            targets[i*512:(i+1)*512] = target_sample
+            inputs[i*32:(i+1)*32] = input_sample
+            targets[i*32:(i+1)*32] = target_sample
         input_sample, target_sample = dataset()
         input_sample, target_sample = swap_axes(input_sample, target_sample)
         input_sample, target_sample = self.gen_feed_data(input_sample, target_sample)
-        inputs[self.num_pregenerated//512*512:] = input_sample[:self.num_pregenerated%512]
-        targets[self.num_pregenerated//512*512:] = target_sample[:self.num_pregenerated%512]
+        inputs[self.num_pregenerated//32*32:] = input_sample[:self.num_pregenerated%32]
+        targets[self.num_pregenerated//32*32:] = target_sample[:self.num_pregenerated%32]
         masks = self._create_mask(inputs)
         # convert inputs, targets, masks to torch tensors
         inputs, targets, masks = torch.tensor(inputs).to(torch.float32), torch.tensor(targets).to(torch.float32), torch.tensor(masks).to(torch.float32)

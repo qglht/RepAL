@@ -109,7 +109,7 @@ def set_hyperparameters(
     model_dir,
     hp=None,
     max_steps=1e7,
-    display_step=100,
+    display_step=10,
     ruleset: List[str] = None,
     rule_trains: List[str] = None,
     rule_prob_map=None,
@@ -214,7 +214,8 @@ def train(run_model, optimizer, hp, log, freeze=False):
                             "Perf reached the target: {:0.2f}".format(hp["target_perf"])
                         )
                         break
-
+            
+            print(step * hp["batch_size_train"])
             # Training
             rule_train_now = hp["rng"].choice(hp["rule_trains"], p=hp["rule_probs"])
             dataloader = dataloaders[rule_train_now]
