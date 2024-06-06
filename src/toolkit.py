@@ -81,7 +81,7 @@ def train_model(activation, hidden_size, lr, freeze, mode, no_pretraining, devic
             return
         else:
             run_model = main.Run_Model(hp, RNNLayer, device)
-            main.pretrain(run_model, optimizer, hp, log, name)
+            main.train(run_model, optimizer, hp, log, name)
             run_model.save(name+".pth")
     return run_model
 
