@@ -25,7 +25,9 @@ module load python/anaconda3
 
 source activate dsa  # If necessary, depends on cluster setup
 poetry install  # Install additional Python packages as needed
-poetry update  # Update the Python packages as needed
+
+# Check if tensorboard is installed, if not, install it manually
+poetry run pip show tensorboard || poetry run pip install tensorboard
 
 # Run the application and monitor GPU status in parallel
 (poetry run python -m src.pretrain) &
