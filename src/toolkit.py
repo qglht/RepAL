@@ -56,7 +56,7 @@ def train_model(activation, hidden_size, lr, freeze, mode, no_pretraining, devic
     if mode == "train":
         if no_pretraining:
             name = os.path.join("models", model_name + f"__{freeze}_train_nopretrain")
-            if (name+".pth") in os.listdir("models"):
+            if  model_name + f"__{freeze}_train_nopretrain.pth" in os.listdir("models"):
                 return
             else:
                 run_model = main.Run_Model(hp, RNNLayer, device)
@@ -64,7 +64,7 @@ def train_model(activation, hidden_size, lr, freeze, mode, no_pretraining, devic
                 run_model.save(name+".pth")
         else: 
             name = os.path.join("models", model_name + f"__{freeze}_train_pretrain") 
-            if (name+".pth") in os.listdir("models"):
+            if  model_name + f"__{freeze}_train_pretrain.pth" in os.listdir("models"):
                 return
             else:
                 run_model = main.load_model(
@@ -77,11 +77,11 @@ def train_model(activation, hidden_size, lr, freeze, mode, no_pretraining, devic
                 run_model.save(name+".pth")
     elif mode == "pretrain":
         name = os.path.join("models", model_name + f"_pretrain")
-        if (name+".pth") in os.listdir("models"):
+        if model_name + f"_pretrain.pth" in os.listdir("models"):
             return
         else:
             run_model = main.Run_Model(hp, RNNLayer, device)
-            main.train(run_model, optimizer, hp, log, name, freeze=freeze)
+            main.pretrain(run_model, optimizer, hp, log, name)
             run_model.save(name+".pth")
     return run_model
 
