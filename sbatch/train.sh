@@ -39,6 +39,8 @@ while kill -0 $APP_PID 2>/dev/null; do
     sleep 300
 done
 
+wait $APP_PID
+
 # Run the application and monitor GPU status in parallel
 (poetry run python -m src.train) &
 
@@ -51,3 +53,5 @@ while kill -0 $APP_PID 2>/dev/null; do
     nvidia-smi
     sleep 300
 done
+
+wait $APP_PID
