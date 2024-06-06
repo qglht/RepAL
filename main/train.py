@@ -199,31 +199,13 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
     else:
         optim = optimizer(run_model.model.parameters(), lr=hp["learning_rate"])
     
-    dataloaders = {rule: main.get_dataloader(env=rule, batch_size=hp["batch_size_train"], num_workers=4, shuffle=False) for rule in hp["rule_trains"]}
+    dataloaders = {rule: main.get_dataloader(env=rule, batch_size=hp["batch_size_train"], num_workers=4, shuffle=True) for rule in hp["rule_trains"]}
     
     for epoch in range(hp["num_epochs"]):
         epoch_loss = 0.0
-        
-        # Create an iterator for each dataloader
-        dataloader_iterators = {rule: iter(dataloaders[rule]["train"]) for rule in hp["rule_trains"]}
-        
-        # Determine the maximum number of batches (using the longest dataloader)
-        max_batches = max(len(dataloaders[rule]["train"]) for rule in hp["rule_trains"])
-        print(f"Epoch {epoch} | Max batches: {max_batches}")
-        for batch_idx in range(max_batches):
-            # Shuffle the list of rules for each batch
-            shuffled_rules = hp["rng"].permutation(hp["rule_trains"])
-            
-            for rule_train_now in shuffled_rules:
-                dataloader = dataloaders[rule_train_now]["train"]
-                try:
-                    inputs, labels, mask = next(dataloader_iterators[rule_train_now])
-                except StopIteration:
-                    # If the iterator is exhausted, reset it
-                    dataloader_iterators[rule_train_now] = iter(dataloader)
-                    inputs, labels, mask = next(dataloader_iterators[rule_train_now])
-                
-                inputs, labels, mask = inputs.permute(1, 0, 2).to(run_model.device), labels.permute(1, 0).to(run_model.device).flatten().long(), mask.permute(1, 0).to(run_model.device).flatten().long()
+        for rule in hp["rule_trains"]:
+            for inputs, labels, mask in dataloaders[rule]["train"]:
+                inputs, labels, mask = inputs.permute(1, 0, 2).to(run_model.device, non_blocking=True), labels.permute(1, 0).to(run_model.device, non_blocking=True).flatten().long(), mask.permute(1, 0).to(run_model.device, non_blocking=True).flatten().long()
                 optim.zero_grad(set_to_none=True)
                 c_lsq, c_reg, _, _, _ = run_model(inputs, labels, mask)
                 loss = c_lsq + c_reg
@@ -267,13 +249,9 @@ def do_eval(run_model, log, rule_train, dataloaders):
     for rule_test in hp["rules"]:
         clsq_tmp, creg_tmp, perf_tmp = [], [], []
         dataloader = dataloaders[rule_test]["test"]
-        num_batches = len(dataloader)
-        print(f"Testing on {rule_test}, {num_batches} batches")
-        for _ in range(num_batches):
+        for inputs, labels, mask in dataloader:
             with torch.no_grad():
-                inputs, labels, mask = next(iter(dataloader))
-                inputs, labels, mask = inputs.permute(1, 0, 2), labels.permute(1, 0), mask.permute(1, 0)
-                inputs, labels, mask = inputs.to(run_model.device), labels.to(run_model.device).flatten().long(), mask.to(run_model.device).flatten().long()
+                inputs, labels, mask = inputs.permute(1, 0, 2).to(run_model.device, non_blocking=True), labels.permute(1, 0).to(run_model.device, non_blocking=True).flatten().long(), mask.permute(1, 0).to(run_model.device, non_blocking=True).flatten().long()
                 c_lsq, c_reg, y_hat_test, _, labels = run_model(
                     inputs, labels, mask
                 )
@@ -329,31 +307,6 @@ def do_eval(run_model, log, rule_train, dataloaders):
     return log
 
 
-# def accuracy(logits, true_class_indices):
-#     # Reshape logits to shape [(batch * images), classes]
-#     logits_flat = logits.view(-1, logits.size(-1))
-
-#     # Reshape true class indices to shape [(batch * images)]
-#     true_class_indices_flat = true_class_indices.flatten()
-
-#     # Get the predicted classes by taking the argmax over the classes dimension
-#     predicted_classes = torch.argmax(logits_flat, dim=1)
-
-#     # Apply mask to consider only non-zero values in true_class_indices_flat
-#     non_zero_mask = true_class_indices_flat != 0
-#     filtered_predicted_classes = predicted_classes[non_zero_mask]
-#     filtered_true_class_indices_flat = true_class_indices_flat[non_zero_mask]
-#     ipdb.set_trace()
-
-#     # Compare predicted classes with true class indices
-#     correct_predictions = (filtered_predicted_classes == filtered_true_class_indices_flat).sum().item()
-
-#     # Calculate accuracy
-#     total_predictions = filtered_true_class_indices_flat.size(0)
-#     accuracy = correct_predictions / total_predictions if total_predictions > 0 else 0.0
-
-#     return accuracy
-
 def accuracy(logits, true_class_indices):
     # Reshape logits to shape [(batch * images), classes]
     logits_flat = logits.view(-1, logits.size(-1))
@@ -369,7 +322,7 @@ def accuracy(logits, true_class_indices):
 
     # Calculate accuracy
     total_predictions = true_class_indices_flat.size(0)
-    accuracy = correct_predictions / total_predictions
+    accuracy = correct_predictions / total_predictions if total_predictions > 0 else 0.0
 
     return accuracy
 
