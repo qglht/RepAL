@@ -4,13 +4,13 @@
 #SBATCH --nodes=1
 
 # set max wallclock time
-#SBATCH --time=4:00:00
+#SBATCH --time=24:00:00
 
 # set name of job
 #SBATCH --job-name=job123
 
 # set number of GPUs
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:8
 
 # mail alert at start, end and abortion of execution
 #SBATCH --mail-type=ALL
@@ -25,9 +25,6 @@ module load python/anaconda3
 
 source activate dsa  # If necessary, depends on cluster setup
 poetry install  # Install additional Python packages as needed
-
-# Check if tensorboard is installed, if not, install it manually
-poetry run pip show tensorboard || poetry run pip install tensorboard
 
 # Run the application and monitor GPU status in parallel
 (poetry run python -m src.pretrain) &
