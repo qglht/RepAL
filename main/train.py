@@ -1,10 +1,10 @@
 """ Main training loop.
 Copied from https://github.com/gyyang/multitask. Modified to work with pytorch instead of tensorflow framework. 
 """
-import os
-import warnings
 from __future__ import division
 
+import os
+import warnings
 import sys
 import time
 from collections import defaultdict
