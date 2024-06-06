@@ -49,8 +49,8 @@ dsa:
   rank: 20
   device: cuda
 simulations:
-  dt: 0.01
-  num_steps: 1000
+  dt: 0.02 # 20 ms
+  num_steps: 200
   num_samples: 200
   lorenz_parameters: {
       'one_attractor': [{'s': 10, 'r': 0.25, 'b': 2.667},{'s': 10, 'r': 0.5, 'b': 2.667},{'s': 10, 'r': 0.75, 'b': 2.667}],

@@ -1,16 +1,13 @@
-from dsa_analysis import load_config, visualize
-import torch
 from src.toolkit import compute_dissimilarity, train_model, generate_data
-import DSA
-# import similarity
-import pickle
-import numpy as np
-import ipdb
-import matplotlib.pyplot as plt
-import multiprocessing
-import seaborn as sns
-import main
+import warnings
+import os
 
+# Suppress specific Gym warnings
+warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
+warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprecated.*")
+
+# Set environment variable to ignore Gym deprecation warnings
+os.environ['GYM_IGNORE_DEPRECATION_WARNINGS'] = '1'
 
 if __name__ == "__main__":
 
