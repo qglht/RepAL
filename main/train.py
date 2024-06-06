@@ -236,7 +236,7 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
         log["trials"].append(epoch)
         log["times"].append(time.time() - t_start)
         log = do_eval(run_model, log, hp["rule_trains"], dataloaders)
-        if log["perf_min"][-1] > hp["target_perf"] and epoch>0:
+        if log["perf_min"][-1] > hp["target_perf"]:
             break
 
         checkpoint_dir = name
