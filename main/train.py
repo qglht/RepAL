@@ -19,6 +19,7 @@ import torch
 import time
 import numpy as np
 import main
+from torch.utils.tensorboard import SummaryWriter
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
@@ -188,6 +189,8 @@ def set_hyperparameters(
     return hp, log, optimizer  # , model
 
 def train(run_model, optimizer, hp, log, name, freeze=False):
+    # Initialize TensorBoard writer
+    writer = SummaryWriter(log_dir=name)
 
     t_start = time.time()
     losses = []
@@ -214,10 +217,17 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
                 epoch_loss += loss.item()
             
         losses.append(epoch_loss)
+        # Log loss to TensorBoard
+        writer.add_scalar('Loss/train', epoch_loss, epoch)
 
         log["trials"].append(epoch)
         log["times"].append(time.time() - t_start)
         log = do_eval(run_model, log, hp["rule_trains"], dataloaders)
+
+        # Log performance metrics to TensorBoard
+        writer.add_scalar('Performance/average', log["perf_avg"][-1], epoch)
+        writer.add_scalar('Performance/minimum', log["perf_min"][-1], epoch)
+
         if log["perf_min"][-1] > hp["target_perf"]:
             break
 
@@ -232,6 +242,8 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
             'log': log
         }, checkpoint_path)
 
+    # Close the TensorBoard writer
+    writer.close()
     print("Optimization finished!")
 
 
