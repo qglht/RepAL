@@ -1,12 +1,4 @@
 import warnings
-import os
-
-# Suppress specific Gym warnings
-warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
-warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprecated.*")
-
-# Set environment variable to ignore Gym deprecation warnings
-os.environ['GYM_IGNORE_DEPRECATION_WARNINGS'] = '1'
 
 import main
 from main import RNNLayer
@@ -16,6 +8,12 @@ import pickle
 import ipdb
 import os
 
+# Suppress specific Gym warnings
+warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
+warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprecated.*")
+
+# Set environment variable to ignore Gym deprecation warnings
+os.environ['GYM_IGNORE_DEPRECATION_WARNINGS'] = '1'
 
 def normalize_within_unit_volume(tensor):
     # Ensure the input is a PyTorch tensor
