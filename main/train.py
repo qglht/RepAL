@@ -1,6 +1,15 @@
 """ Main training loop.
 Copied from https://github.com/gyyang/multitask. Modified to work with pytorch instead of tensorflow framework. 
 """
+import os
+import warnings
+
+# Suppress specific Gym warnings
+warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
+warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprecated.*")
+
+# Set environment variable to ignore Gym deprecation warnings
+os.environ['GYM_IGNORE_DEPRECATION_WARNINGS'] = '1'
 
 from __future__ import division
 
@@ -18,15 +27,6 @@ import torch
 import time
 import numpy as np
 import main
-import os
-import warnings
-
-# Suppress specific Gym warnings
-warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
-warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprecated.*")
-
-# Set environment variable to ignore Gym deprecation warnings
-os.environ['GYM_IGNORE_DEPRECATION_WARNINGS'] = '1'
 
 print_flag = False
 ######## mostly untouched ###############

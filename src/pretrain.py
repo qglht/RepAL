@@ -1,8 +1,3 @@
-from dsa_analysis import load_config
-import torch
-import multiprocessing
-from src.toolkit import train_model
-import ipdb
 import warnings
 import os
 
@@ -12,6 +7,11 @@ warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprec
 
 # Set environment variable to ignore Gym deprecation warnings
 os.environ['GYM_IGNORE_DEPRECATION_WARNINGS'] = '1'
+
+from dsa_analysis import load_config
+import torch
+import multiprocessing
+from src.toolkit import train_model
 
 if __name__ == "__main__":
    

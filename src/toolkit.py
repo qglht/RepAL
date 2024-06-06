@@ -1,10 +1,3 @@
-import main
-from main import RNNLayer
-from dsa_analysis import load_config, visualize
-import torch
-import pickle
-import ipdb
-import os
 import warnings
 import os
 
@@ -14,6 +7,15 @@ warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprec
 
 # Set environment variable to ignore Gym deprecation warnings
 os.environ['GYM_IGNORE_DEPRECATION_WARNINGS'] = '1'
+
+import main
+from main import RNNLayer
+from dsa_analysis import load_config, visualize
+import torch
+import pickle
+import ipdb
+import os
+
 
 def normalize_within_unit_volume(tensor):
     # Ensure the input is a PyTorch tensor

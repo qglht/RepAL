@@ -1,4 +1,3 @@
-from src.toolkit import compute_dissimilarity, train_model, generate_data
 import warnings
 import os
 
@@ -8,6 +7,8 @@ warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprec
 
 # Set environment variable to ignore Gym deprecation warnings
 os.environ['GYM_IGNORE_DEPRECATION_WARNINGS'] = '1'
+
+from src.toolkit import compute_dissimilarity, train_model, generate_data
 
 if __name__ == "__main__":
 
