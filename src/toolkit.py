@@ -56,25 +56,33 @@ def train_model(activation, hidden_size, lr, freeze, mode, no_pretraining, devic
     if mode == "train":
         if no_pretraining:
             name = os.path.join("models", model_name + f"__{freeze}_train_nopretrain")
-            run_model = main.Run_Model(hp, RNNLayer, device)
-            # run_model = torch.compile(run_model,mode="reduce-overhead")
-            main.train(run_model, optimizer, hp, log, name, freeze=freeze)
+            if (name+".pth") in os.listdir("models"):
+                return
+            else:
+                run_model = main.Run_Model(hp, RNNLayer, device)
+                main.train(run_model, optimizer, hp, log, name, freeze=freeze)
+                run_model.save(name+".pth")
         else: 
             name = os.path.join("models", model_name + f"__{freeze}_train_pretrain") 
-            run_model = main.load_model(
-                f"models/{activation}_{hidden_size}_{lr}_pretrain.pth",
-                hp,
-                RNNLayer,
-                device=device,
-            )
-            # run_model = torch.compile(run_model,mode="reduce-overhead")
-            main.train(run_model, optimizer, hp, log, name, freeze=freeze)
+            if (name+".pth") in os.listdir("models"):
+                return
+            else:
+                run_model = main.load_model(
+                    f"models/{activation}_{hidden_size}_{lr}_pretrain.pth",
+                    hp,
+                    RNNLayer,
+                    device=device,
+                )
+                main.train(run_model, optimizer, hp, log, name, freeze=freeze)
+                run_model.save(name+".pth")
     elif mode == "pretrain":
         name = os.path.join("models", model_name + f"_pretrain")
-        run_model = main.Run_Model(hp, RNNLayer, device)
-        # run_model = torch.compile(run_model,mode="reduce-overhead")
-        main.train(run_model, optimizer, hp, log, name, freeze=freeze)
-    run_model.save(name+".pth")
+        if (name+".pth") in os.listdir("models"):
+            return
+        else:
+            run_model = main.Run_Model(hp, RNNLayer, device)
+            main.train(run_model, optimizer, hp, log, name, freeze=freeze)
+            run_model.save(name+".pth")
     return run_model
 
 def generate_data(env):
