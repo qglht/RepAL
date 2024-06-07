@@ -126,7 +126,7 @@ def compute_dissimilarity(activation, hidden_size, lr, freeze, nopretrain ,devic
         RNNLayer,
         device=device,
     )
-    h = main.representation(run_model, config["rnn"]["train"]["ruleset"])
+    h = main.representation(run_model, all_rules)
     h_trans, explained_variance = main.compute_pca(h, n_components=n_components)
     # for key, value in h_trans.items():
     #     for i in range(value.shape[0]):
