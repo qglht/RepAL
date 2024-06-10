@@ -11,7 +11,6 @@ import DSA
 import pandas as pd
 import numpy as np
 from itertools import permutations
-import ipdb
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
@@ -173,20 +172,20 @@ def dsa_optimisation_compositionality(rank, n_delays, delay_interval, device):
     model = list(all_simulations_combined.values())
     model_names = list(all_simulations_combined.keys())
 
+    dsa = DSA.DSA(model,n_delays=n_delays,rank=rank,delay_interval=delay_interval,verbose=True,iters=1000,lr=1e-2, device=device)
+    similarities = dsa.fit_score()
+
     grouped_by_shared_elements = {i:[] for i in range(4)}
     for comp_motif_1 in model_names:
         for comp_motif_2 in model_names:
-            if model_names.index(comp_motif_1) != model_names.index(comp_motif_2):
-                set_1 = set(comp_motif_1)
-                set_2 = set(comp_motif_2)
-                grouped_by_shared_elements[len(set_1.intersection(set_2))].extend([(comp_motif_1, comp_motif_2)])
+            set_1 = set(comp_motif_1)
+            set_2 = set(comp_motif_2)
+            grouped_by_shared_elements[len(set_1.intersection(set_2))].extend([(comp_motif_1, comp_motif_2)])
    
     similarities_grouped_by_shared_elements = {i:[] for i in range(4)}
     for key in grouped_by_shared_elements:
         for tuple1, tuple2 in grouped_by_shared_elements[key]:
-            dsa = DSA.DSA(model[model_names.index(tuple1)], model[model_names.index(tuple2)], n_delays=n_delays,rank=rank,delay_interval=delay_interval,verbose=True,iters=1000,lr=1e-2, device=device)
-            similarities = dsa.fit_score()
-            similarities_grouped_by_shared_elements[key].append(similarities)
+            similarities_grouped_by_shared_elements[key].append(similarities[model_names.index(tuple1), model_names.index(tuple2)])
 
     # compute median of similarities for each group and plot similarity vs number of shared elements
     median_similarities = {key: np.median(value) for key, value in similarities_grouped_by_shared_elements.items()}
