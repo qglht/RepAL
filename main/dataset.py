@@ -12,9 +12,13 @@ class NeuroGymDataset(Dataset):
     
     def load_data(self):
         # load the pickle data file
-        with open(f'data/{self.env}_{self.mode}.pkl', 'rb') as f:
-            self.dataset = pickle.load(f)
-    
+        try:
+            with open(f'data/{self.env}_{self.mode}.pkl', 'rb') as f:
+                self.dataset = pickle.load(f)
+        except FileNotFoundError:
+            with open(f'../data/{self.env}_{self.mode}.pkl', 'rb') as f:
+                self.dataset = pickle.load(f)
+
     def __len__(self):
         return self.dataset["inputs"].shape[0]
 

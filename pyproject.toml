@@ -1,10 +1,10 @@
 [tool.poetry]
-name = "multitask-rnn"
+name = "RepAL"
 version = "0.1.0"
 description = "Similarity of multitask RNNs regarding to learning rules, tasks"
 authors = ["qglht <quentin.guilhot@student-cs.fr>"]
 readme = "README.md"
-packages = [{include = "multitask_rnn"}]
+packages = [{include = "main", from = "."}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -23,7 +23,6 @@ similarity-repository = {git = "https://github.com/nacloos/similarity-repository
 rsatoolbox = "^0.1.5"
 pytorch-lightning = "^2.2.2"
 neurogym = "^0.0.2"
-tensorboard = "^2.16.2"
 
 
 [build-system]
