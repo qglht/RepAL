@@ -11,6 +11,7 @@ import DSA
 import pandas as pd
 import numpy as np
 from itertools import permutations
+import ipdb
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
@@ -172,9 +173,6 @@ def dsa_optimisation_compositionality(rank, n_delays, delay_interval, device):
     model = list(all_simulations_combined.values())
     model_names = list(all_simulations_combined.keys())
 
-    dsa = DSA.DSA(model,n_delays=n_delays,rank=rank,delay_interval=delay_interval,verbose=True,iters=1000,lr=1e-2, device=device)
-    similarities = dsa.fit_score()
-
     grouped_by_shared_elements = {i:[] for i in range(4)}
     for comp_motif_1 in model_names:
         for comp_motif_2 in model_names:
@@ -186,7 +184,9 @@ def dsa_optimisation_compositionality(rank, n_delays, delay_interval, device):
     similarities_grouped_by_shared_elements = {i:[] for i in range(4)}
     for key in grouped_by_shared_elements:
         for tuple1, tuple2 in grouped_by_shared_elements[key]:
-            similarities_grouped_by_shared_elements[key].append(similarities[model_names.index(tuple1), model_names.index(tuple2)])
+            dsa = DSA.DSA(model[model_names.index(tuple1)], model[model_names.index(tuple2)], n_delays=n_delays,rank=rank,delay_interval=delay_interval,verbose=True,iters=1000,lr=1e-2, device=device)
+            similarities = dsa.fit_score()
+            similarities_grouped_by_shared_elements[key].append(similarities)
 
     # compute median of similarities for each group and plot similarity vs number of shared elements
     median_similarities = {key: np.median(value) for key, value in similarities_grouped_by_shared_elements.items()}
