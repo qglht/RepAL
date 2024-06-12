@@ -4,7 +4,7 @@ import os
 from dsa_analysis import load_config
 import torch
 import multiprocessing
-from src.toolkit import train_model
+from src.toolkit import train_model, pipeline
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
@@ -28,21 +28,21 @@ if __name__ == "__main__":
     i = 0
     print(f"devices used : {devices}")
 
-    for rnn_type in config["rnn"]["parameters"]["rnn_type"]:
-        for activation in config["rnn"]["parameters"]["activations"]:
-            for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
-                for lr in config["rnn"]["parameters"]["learning_rate"]:
-                    for freeze in config["rnn"]["parameters"]["freeze"]:
-                        for nopretraining in config["rnn"]["parameters"]["nopretrain"]:
+    for group in config["groups"]:
+        for rnn_type in config["rnn"]["parameters"]["rnn_type"]:
+            for activation in config["rnn"]["parameters"]["activations"]:
+                for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
+                    for lr in config["rnn"]["parameters"]["learning_rate"]:
+                        for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
                             device = devices[
                                 i % len(devices)
                             ]  # Cycle through available devices
-                            tasks.append((rnn_type, activation, hidden_size, lr, freeze, "train", nopretraining, device))
+                            tasks.append((group, rnn_type, activation, hidden_size, lr, batch_size, device))
                             i += 1
 
     # Create a process for each task
     processes = [
-        multiprocessing.Process(target=train_model, args=task) for task in tasks
+        multiprocessing.Process(target=pipeline, args=task) for task in tasks
     ]
 
     # Start all processes

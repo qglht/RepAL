@@ -90,6 +90,71 @@ def train_model(rnn_type, activation, hidden_size, lr, freeze, mode, no_pretrain
             run_model.save(name+".pth")
     return run_model
 
+
+def pipeline(group, rnn_type, activation, hidden_size, lr, batch_size, device):
+    config = load_config("config.yaml")
+    rules_pretrain = group['pretrain']['ruleset']
+    rules_train = group['train']['ruleset']
+    freeze = group['train']['freeze']
+    all_rules = config['all_rules']
+    hp = {
+        "rnn_type": rnn_type,
+        "activation": activation,
+        "n_rnn": hidden_size,
+        "learning_rate": lr,
+        "l2_h": 0.000001,
+        "l2_weight": 0.000001,
+        "num_epochs": 50,
+        "batch_size_train":batch_size
+    }
+    model_name = f"{rnn_type}_{activation}_{hidden_size}_{lr}"
+    path_pretrain_folder = os.path.join(f"models/{group}", model_name + f"_pretrain")
+    path_pretrain_model = os.path.join(f"models/{group}", model_name + f"_pretrain.pth")
+    path_train_folder = os.path.join(f"models/{group}", model_name + f"_train")
+    path_train_model = os.path.join(f"models/{group}", model_name + f"_train.pth")
+
+    # Pretraining
+    if not os.path.exists(path_pretrain_model):
+        if rules_pretrain:
+            print(f"Pretraining model {model_name} for group {group}")
+            hp, log, optimizer = main.set_hyperparameters(
+            model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=rules_pretrain
+        )
+            run_model = main.Run_Model(hp, RNNLayer, device)
+            main.train(run_model, optimizer, hp, log, path_pretrain_folder)
+            run_model.save(path_pretrain_model)
+
+    # Training
+    print(f"Training model {model_name} for group {group}")
+    if not os.path.exists(path_train_model):
+        if rules_train:
+            if rules_pretrain:
+                # load the model first
+                hp, log, optimizer = main.set_hyperparameters(
+                model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=rules_train)
+                run_model = main.load_model(
+                        path_pretrain_model,
+                        hp,
+                        RNNLayer,
+                        device=device,
+                    )
+                main.train(run_model, optimizer, hp, log, path_train_folder, freeze=freeze)
+                run_model.save(path_train_model)
+            else:
+                hp, log, optimizer = main.set_hyperparameters(
+                    model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=rules_train
+                )
+                run_model = main.Run_Model(hp, RNNLayer, device)
+                main.train(run_model, optimizer, hp, log, path_train_folder, freeze=freeze)
+                run_model.save(path_train_model)
+        else:
+            hp, log, optimizer = main.set_hyperparameters(
+                    model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=rules_train
+                )
+            run_model = main.Run_Model(hp, RNNLayer, device)
+            run_model.save(path_train_model)
+    return
+
 def generate_data(env):
     config = load_config("config.yaml")
     all_rules = config["rnn"]["rules"]

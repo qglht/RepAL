@@ -1,5 +1,5 @@
+all_rules: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT, AntiPerceptualDecisionMakingDelayResponseT]
 rnn:
-  rules : [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT, AntiPerceptualDecisionMakingDelayResponseT]
   parameters:
     rnn_type: 
       - leaky_rnn
@@ -9,12 +9,6 @@ rnn:
       - relu
       - softplus
       - tanh
-    freeze:
-      - True 
-      - False
-    nopretrain:
-      - True
-      - False
     n_rnn:
       - 128
       - 256
@@ -24,28 +18,54 @@ rnn:
     batch_size_train:
       - 64
       - 128
-  pretrain:
-    ruleset: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT]
-    # ruleset: [GoNogoT, AntiGoNogoT, GoNogoDelayResponseT]
-    T: 1000
-    batch: 64
-    num_epochs: 50
-  train:
-    ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
-    # ruleset: [AntiGoNogoDelayResponseT]
-    T: 1000
-    batch: 64
-    num_epochs: 20
+groups:
+  master:
+    pretrain:
+      ruleset: []
+    train:
+      ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+      frozen: False
+  pretrain_frozen:
+    pretrain: 
+      ruleset: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT]
+    train:
+      rulset: [AntiPerceptualDecisionMakingDelayResponseT]
+      frozen: True
+  pretrain_unfrozen:
+    pretrain: 
+      ruleset: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT]
+    train:
+      rulset: [AntiPerceptualDecisionMakingDelayResponseT]
+      frozen: False
+  delay: 
+    pretrain:
+      ruleset: []
+    train:
+      ruleset: [PerceptualDecisionMakingDelayResponseT]
+      frozen: False
+  anti:
+    pretrain:
+      ruleset: []
+    train:
+      ruleset: [AntiPerceptualDecisionMakingT]
+      frozen: False
+  basic:
+    pretrain:
+      ruleset: []
+    train:
+      ruleset: [PerceptualDecisionMakingT]
+      frozen: False
+  untrained:
+    pretrain:
+      ruleset: []
+    train:
+      ruleset: []
+      frozen: False
 analysis:
   epochs: [stim1]
   rule: [delayanti]
   trimming_method: time_average
   model: models/model.pth
-# dsa:
-#   n_delays: 50
-#   delay_interval: 20
-#   rank: 50
-#   device: cuda
 dsa:
   n_delays: 10
   delay_interval: 5
