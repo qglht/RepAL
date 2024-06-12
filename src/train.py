@@ -4,7 +4,7 @@ import os
 from dsa_analysis import load_config
 import torch
 import multiprocessing
-from src.toolkit import train_model, pipeline
+from src.toolkit import pipeline
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")

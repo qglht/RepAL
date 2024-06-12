@@ -114,9 +114,9 @@ def pipeline(group, rnn_type, activation, hidden_size, lr, batch_size, device):
     path_train_model = os.path.join(f"models/{group}", model_name + f"_train.pth")
 
     # Pretraining
+    print(f"Pretraining model {model_name} for group {group}")
     if not os.path.exists(path_pretrain_model):
         if rules_pretrain:
-            print(f"Pretraining model {model_name} for group {group}")
             hp, log, optimizer = main.set_hyperparameters(
             model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=rules_pretrain
         )
