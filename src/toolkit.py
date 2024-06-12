@@ -38,13 +38,14 @@ def normalize_within_unit_volume(tensor):
     return normalized_tensor
 
 
-def train_model(activation, hidden_size, lr, freeze, mode, no_pretraining, device):
+def train_model(rnn_type, activation, hidden_size, lr, freeze, mode, no_pretraining, device):
     # Load configuration and set hyperparameters
     config = load_config("config.yaml")
     ruleset = config["rnn"][mode]["ruleset"]
     all_rules = config["rnn"]["train"]["ruleset"] + config["rnn"]["pretrain"]["ruleset"]
     num_epochs = config["rnn"][mode]["num_epochs"]
     hp = {
+        "rnn_type": rnn_type,
         "activation": activation,
         "n_rnn": hidden_size,
         "learning_rate": lr,
@@ -56,7 +57,7 @@ def train_model(activation, hidden_size, lr, freeze, mode, no_pretraining, devic
         model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=ruleset
     )
 
-    model_name = f"{activation}_{hidden_size}_{lr}"
+    model_name = f"{rnn_type}_{activation}_{hidden_size}_{lr}"
     if mode == "train":
         if no_pretraining:
             name = os.path.join("models", model_name + f"__{freeze}_train_nopretrain")
@@ -72,7 +73,7 @@ def train_model(activation, hidden_size, lr, freeze, mode, no_pretraining, devic
                 return
             else:
                 run_model = main.load_model(
-                    f"models/{activation}_{hidden_size}_{lr}_pretrain.pth",
+                    f"models/"+model_name+"_pretrain.pth",
                     hp,
                     RNNLayer,
                     device=device,
@@ -106,13 +107,14 @@ def task_relevant_variables():
     return NotImplementedError
 
 
-def compute_dissimilarity(activation, hidden_size, lr, freeze, nopretrain ,device, n_components=3):
+def compute_dissimilarity(rnn_type, activation, hidden_size, lr, freeze, nopretrain ,device, n_components=3):
     # Load configuration and set hyperparameters
     config = load_config("../config.yaml")
     ruleset = config["rnn"]["train"]["ruleset"]
     all_rules = config["rnn"]["train"]["ruleset"] + config["rnn"]["pretrain"]["ruleset"]
 
     hp = {
+        "rnn_type": rnn_type,
         "activation": activation,
         "n_rnn": hidden_size,
         "learning_rate": lr,
@@ -125,19 +127,13 @@ def compute_dissimilarity(activation, hidden_size, lr, freeze, nopretrain ,devic
     )
     nopretrain = "nopretrain" if nopretrain else "pretrain"
     run_model = main.load_model(
-        f"../models/{activation}_{hidden_size}_{lr}__{freeze}_train_{nopretrain}.pth",
+        f"../models/{rnn_type}_{activation}_{hidden_size}_{lr}__{freeze}_train_{nopretrain}.pth",
         hp,
         RNNLayer,
         device=device,
     )
     h = main.representation(run_model, all_rules)
     h_trans, explained_variance = main.compute_pca(h, n_components=n_components)
-    # for key, value in h_trans.items():
-    #     for i in range(value.shape[0]):
-    #         h_trans[key][i] = value[i]
-            # h_trans[key][i] = normalize_within_unit_volume(value[i])
-    # ipdb.set_trace()
-    # CHANGE HERE FOR OTHER TASKS!
     return h_trans[("AntiPerceptualDecisionMakingDelayResponseT", "stimulus")].detach().numpy(), explained_variance
 
 def dsa_optimisation_compositionality(rank, n_delays, delay_interval, device):

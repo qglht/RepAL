@@ -54,7 +54,7 @@ def get_default_hp(ruleset: List[str]):
         "batch_size_test": 512,
         # input type: normal, multi
         "in_type": "normal",
-        # Type of RNNs: LeakyRNN, LeakyGRU, EILeakyGRU, GRU, LSTM
+        # Type of RNNs: LeakyRNN, LeakyGRU
         "rnn_type": "LeakyRNN",
         # whether rule and stimulus inputs are represented separately
         "use_separate_input": False,
@@ -191,7 +191,6 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
 
     t_start = time.time()
     losses = []
-    loss_change_threshold = 1e-2  # Threshold for change in loss to consider stopping
     if freeze:
         optim = optimizer(
             [run_model.model.rnn.rnncell.weight_ih], lr=hp["learning_rate"]
@@ -202,9 +201,12 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
     dataloaders = {rule: main.get_dataloader(env=rule, batch_size=hp["batch_size_train"], num_workers=4, shuffle=True) for rule in hp["rule_trains"]}
     
     for epoch in range(hp["num_epochs"]):
+        print(f"Epoch {epoch} started")
         epoch_loss = 0.0
         for rule in hp["rule_trains"]:
             for inputs, labels, mask in dataloaders[rule]["train"]:
+                # print batch
+                print(inputs.shape, labels.shape, mask.shape)
                 inputs, labels, mask = inputs.permute(1, 0, 2).to(run_model.device, non_blocking=True), labels.permute(1, 0).to(run_model.device, non_blocking=True).flatten().long(), mask.permute(1, 0).to(run_model.device, non_blocking=True).flatten().long()
                 optim.zero_grad(set_to_none=True)
                 c_lsq, c_reg, _, _, _ = run_model(inputs, labels, mask)

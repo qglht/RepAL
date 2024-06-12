@@ -29,11 +29,11 @@ if __name__ == "__main__":
     # i = 0  # Index to cycle through available devices
 
     # device = devices[0]
-    # train_model("softplus", 128, 0.001, False, "pretrain", False, "cpu")
+    train_model("leaky_gru","leaky_relu", 128, 0.001, False, "pretrain", False, "cpu")
     # curve, explained_variance = compute_dissimilarity(
     #                     "softplus", 128, 0.001, False, "pretrain", "cpu"
     #                 )
-    dsa_optimisation_compositionality(50, 10, 1, "cpu")
+    # dsa_optimisation_compositionality(50, 10, 1, "cpu")
     # curves_frozen = []
     # curves_frozen_names = []
     # curves_unfrozen = []

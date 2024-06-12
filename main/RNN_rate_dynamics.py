@@ -52,11 +52,43 @@ class RNNCell(RNNCell_base):  # Euler integration of rate-neuron network dynamic
         hidden = self.decay * hidden + (1 - self.decay) * activity
         return hidden
 
+class LeakyGRUCell(RNNCell_base):
+    def __init__(self, input_size, hidden_size, nonlinearity=None, decay=0.9, bias=True):
+        super().__init__(input_size, hidden_size, nonlinearity, bias)
+        self.decay = decay
+
+        self.weight_ih = nn.Parameter(torch.Tensor(3 * hidden_size, input_size))
+        self.weight_hh = nn.Parameter(torch.Tensor(3 * hidden_size, hidden_size))
+
+        if bias:
+            self.bias = nn.Parameter(torch.Tensor(3 * hidden_size))
+        else:
+            self.register_parameter("bias", None)
+
+        self.reset_parameters()
+
+    def forward(self, input, hidden):
+        gates = (input @ self.weight_ih.t() + hidden @ self.weight_hh.t() + self.bias)
+        resetgate, updategate, newgate = gates.chunk(3, 1)
+
+        resetgate = torch.sigmoid(resetgate)
+        updategate = torch.sigmoid(updategate)
+        newgate = self.nonlinearity(newgate)
+
+        new_hidden = self.decay * hidden + (1 - self.decay) * newgate
+        hidden = (1 - updategate) * hidden + updategate * new_hidden
+
+        return hidden
 
 class RNNLayer(nn.Module):
-    def __init__(self, *args):
+    def __init__(self, cell_type, *args):
         super().__init__()
-        self.rnncell = RNNCell(*args)
+        if cell_type == "leaky_rnn":
+            self.rnncell = RNNCell(*args)
+        elif cell_type == "leaky_gru":
+            self.rnncell = LeakyGRUCell(*args)
+        else:
+            raise ValueError("Unsupported cell type: {}".format(cell_type))
 
     def forward(self, input, hidden_init):
         inputs = input.unbind(0)  # inputs has dimension [Time, batch, n_input]

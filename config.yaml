@@ -1,12 +1,12 @@
 rnn:
   rules : [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT, AntiPerceptualDecisionMakingDelayResponseT]
   parameters:
-    architecture: 
-      - LeakyRNN
-      # - LeakyGRU
-      # - LSTM
+    rnn_type: 
+      - leaky_rnn
+      - leaky_gru
     activations:
-      # - relu
+      - leaky_relu
+      - relu
       - softplus
       - tanh
     freeze:
@@ -21,6 +21,9 @@ rnn:
     learning_rate:
       - 0.0001
       - 0.001
+    batch_size_train:
+      - 64
+      - 128
   pretrain:
     ruleset: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT]
     # ruleset: [GoNogoT, AntiGoNogoT, GoNogoDelayResponseT]

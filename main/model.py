@@ -19,6 +19,8 @@ class Model(nn.Module):
             hp["activation"] == "relu"
         ):  # Type of activation runctions, relu, softplus, tanh, elu
             nonlinearity = nn.ReLU()
+        elif hp["activation"] == "leaky_relu":
+            nonlinearity = nn.LeakyReLU()
         elif hp["activation"] == "tanh":
             nonlinearity = nn.Tanh()
         elif hp["activation"] == "softplus":
@@ -27,7 +29,7 @@ class Model(nn.Module):
             raise NotImplementedError
 
         self.n_rnn = n_rnn
-        self.rnn = RNNLayer(n_input, n_rnn, nonlinearity, decay)
+        self.rnn = RNNLayer(hp["rnn_type"], n_input, n_rnn, nonlinearity, decay)
         self.readout = nn.Linear(n_rnn, n_output, bias=False)
 
     def forward(self, x):

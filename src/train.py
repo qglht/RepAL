@@ -27,16 +27,18 @@ if __name__ == "__main__":
     )
     i = 0
     print(f"devices used : {devices}")
-    for activation in config["rnn"]["parameters"]["activations"]:
-        for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
-            for lr in config["rnn"]["parameters"]["learning_rate"]:
-                for freeze in config["rnn"]["parameters"]["freeze"]:
-                    for nopretraining in config["rnn"]["parameters"]["nopretrain"]:
-                        device = devices[
-                            i % len(devices)
-                        ]  # Cycle through available devices
-                        tasks.append((activation, hidden_size, lr, freeze, "train", nopretraining, device))
-                        i += 1
+
+    for rnn_type in config["rnn"]["parameters"]["rnn_type"]:
+        for activation in config["rnn"]["parameters"]["activations"]:
+            for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
+                for lr in config["rnn"]["parameters"]["learning_rate"]:
+                    for freeze in config["rnn"]["parameters"]["freeze"]:
+                        for nopretraining in config["rnn"]["parameters"]["nopretrain"]:
+                            device = devices[
+                                i % len(devices)
+                            ]  # Cycle through available devices
+                            tasks.append((rnn_type, activation, hidden_size, lr, freeze, "train", nopretraining, device))
+                            i += 1
 
     # Create a process for each task
     processes = [

@@ -32,12 +32,13 @@ if __name__ == "__main__":
 
     i = 0  # Index to cycle through available devices
 
-    for activation in config["rnn"]["parameters"]["activations"]:
-        for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
-            for lr in config["rnn"]["parameters"]["learning_rate"]:
-                device = devices[i % len(devices)]  # Cycle through available devices
-                tasks.append((activation, hidden_size, lr, False, "pretrain", False, device))
-                i += 1
+    for rnn_type in config["rnn"]["parameters"]["rnn_type"]:
+        for activation in config["rnn"]["parameters"]["activations"]:
+            for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
+                for lr in config["rnn"]["parameters"]["learning_rate"]:
+                    device = devices[i % len(devices)]  # Cycle through available devices
+                    tasks.append((rnn_type, activation, hidden_size, lr, False, "pretrain", False, device))
+                    i += 1
 
     processes = [
         multiprocessing.Process(target=train_model, args=task) for task in tasks
