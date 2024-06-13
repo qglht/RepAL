@@ -1,60 +1,46 @@
-import neurogym as ngym
-import numpy as np
-import matplotlib.pyplot as plt
-import ipdb 
 import torch
-import importlib
+from torch.utils.data import Dataset, DataLoader
+import pickle
 
-class Dataset:
-    def __init__(self, env, batch_size, seq_len):
-        self.batch_size = batch_size
-        self.seq_len = seq_len
-        self.env = env
-        self._mask = None
     
-    # Make supervised dataset
-        self.dataset = ngym.Dataset(
-            env, batch_size=self.batch_size, seq_len=self.seq_len)
-        self.ob_size = self.env.observation_space.shape[0]
-        self.act_size = self.env.action_space.n
+class NeuroGymDataset(Dataset):
+    def __init__(self, env, mode):
+        self.env = env
+        self.dataset = None
+        self.mode = mode
+        self.load_data()
+    
+    def load_data(self):
+        # load the pickle data file
+        try:
+            with open(f'data/{self.env}_{self.mode}.pkl', 'rb') as f:
+                self.dataset = pickle.load(f)
+        except FileNotFoundError:
+            with open(f'../data/{self.env}_{self.mode}.pkl', 'rb') as f:
+                self.dataset = pickle.load(f)
 
-    def plot_env(self):
-        fig = ngym.utils.plot_env(self.env, num_trials=3)
-        plt.show()
+    def __len__(self):
+        return self.dataset["inputs"].shape[0]
 
-    @property
-    def mask(self):
-        if self._mask is None:
-            inputs, labels = self.dataset()
-            n_time, batch_size, _ = inputs.shape
-            
-            # Identify response period indexes where inputs are all zeros
-            zero_mask = np.all(inputs == 0 , axis=2)
+    def __getitem__(self, idx):
+        return self.dataset["inputs"][idx], self.dataset["targets"][idx], self.dataset["masks"][idx]
 
-            # Identify response period indexes where inputs are all zeros
-            mask = np.where(zero_mask, 5, 1)
+def get_dataloader(env, batch_size, num_workers, shuffle, mode="train", train_split=0.8):
+    dataset = NeuroGymDataset(env, mode=mode)
+    
+    #TODO: Add an argument to be able to be able to generate dataset on the go
+    # Determine the size of train and test sets
+    total_samples = len(dataset)
+    train_size = int(train_split * total_samples)
+    test_size = total_samples - train_size
+    
+    # Split the dataset into train and test sets
+    train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, test_size])
+    
+    # Create dataloaders for train and test sets
+    train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True)
+    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers, pin_memory=True)
+    
+    return {"train":train_dataloader, "test":test_dataloader}
 
-            # Modify mask for continuous sequences of fives
-            for b in range(batch_size):
-                count = 0
-                for i in range(n_time):
-                    if mask[i, b] == 5:
-                        if count < 4:
-                            mask[i, b] = 2 + count
-                        count += 1
-                    else:
-                        count = 0  # Reinitialize the count when a non-five value is encountered
-
-            self._mask = mask
-
-        return mask
-
-
-
-
-def get_class_instance(class_name, **kwargs):
-    module = importlib.import_module('main')
-    class_ = getattr(module, class_name)
-    instance = class_(**kwargs)
-    return instance
     

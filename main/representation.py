@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import ipdb
 import torch
 from torch import linalg as LA
-from main.dataset import Dataset, get_class_instance
+from main import get_dataloader, get_class_instance
 
 #### Not modified for neurogym yet!!
 
@@ -37,17 +37,27 @@ def representation(model, rules):
         rules = [rules]
     elif rules is None:
         rules = hp["rules"]
-
+    activations = OrderedDict()
+    dataloaders = {rule: get_dataloader(env=rule, batch_size=hp["batch_size_train"], num_workers=4, shuffle=False, mode="test") for rule in rules}
     for rule in rules:
+        # TODO : think about taking the good mode for the task otherwise the timing will be wrong
+        # seq leng is the length of the cumulated timing
         env = get_class_instance(rule, config=hp)
         timing = env.timing
-        # seq leng is the length of the cumulated timing
         seq_length = int(sum([v for k,v in timing.items()])/hp["dt"])
-        _, _, _, h, trial = model(rule=rule, batch_size= hp["batch_size_test"], seq_len=seq_length)
-        # t_start = int(500 / hp["dt"])  # Important: Ignore the initial transition
-        h_byepoch = get_indexes(hp['dt'], timing, seq_length, h, rule)
+        # concatenate the activations for all trials
+        for inputs, labels, mask in dataloaders[rule]["test"]:
+            with torch.no_grad():
+                inputs, labels, mask = inputs.permute(1, 0, 2).to(model.device, non_blocking=True), labels.permute(1, 0).to(model.device, non_blocking=True).flatten().long(), mask.permute(1, 0).to(model.device, non_blocking=True).flatten().long()
+                _, _, _, h, _ = model(inputs, labels, mask)
+                h_byepoch = get_indexes(hp['dt'], timing, seq_length, h, rule)
+                for key, value in h_byepoch.items():
+                    if key not in activations:
+                        activations[key] = value
+                    else:
+                        activations[key] = torch.cat([activations[key], value], dim=1)
 
-    return h_byepoch
+    return activations
 
 
 def compute_pca(h, n_components=3):

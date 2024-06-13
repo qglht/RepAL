@@ -27,7 +27,7 @@ source activate dsa  # If necessary, depends on cluster setup
 poetry install  # Install additional Python packages as needed
 
 # Run the application and monitor GPU status in parallel
-(poetry run python -m src.train) &
+(poetry run python -m src.dsa_optimization) &
 
 # PID of the application
 APP_PID=$!

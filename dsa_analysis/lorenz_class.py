@@ -25,7 +25,7 @@ def normalize_within_unit_volume(array):
     max_value = np.max(array)
 
     # Calculate scaling factor to fit the entire array within the unit volume
-    scale_factor = 1.0 / (max_value - min_value)
+    scale_factor = 1.0 / (max_value - min_value+1e-6)
 
     # Normalize the array
     normalized_array = (array - min_value) * scale_factor

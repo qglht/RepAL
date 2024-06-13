@@ -1,9 +1,10 @@
 """ Main training loop.
 Copied from https://github.com/gyyang/multitask. Modified to work with pytorch instead of tensorflow framework. 
 """
-
 from __future__ import division
 
+import os
+import warnings
 import sys
 import time
 from collections import defaultdict
@@ -14,12 +15,24 @@ import numpy as np
 import ipdb
 from neurogym import TrialEnv
 from typing import List
-from main import get_class_instance
+import torch
+import time
+import numpy as np
+import main
 
+# Suppress specific Gym warnings
+warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
+warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprecated.*")
+
+# Set environment variable to ignore Gym deprecation warnings
+os.environ['GYM_IGNORE_DEPRECATION_WARNINGS'] = '1'
 
 print_flag = False
 ######## mostly untouched ###############
 
+def create_directory_if_not_exists(directory):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
 
 def get_default_hp(ruleset: List[str]):
     """Get a default hp.
@@ -30,18 +43,18 @@ def get_default_hp(ruleset: List[str]):
         hp : a dictionary containing training hpuration
     """
     basic_kwargs = {'dt':20, "mode":"train", "rng":np.random.RandomState(0)}
-    env = get_class_instance(ruleset[0],config=basic_kwargs)
+    env = main.get_class_instance(ruleset[0],config=basic_kwargs)
     n_rule = len(ruleset)
     n_input, n_output = env.observation_space.shape[0] + n_rule, env.action_space.n
     hp = {
         "mode":"train",
         # batch size for training
-        "batch_size_train": 64,
+        "batch_size_train": 128,
         # batch_size for testing
         "batch_size_test": 512,
         # input type: normal, multi
         "in_type": "normal",
-        # Type of RNNs: LeakyRNN, LeakyGRU, EILeakyGRU, GRU, LSTM
+        # Type of RNNs: LeakyRNN, LeakyGRU
         "rnn_type": "LeakyRNN",
         # whether rule and stimulus inputs are represented separately
         "use_separate_input": False,
@@ -96,6 +109,7 @@ def get_default_hp(ruleset: List[str]):
         # intelligent synapses parameters, tuple (c, ksi)
         "c_intsyn": 0,
         "ksi_intsyn": 0,
+        "num_epochs": 10,
     }
 
     return hp
@@ -105,8 +119,7 @@ def get_default_hp(ruleset: List[str]):
 def set_hyperparameters(
     model_dir,
     hp=None,
-    max_steps=1e7,
-    display_step=500,
+    display_step=10,
     ruleset: List[str] = None,
     rule_trains: List[str] = None,
     rule_prob_map=None,
@@ -119,7 +132,7 @@ def set_hyperparameters(
     Args:
         model_dir: str, training directory
         hp: dictionary of hyperparameters
-        max_steps: int, maximum number of training steps
+        num_epochs: int, maximum number of training steps
         display_step: int, display steps
         ruleset: the set of rules to train
         rule_trains: list of rules to train, if None then all rules possible
@@ -141,7 +154,6 @@ def set_hyperparameters(
     hp["seed"] = seed
     hp["rng"] = np.random.RandomState(seed)
     hp["model_dir"] = model_dir
-    hp["max_steps"] = max_steps
     hp["display_step"] = display_step
     hp["decay"] = math.exp(-hp["dt"] / hp["tau"])  # 1 - hp['dt']/hp['tau']
     hp["rule_trains"] = rule_trains
@@ -150,13 +162,6 @@ def set_hyperparameters(
     # Assign probabilities for rule_trains.
     if rule_prob_map is None:
         rule_prob_map = dict()
-
-    # Turn into rule_trains format
-    hp["rule_probs"] = None
-    if hasattr(hp["rule_trains"], "__iter__"):
-        # Set default as 1.
-        rule_prob = np.array([rule_prob_map.get(r, 1.0) for r in hp["rule_trains"]])
-        hp["rule_probs"] = list(rule_prob / np.sum(rule_prob))
 
     # penalty on deviation from initial weight
     if hp["l2_weight_init"] > 0:
@@ -182,60 +187,59 @@ def set_hyperparameters(
 
     return hp, log, optimizer  # , model
 
+def train(run_model, optimizer, hp, log, name, freeze=False):
 
-def train(run_model, optimizer, hp, log, freeze=False):
-
-    step = 0
     t_start = time.time()
     losses = []
-    loss_change_threshold = 1e-3  # Threshold for change in loss to consider stopping
     if freeze:
         optim = optimizer(
             [run_model.model.rnn.rnncell.weight_ih], lr=hp["learning_rate"]
         )
     else:
         optim = optimizer(run_model.model.parameters(), lr=hp["learning_rate"])
-    while step * hp["batch_size_train"] <= hp["max_steps"]:
-        try:
-            # Validation
-            if step % hp["display_step"] == 0:
-                log["trials"].append(step * hp["batch_size_train"])
-                log["times"].append(time.time() - t_start)
-                log = do_eval(run_model, log, hp["rule_trains"])
-                # if loss is not decreasing anymore, stop training
-                # check if minimum performance is above target
-                if log["perf_min"][-1] > hp["target_perf"]:
-                    # Check if the average decrease in loss is below a certain threshold
-                    recent_losses = losses[-hp["batch_size_train"] * 2 :]
-                    # TODO : change to batch_size_test
-                    avg_loss_change = np.mean(np.diff(recent_losses))
-                    if abs(avg_loss_change) < loss_change_threshold:
-                        print(
-                            "Perf reached the target: {:0.2f}".format(hp["target_perf"])
-                        )
-                        break
+    
+    dataloaders = {rule: main.get_dataloader(env=rule, batch_size=hp["batch_size_train"], num_workers=4, shuffle=True) for rule in hp["rule_trains"]}
+    
+    for epoch in range(hp["num_epochs"]):
+        print(f"Epoch {epoch} started")
+        epoch_loss = 0.0
+        for rule in hp["rule_trains"]:
+            for inputs, labels, mask in dataloaders[rule]["train"]:
+                # print batch
+                print(inputs.shape, labels.shape, mask.shape)
+                inputs, labels, mask = inputs.permute(1, 0, 2).to(run_model.device, non_blocking=True), labels.permute(1, 0).to(run_model.device, non_blocking=True).flatten().long(), mask.permute(1, 0).to(run_model.device, non_blocking=True).flatten().long()
+                optim.zero_grad(set_to_none=True)
+                c_lsq, c_reg, _, _, _ = run_model(inputs, labels, mask)
+                loss = c_lsq + c_reg
+                loss.backward()
+                optim.step()
+                epoch_loss += loss.item()
+            
+        losses.append(epoch_loss)
 
-            # Training
-            rule_train_now = hp["rng"].choice(hp["rule_trains"], p=hp["rule_probs"])
+        log["trials"].append(epoch)
+        log["times"].append(time.time() - t_start)
+        log = do_eval(run_model, log, hp["rule_trains"], dataloaders)
 
-            optim.zero_grad()
-            c_lsq, c_reg, _, _, _ = run_model(
-                rule=rule_train_now, batch_size=hp["batch_size_train"]
-            )
-            loss = c_lsq + c_reg
-            losses.append(loss.item())
-            loss.backward()
-            optim.step()
-            step += 1
-
-        except KeyboardInterrupt:
-            print("Optimization interrupted by user")
+        if log["perf_min"][-1] > hp["target_perf"]:
             break
+
+        checkpoint_dir = name
+        create_directory_if_not_exists(checkpoint_dir)
+        checkpoint_path = os.path.join(checkpoint_dir, f'epoch_{epoch}_checkpoint.pth')
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': run_model.state_dict(),
+            'optimizer_state_dict': optim.state_dict(),
+            'loss': epoch_loss,
+            'log': log
+        }, checkpoint_path)
+
 
     print("Optimization finished!")
 
 
-def do_eval(run_model, log, rule_train):
+def do_eval(run_model, log, rule_train, dataloaders):
     """Do evaluation using entirely PyTorch operations to ensure GPU utilization."""
     hp = run_model.hp
     if isinstance(rule_train, str):
@@ -246,16 +250,14 @@ def do_eval(run_model, log, rule_train):
     print(
         f"Trial {log['trials'][-1]:7d} | Time {log['times'][-1]:0.2f} s | Now training {rule_name_print}"
     )
-
     for rule_test in hp["rules"]:
-        n_rep = 16
-        batch_size_test_rep = hp["batch_size_test"] // n_rep
         clsq_tmp, creg_tmp, perf_tmp = [], [], []
-
-        for i_rep in range(n_rep):
+        dataloader = dataloaders[rule_test]["test"]
+        for inputs, labels, mask in dataloader:
             with torch.no_grad():
+                inputs, labels, mask = inputs.permute(1, 0, 2).to(run_model.device, non_blocking=True), labels.permute(1, 0).to(run_model.device, non_blocking=True).flatten().long(), mask.permute(1, 0).to(run_model.device, non_blocking=True).flatten().long()
                 c_lsq, c_reg, y_hat_test, _, labels = run_model(
-                    rule=rule_test, batch_size=batch_size_test_rep
+                    inputs, labels, mask
                 )
 
             # Store costs directly as tensors to avoid multiple GPU to CPU transfers
@@ -308,30 +310,6 @@ def do_eval(run_model, log, rule_train):
 
     return log
 
-# def accuracy(logits, true_class_indices):
-#     # Reshape logits to shape [(batch * images), classes]
-#     logits_flat = logits.view(-1, logits.size(-1))
-
-#     # Reshape true class indices to shape [(batch * images)]
-#     true_class_indices_flat = true_class_indices.flatten()
-
-#     # Get the predicted classes by taking the argmax over the classes dimension
-#     predicted_classes = torch.argmax(logits_flat, dim=1)
-
-#     # Apply mask to consider only non-zero values in true_class_indices_flat
-#     non_zero_mask = true_class_indices_flat != 0
-#     filtered_predicted_classes = predicted_classes[non_zero_mask]
-#     filtered_true_class_indices_flat = true_class_indices_flat[non_zero_mask]
-#     ipdb.set_trace()
-
-#     # Compare predicted classes with true class indices
-#     correct_predictions = (filtered_predicted_classes == filtered_true_class_indices_flat).sum().item()
-
-#     # Calculate accuracy
-#     total_predictions = filtered_true_class_indices_flat.size(0)
-#     accuracy = correct_predictions / total_predictions if total_predictions > 0 else 0.0
-
-#     return accuracy
 
 def accuracy(logits, true_class_indices):
     # Reshape logits to shape [(batch * images), classes]
@@ -348,7 +326,7 @@ def accuracy(logits, true_class_indices):
 
     # Calculate accuracy
     total_predictions = true_class_indices_flat.size(0)
-    accuracy = correct_predictions / total_predictions
+    accuracy = correct_predictions / total_predictions if total_predictions > 0 else 0.0
 
     return accuracy
 

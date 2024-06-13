@@ -1,10 +1,20 @@
+import warnings
+import os
+
 from dsa_analysis import load_config
 import torch
 import multiprocessing
-from src.toolkit import train_model
-import ipdb
+from src.toolkit import generate_data
+
+# Suppress specific Gym warnings
+warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
+warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprecated.*")
+
+# Set environment variable to ignore Gym deprecation warnings
+os.environ['GYM_IGNORE_DEPRECATION_WARNINGS'] = '1'
 
 if __name__ == "__main__":
+   
     multiprocessing.set_start_method(
         "spawn", force=True
     )  # Set multiprocessing to use 'spawn'
@@ -22,15 +32,14 @@ if __name__ == "__main__":
 
     i = 0  # Index to cycle through available devices
 
-    for activation in config["rnn"]["parameters"]["activations"]:
-        for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
-            for lr in config["rnn"]["parameters"]["learning_rate"]:
-                device = devices[i % len(devices)]  # Cycle through available devices
-                tasks.append((activation, hidden_size, lr, False, "pretrain", False, device))
-                i += 1
+    for env in config['rnn']['rules']:
+        device = devices[i % len(devices)]  # Cycle through available devices
+        tasks.append((env))
+        i += 1
 
+    print([task for task in tasks])
     processes = [
-        multiprocessing.Process(target=train_model, args=task) for task in tasks
+        multiprocessing.Process(target=generate_data, args=(task,)) for task in tasks
     ]
     # Start all processes
     for process in processes:
