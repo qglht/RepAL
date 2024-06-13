@@ -93,9 +93,9 @@ def train_model(rnn_type, activation, hidden_size, lr, freeze, mode, no_pretrain
 
 def pipeline(group, rnn_type, activation, hidden_size, lr, batch_size, device):
     config = load_config("config.yaml")
-    rules_pretrain = group['pretrain']['ruleset']
-    rules_train = group['train']['ruleset']
-    freeze = group['train']['freeze']
+    rules_pretrain = config['groups'][group]['pretrain']['ruleset']
+    rules_train = config['groups'][group]['train']['ruleset']
+    freeze = config['groups'][group]['train']['frozen']
     all_rules = config['all_rules']
     hp = {
         "rnn_type": rnn_type,
@@ -148,6 +148,7 @@ def pipeline(group, rnn_type, activation, hidden_size, lr, batch_size, device):
                 main.train(run_model, optimizer, hp, log, path_train_folder, freeze=freeze)
                 run_model.save(path_train_model)
         else:
+            # if rules_train is empty, then we don't train the model
             hp, log, optimizer = main.set_hyperparameters(
                     model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=rules_train
                 )

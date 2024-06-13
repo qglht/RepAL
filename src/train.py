@@ -28,6 +28,11 @@ if __name__ == "__main__":
     i = 0
     print(f"devices used : {devices}")
 
+    # create a folder for each group in config['groups'] under model folder
+    for group in config["groups"]:
+        if not os.path.exists(f"models/{group}"):
+            os.makedirs(f"models/{group}")
+
     for group in config["groups"]:
         for rnn_type in config["rnn"]["parameters"]["rnn_type"]:
             for activation in config["rnn"]["parameters"]["activations"]:

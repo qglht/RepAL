@@ -1,7 +1,7 @@
 import warnings
 import os
 
-from src.toolkit import compute_dissimilarity, train_model, generate_data, dsa_optimisation_compositionality
+from src.toolkit import compute_dissimilarity, train_model, generate_data, dsa_optimisation_compositionality, pipeline
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
@@ -29,7 +29,7 @@ if __name__ == "__main__":
     # i = 0  # Index to cycle through available devices
 
     # device = devices[0]
-    train_model("leaky_gru","leaky_relu", 128, 0.001, False, "pretrain", False, "cpu")
+    pipeline("master","leaky_gru","leaky_relu", 128, 0.001, 64, "cpu")
     # curve, explained_variance = compute_dissimilarity(
     #                     "softplus", 128, 0.001, False, "pretrain", "cpu"
     #                 )
