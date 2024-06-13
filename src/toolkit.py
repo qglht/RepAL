@@ -11,7 +11,6 @@ import DSA
 import pandas as pd
 import numpy as np
 from itertools import permutations
-import ipdb
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
@@ -40,7 +39,6 @@ def normalize_within_unit_volume(tensor):
 
 def pipeline(group, rnn_type, activation, hidden_size, lr, batch_size, device):
     config = load_config("config.yaml")
-    ipdb.set_trace()
     rules_pretrain = config['groups'][group]['pretrain']['ruleset']
     rules_train = config['groups'][group]['train']['ruleset']
     freeze = config['groups'][group]['train']['frozen']
