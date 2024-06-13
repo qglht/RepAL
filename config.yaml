@@ -29,13 +29,13 @@ groups:
     pretrain: 
       ruleset: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT]
     train:
-      rulset: [AntiPerceptualDecisionMakingDelayResponseT]
+      ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
       frozen: True
   pretrain_unfrozen:
     pretrain: 
       ruleset: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT]
     train:
-      rulset: [AntiPerceptualDecisionMakingDelayResponseT]
+      ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
       frozen: False
   delay: 
     pretrain:

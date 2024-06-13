@@ -11,6 +11,7 @@ import DSA
 import pandas as pd
 import numpy as np
 from itertools import permutations
+import ipdb
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
@@ -37,62 +38,9 @@ def normalize_within_unit_volume(tensor):
 
     return normalized_tensor
 
-
-def train_model(rnn_type, activation, hidden_size, lr, freeze, mode, no_pretraining, device):
-    # Load configuration and set hyperparameters
-    config = load_config("config.yaml")
-    ruleset = config["rnn"][mode]["ruleset"]
-    all_rules = config["rnn"]["train"]["ruleset"] + config["rnn"]["pretrain"]["ruleset"]
-    num_epochs = config["rnn"][mode]["num_epochs"]
-    hp = {
-        "rnn_type": rnn_type,
-        "activation": activation,
-        "n_rnn": hidden_size,
-        "learning_rate": lr,
-        "l2_h": 0.000001,
-        "l2_weight": 0.000001,
-        "num_epochs": num_epochs,
-    }
-    hp, log, optimizer = main.set_hyperparameters(
-        model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=ruleset
-    )
-
-    model_name = f"{rnn_type}_{activation}_{hidden_size}_{lr}"
-    if mode == "train":
-        if no_pretraining:
-            name = os.path.join("models", model_name + f"__{freeze}_train_nopretrain")
-            if  model_name + f"__{freeze}_train_nopretrain.pth" in os.listdir("models"):
-                return
-            else:
-                run_model = main.Run_Model(hp, RNNLayer, device)
-                main.train(run_model, optimizer, hp, log, name, freeze=freeze)
-                run_model.save(name+".pth")
-        else: 
-            name = os.path.join("models", model_name + f"__{freeze}_train_pretrain") 
-            if  model_name + f"__{freeze}_train_pretrain.pth" in os.listdir("models"):
-                return
-            else:
-                run_model = main.load_model(
-                    f"models/"+model_name+"_pretrain.pth",
-                    hp,
-                    RNNLayer,
-                    device=device,
-                )
-                main.train(run_model, optimizer, hp, log, name, freeze=freeze)
-                run_model.save(name+".pth")
-    elif mode == "pretrain":
-        name = os.path.join("models", model_name + f"_pretrain")
-        if model_name + f"_pretrain.pth" in os.listdir("models"):
-            return
-        else:
-            run_model = main.Run_Model(hp, RNNLayer, device)
-            main.train(run_model, optimizer, hp, log, name)
-            run_model.save(name+".pth")
-    return run_model
-
-
 def pipeline(group, rnn_type, activation, hidden_size, lr, batch_size, device):
     config = load_config("config.yaml")
+    ipdb.set_trace()
     rules_pretrain = config['groups'][group]['pretrain']['ruleset']
     rules_train = config['groups'][group]['train']['ruleset']
     freeze = config['groups'][group]['train']['frozen']
