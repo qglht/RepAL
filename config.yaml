@@ -59,8 +59,8 @@ groups:
     pretrain:
       ruleset: []
     train:
-      ruleset: []
-      frozen: False
+      ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+      frozen: True
 analysis:
   epochs: [stim1]
   rule: [delayanti]

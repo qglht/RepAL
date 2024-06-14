@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # set the number of nodes
-#SBATCH --nodes=8
+#SBATCH --nodes=1
 
 # set max wallclock time
 #SBATCH --time=24:00:00
