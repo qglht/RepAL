@@ -12,7 +12,6 @@ from collections import defaultdict
 import torch
 import math
 import numpy as np
-import ipdb
 from neurogym import TrialEnv
 from typing import List
 from torch.cuda.amp import autocast, GradScaler
@@ -330,10 +329,12 @@ def accuracy(logits, true_class_indices, mask):
     # Reshape mask to shape [(batch * images)]
     mask_flat = mask.flatten()
 
+    # put 1 when mask >1, 0 otherwise
+    mask_flat = (mask_flat > 1).float()
+
     # Get the predicted classes by taking the argmax over the classes dimension
     predicted_classes = torch.argmax(logits_flat, dim=1)
 
-    ipdb.set_trace()
     # Compare predicted classes with true class indices
     correct_predictions = (predicted_classes == true_class_indices_flat).float()
 
