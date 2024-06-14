@@ -104,7 +104,7 @@ def pipeline(group, rnn_type, activation, hidden_size, lr, batch_size, device):
 
 def generate_data(env):
     config = load_config("config.yaml")
-    all_rules = config["rnn"]["rules"]
+    all_rules = config["all_rules"]
     hp, _, _ = main.set_hyperparameters(
         model_dir="debug", hp={}, ruleset=all_rules
     )

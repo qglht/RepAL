@@ -32,7 +32,7 @@ if __name__ == "__main__":
 
     i = 0  # Index to cycle through available devices
 
-    for env in config['rnn']['rules']:
+    for env in config['all_rules']:
         device = devices[i % len(devices)]  # Cycle through available devices
         tasks.append((env))
         i += 1

@@ -12,7 +12,7 @@ os.environ['GYM_IGNORE_DEPRECATION_WARNINGS'] = '1'
 
 if __name__ == "__main__":
 
-    # generate_data("PerceptualDecisionMakingT")
+    generate_data("PerceptualDecisionMakingT")
     # )  # Set multiprocessing to use 'spawn'
     # config = load_config("config.yaml")
 
@@ -29,7 +29,7 @@ if __name__ == "__main__":
     # i = 0  # Index to cycle through available devices
 
     # device = devices[0]
-    pipeline("test","leaky_gru","leaky_relu", 128, 0.001, 64, "cpu")
+    # pipeline("test","leaky_gru","leaky_relu", 128, 0.001, 64, "cpu")
     # curve, explained_variance = compute_dissimilarity(
     #                     "softplus", 128, 0.001, False, "pretrain", "cpu"
     #                 )
