@@ -1,7 +1,7 @@
 import warnings
 import os
 
-from src.toolkit import compute_dissimilarity, train_model, generate_data, dsa_optimisation_compositionality, pipeline
+from src.toolkit import compute_dissimilarity,  generate_data, dsa_optimisation_compositionality, pipeline
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")

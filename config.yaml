@@ -11,13 +11,13 @@ rnn:
       - tanh
     n_rnn:
       - 128
-      - 256
+      # - 256
     learning_rate:
-      - 0.0001
+      # - 0.0001
       - 0.001
     batch_size_train:
       - 64
-      - 128
+      # - 128
 groups:
   master:
     pretrain:

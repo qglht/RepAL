@@ -15,10 +15,12 @@ import numpy as np
 import ipdb
 from neurogym import TrialEnv
 from typing import List
+from torch.cuda.amp import autocast, GradScaler
 import torch
 import time
 import numpy as np
 import main
+
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
@@ -198,6 +200,9 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
     else:
         optim = optimizer(run_model.model.parameters(), lr=hp["learning_rate"])
     
+    # Create a GradScaler for mixed precision training
+    scaler = GradScaler()
+
     dataloaders = {rule: main.get_dataloader(env=rule, batch_size=hp["batch_size_train"], num_workers=4, shuffle=True) for rule in hp["rule_trains"]}
     
     for epoch in range(hp["num_epochs"]):
@@ -205,14 +210,18 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
         epoch_loss = 0.0
         for rule in hp["rule_trains"]:
             for inputs, labels, mask in dataloaders[rule]["train"]:
-                # print batch
-                print(inputs.shape, labels.shape, mask.shape)
                 inputs, labels, mask = inputs.permute(1, 0, 2).to(run_model.device, non_blocking=True), labels.permute(1, 0).to(run_model.device, non_blocking=True).flatten().long(), mask.permute(1, 0).to(run_model.device, non_blocking=True).flatten().long()
                 optim.zero_grad(set_to_none=True)
-                c_lsq, c_reg, _, _, _ = run_model(inputs, labels, mask)
-                loss = c_lsq + c_reg
-                loss.backward()
-                optim.step()
+
+                # autocast for mixed precision training
+                with autocast():
+                    c_lsq, c_reg, _, _, _ = run_model(inputs, labels, mask)
+                    loss = c_lsq + c_reg
+
+                # scale the loss and call backward() to create scaled gradients
+                scaler.scale(loss).backward()
+                scaler.step(optim)
+                scaler.update()
                 epoch_loss += loss.item()
             
         losses.append(epoch_loss)

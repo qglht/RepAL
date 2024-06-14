@@ -27,6 +27,7 @@ if __name__ == "__main__":
     )
     i = 0
     print(f"devices used : {devices}")
+    print(f"number of devices : {num_gpus}")
 
     # create a folder for each group in config['groups'] under model folder
     for group in config["groups"]:
