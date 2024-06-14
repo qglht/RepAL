@@ -57,7 +57,7 @@ def get_default_hp(ruleset: List[str]):
         # input type: normal, multi
         "in_type": "normal",
         # Type of RNNs: LeakyRNN, LeakyGRU
-        "rnn_type": "LeakyRNN",
+        "rnn_type": "leaky_rnn",
         # whether rule and stimulus inputs are represented separately
         "use_separate_input": False,
         # Type of loss functions
@@ -204,7 +204,7 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
     scaler = GradScaler()
 
     dataloaders = {rule: main.get_dataloader(env=rule, batch_size=hp["batch_size_train"], num_workers=4, shuffle=True) for rule in hp["rule_trains"]}
-    
+
     for epoch in range(hp["num_epochs"]):
         print(f"Epoch {epoch} started")
         epoch_loss = 0.0
@@ -274,7 +274,7 @@ def do_eval(run_model, log, rule_train, dataloaders):
             creg_tmp.append(c_reg)
 
             # Calculate performance using PyTorch
-            perf_test = get_perf(y_hat_test, labels)
+            perf_test = get_perf(y_hat_test, labels, mask)
             perf_tmp.append(perf_test)
 
         # Convert lists of tensors to single tensors and compute mean
@@ -320,28 +320,34 @@ def do_eval(run_model, log, rule_train, dataloaders):
     return log
 
 
-def accuracy(logits, true_class_indices):
+def accuracy(logits, true_class_indices, mask):
     # Reshape logits to shape [(batch * images), classes]
     logits_flat = logits.view(-1, logits.size(-1))
 
     # Reshape true class indices to shape [(batch * images)]
     true_class_indices_flat = true_class_indices.flatten()
 
+    # Reshape mask to shape [(batch * images)]
+    mask_flat = mask.flatten()
+
     # Get the predicted classes by taking the argmax over the classes dimension
     predicted_classes = torch.argmax(logits_flat, dim=1)
 
     # Compare predicted classes with true class indices
-    correct_predictions = (predicted_classes == true_class_indices_flat).sum().item()
+    correct_predictions = (predicted_classes == true_class_indices_flat).float()
 
-    # Calculate accuracy
-    total_predictions = true_class_indices_flat.size(0)
-    accuracy = correct_predictions / total_predictions if total_predictions > 0 else 0.0
+    # Apply the mask to weigh the correct predictions
+    weighted_correct_predictions = correct_predictions * mask_flat
 
-    return accuracy
+    # Calculate weighted accuracy
+    total_weight = mask_flat.sum().item()
+    weighted_accuracy = weighted_correct_predictions.sum().item() / total_weight if total_weight > 0 else 0.0
+
+    return weighted_accuracy
 
 
 
-def get_perf(outputs, true_labels):
+def get_perf(outputs, true_labels, mask):
     """Compute performance using PyTorch."""
     # Assuming outputs and true_labels are PyTorch tensors
-    return accuracy(outputs, true_labels)
+    return accuracy(outputs, true_labels, mask)
