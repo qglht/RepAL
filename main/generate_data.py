@@ -65,12 +65,12 @@ def generate_data(env, hp, mode, seq_len=400, num_pregenerated=100000):
     
     # Swap axes after gathering all samples
     inputs, targets = swap_axes(inputs, targets)
+
+    # Create masks
+    masks = create_mask(inputs)
     
     # Generate feed data
     inputs, targets = gen_feed_data(inputs, targets, env, hp)
-    
-    # Create masks
-    masks = create_mask(inputs)
     
     # Convert inputs, targets, masks to torch tensors
     inputs, targets, masks = torch.tensor(inputs).to(torch.float32), torch.tensor(targets).to(torch.float32), torch.tensor(masks).to(torch.float32)

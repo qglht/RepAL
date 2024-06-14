@@ -333,6 +333,7 @@ def accuracy(logits, true_class_indices, mask):
     # Get the predicted classes by taking the argmax over the classes dimension
     predicted_classes = torch.argmax(logits_flat, dim=1)
 
+    ipdb.set_trace()
     # Compare predicted classes with true class indices
     correct_predictions = (predicted_classes == true_class_indices_flat).float()
 
