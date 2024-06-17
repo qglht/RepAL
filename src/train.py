@@ -33,7 +33,7 @@ nvidia-smi --query-gpu=timestamp,name,utilization.gpu,utilization.memory --forma
 
 MONITOR_PID=$!
 
-poetry run python src.train_group --group {group}
+poetry run python -m src.train_group --group {group}
 
 kill $MONITOR_PID
 """
