@@ -1,6 +1,6 @@
 import warnings
 import os
-
+import argparse
 from dsa_analysis import load_config
 import torch
 import multiprocessing
@@ -15,47 +15,28 @@ warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprec
 # Set environment variable to ignore Gym deprecation warnings
 os.environ['GYM_IGNORE_DEPRECATION_WARNINGS'] = '1'
 
-if __name__ == "__main__":
-    multiprocessing.set_start_method("spawn", force=True)
-    config = load_config("config.yaml")
+def dsa_computation(args: argparse.Namespace) -> None:
 
-    # Create a list of all tasks to run
-    tasks = []
-    num_gpus = torch.cuda.device_count()  # Get the number of GPUs available
-    devices = (
-        [torch.device(f"cuda:{i}") for i in range(num_gpus)]
-        if num_gpus > 0
-        else [torch.device("cpu")]
-    )
-    i = 0
-    print(f"devices used : {devices}")
+    device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
 
     rank=50
-    number_parameters_delays = 10
-    number_parameters_intervals = 5
 
-    n_delays = np.linspace(5, 50, number_parameters_delays, dtype=int)
+    dsa_optimisation_compositionality(rank, args.n_delay, args.delay_interval, device)
+    return
 
-    for delay in n_delays:
-        delay_interval = np.linspace(1, int(200/delay), number_parameters_intervals, dtype=int)
-        for space in delay_interval:
-            device = devices[
-                i % len(devices)
-            ]  # Cycle through available devices
-            tasks.append((int(rank), int(delay), int(space), device))
-            i += 1
-
-
-    # Create a process for each task
-    processes = [
-        multiprocessing.Process(target=dsa_optimisation_compositionality, args=task) for task in tasks
-    ]
-
-
-    # Start all processes
-    for process in processes:
-        process.start()
-
-    # Wait for all processes to finish
-    for process in processes:
-        process.join()
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Dsa optimisation")
+    parser.add_argument(
+        "--n_delay",
+        type=int,
+        default=5,
+        help="The number of delays to compute DSA",
+    )
+    parser.add_argument(
+        "--delay_interval",
+        type=int,
+        default=1,
+        help="The delay interval to compute DSA",
+    )
+    args = parser.parse_args()
+    dsa_computation(args)

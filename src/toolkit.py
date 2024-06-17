@@ -115,10 +115,6 @@ def generate_data(env):
     )
     main.generate_data(env, hp, mode="test", num_pregenerated=1000)
 
-def task_relevant_variables():
-    return NotImplementedError
-
-
 def compute_dissimilarity(rnn_type, activation, hidden_size, lr, freeze, nopretrain ,device, n_components=3):
     # Load configuration and set hyperparameters
     config = load_config("../config.yaml")
