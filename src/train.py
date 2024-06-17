@@ -29,7 +29,7 @@ module load python/anaconda3
 source activate dsa
 poetry install
 
-nvidia-smi --query-gpu=timestamp,name,utilization.gpu,utilization.memory --format=csv,nounits -l 300 > {group}_gpu_usage.log &
+nvidia-smi --query-gpu=timestamp,name,utilization.gpu,utilization.memory --format=csv,nounits -l 300 > gpu_usage/{group}_gpu_usage.log &
 
 MONITOR_PID=$!
 
@@ -40,7 +40,7 @@ kill $MONITOR_PID
 
     for group in groups:
         script_content = script_template.format(group=group)
-        script_filename = f"sbatch/{group}_script.sh"
+        script_filename = f"sbatch/groups/{group}_script.sh"
 
         with open(script_filename, 'w') as script_file:
             script_file.write(script_content)
