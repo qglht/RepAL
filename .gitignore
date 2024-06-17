@@ -109,6 +109,7 @@ venv.bak/
 .pth
 .pt
 models/
+models_trained_8_models_per_group/
 
 # data
 .npy
