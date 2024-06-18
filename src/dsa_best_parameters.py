@@ -39,9 +39,9 @@ kill $MONITOR_PID
 
     n_delays = np.linspace(5, 50, number_parameters_delays, dtype=int)
 
-    for delay in n_delays:
+    for delay in n_delays[::-1]:
         delay_interval = np.linspace(1, int(200/delay), number_parameters_intervals, dtype=int)
-        for space in delay_interval:
+        for space in delay_interval[::-1]:
             script_content = script_template.format(n_delay=delay, delay_interval=space)
             script_filename = f"sbatch/dsa/{delay}_{space}_script.sh"
 
