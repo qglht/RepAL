@@ -29,7 +29,8 @@ module load python/anaconda3
 source activate dsa
 poetry install
 
-nvidia-smi --query-gpu=timestamp,name,utilization.gpu,utilization.memory --format=csv,nounits -l 300 > gpu_usage/{group}_gpu_usage.log &
+nvidia-smi --query-gpu=timestamp,index,name,utilization.gpu,utilization.memory --format=csv,nounits -l 300 > gpu_usage/{group}_gpu_usage.log &
+nvidia-smi pmon -c 1 -s um > gpu_usage/{group}_gpu_processes.log &
 
 MONITOR_PID=$!
 
