@@ -226,6 +226,7 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
     for epoch in range(hp["num_epochs"]):
         print(f"Epoch {epoch} started")
         epoch_loss = 0.0
+        t_start_epoch = time.time()
         times_per_inputs = []
         times_between_inputs = []
         current_time = time.time()
@@ -258,7 +259,7 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
         t_start_eval = time.time()
         log = do_eval(run_model, log, hp["rule_trains"], dataloaders)
         t_end_eval = time.time() - t_start_eval 
-        t_end_epoch = time.time() - t_start
+        t_end_epoch = time.time() - t_start_epoch
         if log["perf_min"][-1] > hp["target_perf"]:
             break
         
@@ -272,7 +273,7 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
         logging.info(f"Training {rule_name_print} Epoch {epoch:7d} | Loss {epoch_loss:0.6f} | Perf {log['perf_avg'][-1]:0.2f} | Min {log['perf_min'][-1]:0.2f} | Time {t_end_epoch:0.2f} s")
 
         
-        
+        start_save_time = time.time()
         # saving model checkpoint
         checkpoint_dir = name
         create_directory_if_not_exists(checkpoint_dir)
@@ -284,49 +285,63 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
             'loss': epoch_loss,
             'log': log
         }, checkpoint_path)
+        end_save_time = time.time() - start_save_time
+        logging.info(f"Time saving model :  {end_save_time:0.2f}s")
 
 
     logging.info("Optimization finished!")
 
-
 def do_eval(run_model, log, rule_train, dataloaders):
-    """Do evaluation using entirely PyTorch operations to ensure GPU utilization."""
     hp = run_model.hp
+    device = run_model.device
+
+    # Lists to store times for all rules
+    data_loading_times = []
+    computation_times = []
 
     for rule_test in hp["rules"]:
         clsq_tmp, creg_tmp, perf_tmp = [], [], []
         dataloader = dataloaders[rule_test]["test"]
+
         for inputs, labels, mask in dataloader:
+            # Record start time for data loading
+            data_start_time = time.time()
             with torch.no_grad():
-                inputs, labels, mask = inputs.permute(1, 0, 2).to(run_model.device, non_blocking=True), labels.permute(1, 0).to(run_model.device, non_blocking=True).flatten().long(), mask.permute(1, 0).to(run_model.device, non_blocking=True).flatten().long()
-                c_lsq, c_reg, y_hat_test, _, labels = run_model(
-                    inputs, labels, mask
+                inputs, labels, mask = (
+                    inputs.permute(1, 0, 2).to(device, non_blocking=True),
+                    labels.permute(1, 0).to(device, non_blocking=True).flatten().long(),
+                    mask.permute(1, 0).to(device, non_blocking=True).flatten().long()
                 )
+            # Record data loading time
+            data_loading_time = time.time() - data_start_time
+            data_loading_times.append(data_loading_time)
 
-            # Store costs directly as tensors to avoid multiple GPU to CPU transfers
-            clsq_tmp.append(c_lsq)
-            creg_tmp.append(c_reg)
+            # Record start time for computation
+            computation_start_time = time.time()
+            with torch.no_grad(), autocast():
+                c_lsq, c_reg, y_hat_test, _, labels = run_model(inputs, labels, mask)
 
-            # Calculate performance using PyTorch
-            perf_test = get_perf(y_hat_test, labels, mask)
-            perf_tmp.append(perf_test)
+                clsq_tmp.append(c_lsq.float())  # Ensure this stays in float32 for stability
+                creg_tmp.append(c_reg.float())
 
-        # Convert lists of tensors to single tensors and compute mean
+                perf_test = get_perf(y_hat_test, labels, mask)
+                perf_tmp.append(perf_test.float())
+
+            # Record computation time
+            computation_time = time.time() - computation_start_time
+            computation_times.append(computation_time)
+
         clsq_mean = torch.mean(torch.stack(clsq_tmp))
         creg_mean = torch.mean(torch.stack(creg_tmp))
         perf_mean = torch.mean(torch.tensor(perf_tmp))
 
-        # Append to log dictionary (transfer to CPU and convert to numpy for logging purposes only)
         log["cost_" + rule_test].append(clsq_mean.item())
         log["creg_" + rule_test].append(creg_mean.item())
         log["perf_" + rule_test].append(perf_mean.item())
 
-        print(
-            f"{rule_test:15s}| cost {clsq_mean.item():0.6f}| c_reg {creg_mean.item():0.6f} | perf {perf_mean.item():0.2f}"
-        )
+        print(f"{rule_test:15s}| cost {clsq_mean.item():0.6f}| c_reg {creg_mean.item():0.6f} | perf {perf_mean.item():0.2f}")
         sys.stdout.flush()
 
-    # Calculate average and minimum performance across rules being trained
     perf_tests_mean = torch.mean(
         torch.tensor(
             [
@@ -351,8 +366,13 @@ def do_eval(run_model, log, rule_train, dataloaders):
     log["perf_avg"].append(perf_tests_mean.item())
     log["perf_min"].append(perf_tests_min.item())
 
-    return log
+    # Calculate median times
+    median_data_loading_time = np.median(data_loading_times)
+    median_computation_time = np.median(computation_times)
 
+    print(f"Median data loading time: {median_data_loading_time:.2f}s, Median computation time: {median_computation_time:.2f}s")
+
+    return log
 
 def accuracy(logits, true_class_indices, mask):
     # Reshape logits to shape [(batch * images), classes]
