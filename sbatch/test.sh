@@ -1,11 +1,11 @@
 #!/bin/bash
 
 #SBATCH --nodes=1
-#SBATCH --time=24:00:00
+#SBATCH --time=1:00:00
 #SBATCH --job-name={group}_job
-#SBATCH --gres=gpu:8
+#SBATCH --gres=gpu:1
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=80  # 10 CPUs per GPU * 8 GPUs
+#SBATCH --cpus-per-task=10  # 10 CPUs per GPU * 8 GPUs
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=oxfd2547@ox.ac.uk
 
