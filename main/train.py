@@ -19,7 +19,7 @@ import torch
 import time
 import numpy as np
 import main
-
+import logging
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
@@ -34,6 +34,22 @@ print_flag = False
 def create_directory_if_not_exists(directory):
     if not os.path.exists(directory):
         os.makedirs(directory)
+
+def setup_logging(log_dir):
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+    logging.basicConfig(
+        filename=os.path.join(log_dir, 'training.log'),
+        filemode='w',
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        level=logging.INFO
+    )
+    console = logging.StreamHandler()
+    console.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    console.setFormatter(formatter)
+    logging.getLogger('').addHandler(console)
+    return logging
 
 def get_default_hp(ruleset: List[str]):
     """Get a default hp.
@@ -190,6 +206,9 @@ def set_hyperparameters(
 
 def train(run_model, optimizer, hp, log, name, freeze=False):
 
+    # set up log
+    logging = setup_logging(os.path.join(name,"logs"))
+
     t_start = time.time()
     losses = []
     if freeze:
@@ -204,11 +223,17 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
 
     dataloaders = {rule: main.get_dataloader(env=rule, batch_size=hp["batch_size_train"], num_workers=4, shuffle=True) for rule in hp["rule_trains"]}
 
+    
     for epoch in range(hp["num_epochs"]):
         print(f"Epoch {epoch} started")
         epoch_loss = 0.0
+        times_per_inputs = []
+        times_between_inputs = []
+        current_time = time.time()
         for rule in hp["rule_trains"]:
             for inputs, labels, mask in dataloaders[rule]["train"]:
+                times_per_inputs.append(time.time())
+                times_between_inputs.append(current_time - time.time())
                 inputs, labels, mask = inputs.permute(1, 0, 2).to(run_model.device, non_blocking=True), labels.permute(1, 0).to(run_model.device, non_blocking=True).flatten().long(), mask.permute(1, 0).to(run_model.device, non_blocking=True).flatten().long()
                 optim.zero_grad(set_to_none=True)
 
@@ -222,16 +247,33 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
                 scaler.step(optim)
                 scaler.update()
                 epoch_loss += loss.item()
+                times_per_inputs.append(times_per_inputs[-1] - time.time()) # time to process one input
+                current_time = time.time()
             
         losses.append(epoch_loss)
 
+        # doing evaluation
         log["trials"].append(epoch)
         log["times"].append(time.time() - t_start)
+        # timing do_eval
+        t_start_eval = time.time()
         log = do_eval(run_model, log, hp["rule_trains"], dataloaders)
-
+        t_end_eval = time.time() - t_start_eval 
         if log["perf_min"][-1] > hp["target_perf"]:
             break
+        
+        rule_train = hp["rule_trains"]
+        if isinstance(rule_train, str):
+            rule_name_print = rule_train
+        else:
+            rule_name_print = " & ".join(rule_train)
 
+        logging.info(f"Time per input {np.median(times_per_inputs):0.6f} s | Time between inputs {np.median(times_between_inputs):0.6f} s")
+        logging.info(f"Training {rule_name_print} Epoch {epoch:7d} | Loss {epoch_loss:0.6f} | Perf {log['perf_avg'][-1]:0.2f} | Min {log['perf_min'][-1]:0.2f} | Time {t_end_eval:0.2f} s")
+
+        
+        
+        # saving model checkpoint
         checkpoint_dir = name
         create_directory_if_not_exists(checkpoint_dir)
         checkpoint_path = os.path.join(checkpoint_dir, f'epoch_{epoch}_checkpoint.pth')
@@ -244,20 +286,13 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
         }, checkpoint_path)
 
 
-    print("Optimization finished!")
+    logging.info("Optimization finished!")
 
 
 def do_eval(run_model, log, rule_train, dataloaders):
     """Do evaluation using entirely PyTorch operations to ensure GPU utilization."""
     hp = run_model.hp
-    if isinstance(rule_train, str):
-        rule_name_print = rule_train
-    else:
-        rule_name_print = " & ".join(rule_train)
 
-    print(
-        f"Trial {log['trials'][-1]:7d} | Time {log['times'][-1]:0.2f} s | Now training {rule_name_print}"
-    )
     for rule_test in hp["rules"]:
         clsq_tmp, creg_tmp, perf_tmp = [], [], []
         dataloader = dataloaders[rule_test]["test"]

@@ -10,7 +10,7 @@
 #SBATCH --job-name=job123
 
 # set number of GPUs
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:8
 
 # mail alert at start, end and abortion of execution
 #SBATCH --mail-type=ALL
@@ -31,7 +31,7 @@ echo "Checking GPU status before running the application:"
 nvidia-smi
 
 # Run the application and monitor GPU status in parallel
-(poetry run python -m src.test) &
+(poetry run python -m src.test --group pretrain_unfrozen) &
 
 # PID of the application
 APP_PID=$!
