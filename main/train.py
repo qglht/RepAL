@@ -257,7 +257,7 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
         log["times"].append(time.time() - t_start)
         # timing do_eval
         t_start_eval = time.time()
-        log = do_eval(run_model, log, hp["rule_trains"], dataloaders)
+        log, logging = do_eval(run_model, log, logging, hp["rule_trains"], dataloaders)
         t_end_eval = time.time() - t_start_eval 
         t_end_epoch = time.time() - t_start_epoch
         if log["perf_min"][-1] > hp["target_perf"]:
@@ -291,7 +291,7 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
 
     logging.info("Optimization finished!")
 
-def do_eval(run_model, log, rule_train, dataloaders):
+def do_eval(run_model, log, logging, rule_train, dataloaders):
     hp = run_model.hp
     device = run_model.device
 
@@ -339,7 +339,7 @@ def do_eval(run_model, log, rule_train, dataloaders):
         log["creg_" + rule_test].append(creg_mean.item())
         log["perf_" + rule_test].append(perf_mean.item())
 
-        print(f"{rule_test:15s}| cost {clsq_mean.item():0.6f}| c_reg {creg_mean.item():0.6f} | perf {perf_mean.item():0.2f}")
+        logging.info(f"{rule_test:15s}| cost {clsq_mean.item():0.6f}| c_reg {creg_mean.item():0.6f} | perf {perf_mean.item():0.2f}")
         sys.stdout.flush()
 
     perf_tests_mean = torch.mean(
@@ -370,7 +370,7 @@ def do_eval(run_model, log, rule_train, dataloaders):
     median_data_loading_time = np.median(data_loading_times)
     median_computation_time = np.median(computation_times)
 
-    print(f"Median data loading time: {median_data_loading_time:.2f}s, Median computation time: {median_computation_time:.2f}s")
+    logging.info(f"Median data loading time: {median_data_loading_time:.2f}s, Median computation time: {median_computation_time:.2f}s")
 
     return log
 
