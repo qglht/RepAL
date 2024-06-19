@@ -321,11 +321,11 @@ def do_eval(run_model, log, logging, rule_train, dataloaders):
             with torch.no_grad(), autocast():
                 c_lsq, c_reg, y_hat_test, _, labels = run_model(inputs, labels, mask)
 
-                clsq_tmp.append(c_lsq.float())  # Ensure this stays in float32 for stability
-                creg_tmp.append(c_reg.float())
+                clsq_tmp.append(c_lsq)  # Ensure this stays in float32 for stability
+                creg_tmp.append(c_reg)
 
                 perf_test = get_perf(y_hat_test, labels, mask)
-                perf_tmp.append(perf_test.float())
+                perf_tmp.append(perf_test)
 
             # Record computation time
             computation_time = time.time() - computation_start_time
