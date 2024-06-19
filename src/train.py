@@ -31,14 +31,19 @@ module load python/anaconda3
 source activate dsa
 poetry install
 
-nvidia-smi --query-gpu=timestamp,index,name,utilization.gpu,utilization.memory --format=csv,nounits -l 300 > gpu_usage/{group}_gpu_usage.log &
-nvidia-smi pmon -c 1 -s um > gpu_usage/{group}_gpu_processes.log &
+(poetry run python -m src.train_group --group {group}) & 
 
-MONITOR_PID=$!
+# PID of the application
+APP_PID=$!
 
-poetry run python -m src.train_group --group {group}
+# Monitor GPU status every 300 seconds (5 minutes) until the application finishes
+while kill -0 $APP_PID 2>/dev/null; do
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - Checking GPU status during the application run:" >> gpu_usage/{group}_gpu_usage.log
+    nvidia-smi >> gpu_usage/{group}_gpu_usage.log  # Append output to log file
+    sleep 300 
+done
 
-kill $MONITOR_PID
+wait $APP_PID
 """
 
     for group in groups:

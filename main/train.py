@@ -221,7 +221,7 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
     # Create a GradScaler for mixed precision training
     scaler = GradScaler()
 
-    dataloaders = {rule: main.get_dataloader(env=rule, batch_size=hp["batch_size_train"], num_workers=16, shuffle=True) for rule in hp["rule_trains"]}
+    dataloaders = {rule: main.get_dataloader(env=rule, batch_size=hp["batch_size_train"], num_workers=32, shuffle=True) for rule in hp["rule_trains"]}
 
     for epoch in range(hp["num_epochs"]):
         print(f"Epoch {epoch} started")
@@ -231,8 +231,8 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
         current_time = time.time()
         for rule in hp["rule_trains"]:
             for inputs, labels, mask in dataloaders[rule]["train"]:
-                times_per_inputs.append(time.time())
-                times_between_inputs.append(current_time - time.time())
+                time_input = time.time()
+                times_between_inputs.append(time.time()- current_time)
                 inputs, labels, mask = inputs.permute(1, 0, 2).to(run_model.device, non_blocking=True), labels.permute(1, 0).to(run_model.device, non_blocking=True).flatten().long(), mask.permute(1, 0).to(run_model.device, non_blocking=True).flatten().long()
                 optim.zero_grad(set_to_none=True)
 
@@ -246,7 +246,7 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
                 scaler.step(optim)
                 scaler.update()
                 epoch_loss += loss.item()
-                times_per_inputs.append(times_per_inputs[-1] - time.time()) # time to process one input
+                times_per_inputs.append(time.time()-time_input) # time to process one input
                 current_time = time.time()
             
         losses.append(epoch_loss)
