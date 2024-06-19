@@ -1,35 +1,25 @@
 #!/bin/bash
-
 #SBATCH --nodes=1
-#SBATCH --time=1:00:00
-#SBATCH --job-name={group}_job
+#SBATCH --time=24:00:00
+#SBATCH --job-name=master_job
 #SBATCH --gres=gpu:1
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=10  # 10 CPUs per GPU * 8 GPUs
+#SBATCH --cpus-per-task=80  # 10 CPUs per GPU * 8 GPUs
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=oxfd2547@ox.ac.uk
 
-# load necessary modules or activate your environment
 module load cuda/11.2
 module load pytorch/1.9.0
 module load python/anaconda3
 
-source activate dsa  # If necessary, depends on cluster setup
-poetry install  # Install additional Python packages as needed
+source activate dsa
+poetry install
 
-# Check GPU status before running the application
-echo "Checking GPU status before running the application:"
-nvidia-smi
+nvidia-smi --query-gpu=timestamp,index,name,utilization.gpu,utilization.memory --format=csv,nounits -l 300 > gpu_usage/master_gpu_usage.log &
+nvidia-smi pmon -c 1 -s um > gpu_usage/master_gpu_processes.log &
 
-# Run the application and monitor GPU status in parallel
-(poetry run python -m src.test --group pretrain_unfrozen) &
+MONITOR_PID=$!
 
-# PID of the application
-APP_PID=$!
+poetry run python -m src.train_group --group master
 
-# Monitor GPU status every 60 seconds until the application finishes
-while kill -0 $APP_PID 2>/dev/null; do
-    echo "Checking GPU status during the application run:"
-    nvidia-smi
-    sleep 60
-done
+kill $MONITOR_PID

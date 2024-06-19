@@ -115,11 +115,11 @@ def generate_data(env):
     )
     main.generate_data(env, hp, mode="test", num_pregenerated=1000)
 
-def compute_dissimilarity(rnn_type, activation, hidden_size, lr, freeze, nopretrain ,device, n_components=3):
+def compute_dissimilarity(rnn_type, activation, hidden_size, lr, model, group,device, n_components=3):
     # Load configuration and set hyperparameters
     config = load_config("../config.yaml")
-    ruleset = config["rnn"]["train"]["ruleset"]
-    all_rules = config["rnn"]["train"]["ruleset"] + config["rnn"]["pretrain"]["ruleset"]
+    ruleset = config["all_rules"][-1]
+    all_rules = config["all_rules"]
 
     hp = {
         "rnn_type": rnn_type,
@@ -133,9 +133,8 @@ def compute_dissimilarity(rnn_type, activation, hidden_size, lr, freeze, nopretr
     hp, _, _ = main.set_hyperparameters(
         model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=ruleset
     )
-    nopretrain = "nopretrain" if nopretrain else "pretrain"
     run_model = main.load_model(
-        f"../models/{rnn_type}_{activation}_{hidden_size}_{lr}__{freeze}_train_{nopretrain}.pth",
+        f"../models/{group}/{model}",
         hp,
         RNNLayer,
         device=device,
