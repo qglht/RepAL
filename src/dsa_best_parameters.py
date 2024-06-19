@@ -16,6 +16,7 @@ def generate_and_submit_scripts():
 #SBATCH --time=5:00:00
 #SBATCH --job-name={n_delay}_{delay_interval}_job
 #SBATCH --gres=gpu:1
+#SBATCH --partition=small
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=oxfd2547@ox.ac.uk
 
