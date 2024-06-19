@@ -221,7 +221,7 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
     # Create a GradScaler for mixed precision training
     scaler = GradScaler()
 
-    dataloaders = {rule: main.get_dataloader(env=rule, batch_size=hp["batch_size_train"], num_workers=4, shuffle=True) for rule in hp["rule_trains"]}
+    dataloaders = {rule: main.get_dataloader(env=rule, batch_size=hp["batch_size_train"], num_workers=16, shuffle=True) for rule in hp["rule_trains"]}
 
     for epoch in range(hp["num_epochs"]):
         print(f"Epoch {epoch} started")
