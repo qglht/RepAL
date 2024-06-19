@@ -223,7 +223,6 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
 
     dataloaders = {rule: main.get_dataloader(env=rule, batch_size=hp["batch_size_train"], num_workers=4, shuffle=True) for rule in hp["rule_trains"]}
 
-    
     for epoch in range(hp["num_epochs"]):
         print(f"Epoch {epoch} started")
         epoch_loss = 0.0
@@ -259,6 +258,7 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
         t_start_eval = time.time()
         log = do_eval(run_model, log, hp["rule_trains"], dataloaders)
         t_end_eval = time.time() - t_start_eval 
+        t_end_epoch = time.time() - t_start
         if log["perf_min"][-1] > hp["target_perf"]:
             break
         
@@ -268,8 +268,8 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
         else:
             rule_name_print = " & ".join(rule_train)
 
-        logging.info(f"Time per input {np.median(times_per_inputs):0.6f} s | Time between inputs {np.median(times_between_inputs):0.6f} s")
-        logging.info(f"Training {rule_name_print} Epoch {epoch:7d} | Loss {epoch_loss:0.6f} | Perf {log['perf_avg'][-1]:0.2f} | Min {log['perf_min'][-1]:0.2f} | Time {t_end_eval:0.2f} s")
+        logging.info(f"Time per input {np.median(times_per_inputs):0.6f} s | Time between inputs {np.median(times_between_inputs):0.6f} s | Time for evaluation {t_end_eval:0.2f} s")
+        logging.info(f"Training {rule_name_print} Epoch {epoch:7d} | Loss {epoch_loss:0.6f} | Perf {log['perf_avg'][-1]:0.2f} | Min {log['perf_min'][-1]:0.2f} | Time {t_end_epoch:0.2f} s")
 
         
         
