@@ -51,6 +51,13 @@ def setup_logging(log_dir):
     logging.getLogger('').addHandler(console)
     return logging
 
+def find_checkpoints(name):
+    # Find the latest checkpoint file
+    checkpoint_dir = name
+    checkpoint_files = [f for f in os.listdir(checkpoint_dir) if f.startswith('epoch_') and f.endswith('_checkpoint.pth')]
+    checkpoint_files.sort(key=lambda x: int(x.split('_')[1]))
+    return checkpoint_files
+
 def get_default_hp(ruleset: List[str]):
     """Get a default hp.
 
@@ -209,21 +216,40 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
     # set up log
     logging = setup_logging(os.path.join(name,"logs"))
 
-    t_start = time.time()
-    losses = []
+    start_epoch = 0
+
+    # load checkpoint if there is any
+    checkpoint_files = find_checkpoints(name)
+    if checkpoint_files:
+        latest_checkpoint = os.path.join(checkpoint_dir, checkpoint_files[-1])
+        checkpoint = torch.load(latest_checkpoint, device=run_model.device)
+        run_model.model.load_state_dict(checkpoint['model_state_dict'])
+        start_epoch = checkpoint['epoch'] + 1
+        log = checkpoint['log']
+        print(f"Resuming training from epoch {start_epoch}")
+    
+    # freeze input weights or not
     if freeze:
         optim = optimizer(
             [run_model.model.rnn.rnncell.weight_ih], lr=hp["learning_rate"]
         )
     else:
         optim = optimizer(run_model.model.parameters(), lr=hp["learning_rate"])
+
+    # if model loaded, load optim state dict
+    if checkpoint_files:
+        optim.load_state_dict(checkpoint['optimizer_state_dict'])
+        
+
     
     # Create a GradScaler for mixed precision training
     scaler = GradScaler()
 
     dataloaders = {rule: main.get_dataloader(env=rule, batch_size=hp["batch_size_train"], num_workers=16, shuffle=True) for rule in hp["rule_trains"]}
 
-    for epoch in range(hp["num_epochs"]):
+    t_start = time.time()
+
+    for epoch in range(start_epoch, hp["num_epochs"]):
         print(f"Epoch {epoch} started")
         epoch_loss = 0.0
         t_start_epoch = time.time()
@@ -249,8 +275,6 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
                 epoch_loss += loss.item()
                 times_per_inputs.append(time.time()-time_input) # time to process one input
                 current_time = time.time()
-            
-        losses.append(epoch_loss)
 
         # doing evaluation
         log["trials"].append(epoch)
