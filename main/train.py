@@ -372,7 +372,7 @@ def do_eval(run_model, log, logging, rule_train, dataloaders):
 
     logging.info(f"Median data loading time: {median_data_loading_time:.2f}s, Median computation time: {median_computation_time:.2f}s")
 
-    return log
+    return log, logging
 
 def accuracy(logits, true_class_indices, mask):
     # Reshape logits to shape [(batch * images), classes]
