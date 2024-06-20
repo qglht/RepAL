@@ -211,7 +211,7 @@ def set_hyperparameters(
 
     return hp, log, optimizer  # , model
 
-def train(run_model, optimizer, hp, log, name, freeze=False):
+def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False):
 
     # set up log
     logging = setup_logging(os.path.join(name,"logs"))
@@ -219,14 +219,15 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
     start_epoch = 0
 
     # load checkpoint if there is any
-    checkpoint_files = find_checkpoints(name)
-    if checkpoint_files:
-        latest_checkpoint = os.path.join(checkpoint_dir, checkpoint_files[-1])
-        checkpoint = torch.load(latest_checkpoint, device=run_model.device)
-        run_model.model.load_state_dict(checkpoint['model_state_dict'])
-        start_epoch = checkpoint['epoch'] + 1
-        log = checkpoint['log']
-        print(f"Resuming training from epoch {start_epoch}")
+    if not retrain:
+        checkpoint_files = find_checkpoints(name)
+        if checkpoint_files:
+            latest_checkpoint = os.path.join(checkpoint_dir, checkpoint_files[-1])
+            checkpoint = torch.load(latest_checkpoint, device=run_model.device)
+            run_model.load_state_dict(checkpoint['model_state_dict'])
+            start_epoch = checkpoint['epoch'] + 1
+            log = checkpoint['log']
+            print(f"Resuming training from epoch {start_epoch}")
     
     # freeze input weights or not
     if freeze:
@@ -237,8 +238,9 @@ def train(run_model, optimizer, hp, log, name, freeze=False):
         optim = optimizer(run_model.model.parameters(), lr=hp["learning_rate"])
 
     # if model loaded, load optim state dict
-    if checkpoint_files:
-        optim.load_state_dict(checkpoint['optimizer_state_dict'])
+    if not retrain:
+        if checkpoint_files:
+            optim.load_state_dict(checkpoint['optimizer_state_dict'])
         
 
     
