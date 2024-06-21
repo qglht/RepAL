@@ -1,4 +1,4 @@
-all_rules: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT, AntiPerceptualDecisionMakingDelayResponseT]
+all_rules: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT, AntiPerceptualDecisionMakingDelayResponseT] #GoNogoT, AntiGoNogoT, GoNogoDelayResponseT, AntiGoNogoDelayResponseT]
 rnn:
   parameters:
     rnn_type: 
@@ -67,6 +67,30 @@ groups:
     train:
       ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
       frozen: True
+  # gonogo:
+  #   pretrain:
+  #     ruleset: []
+  #   train:
+  #     ruleset: [GoNogoT]
+  #     frozen: False
+  # antigonogo:
+  #   pretrain:
+  #     ruleset: []
+  #   train:
+  #     ruleset: [AntiGoNogoT]
+  #     frozen: False
+  # delaygonogo:
+  #   pretrain:
+  #     ruleset: []
+  #   train:
+  #     ruleset: [GoNogoDelayResponseT]
+  #     frozen: False
+  # delayantigonogo:
+  #   pretrain:
+  #     ruleset: []
+  #   train:
+  #     ruleset: [AntiGoNogoDelayResponseT]
+  #     frozen: False
 analysis:
   epochs: [stim1]
   rule: [delayanti]

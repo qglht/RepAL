@@ -20,7 +20,7 @@ def generate_and_submit_scripts():
 #SBATCH --job-name={group}_job
 #SBATCH --gres=gpu:8
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=80  # 10 CPUs per GPU * 8 GPUs
+#SBATCH --cpus-per-task=80  
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=oxfd2547@ox.ac.uk
 
