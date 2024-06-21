@@ -41,7 +41,8 @@ def initialize_model(rnn_type, activation, hidden_size, lr, batch_size, device):
         "l2_h": 0.0001,
         "l2_weight": 0.0001,
         "num_epochs": 50,
-        "batch_size_train":batch_size
+        "batch_size_train":batch_size,
+        "mode": "test",
     }
     hp, log, optimizer = main.set_hyperparameters(
             model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=all_rules
@@ -55,7 +56,7 @@ def corresponding_training_time(n,p):
 def get_curves(model, rules, components):
     h = main.representation(model, rules)
     h_trans, explained_variance = main.compute_pca(h, n_components=components)
-    return h_trans[("AntiPerceptualDecisionMakingDelayResponseT", "stimulus")].detach().numpy(), explained_variance
+    return h_trans[("AntiPerceptualDecisionMakingDelayResponseT", "stimulus")].detach().numpy()
 
 def normalize_within_unit_volume(tensor):
     # Ensure the input is a PyTorch tensor
@@ -182,7 +183,7 @@ def compute_dissimilarity(rnn_type, activation, hidden_size, lr, model, group,de
     return h_trans[("AntiPerceptualDecisionMakingDelayResponseT", "stimulus")].detach().numpy(), explained_variance
 
 def dissimilarity_over_learning(group1, group2, rnn_type, activation, hidden_size, lr, batch_size, device):
-    config = load_config("../config.yaml")
+    config = load_config("config.yaml")
     all_rules = config["all_rules"]
 
     # paths for checkpoints
@@ -208,17 +209,17 @@ def dissimilarity_over_learning(group1, group2, rnn_type, activation, hidden_siz
         if len(checkpoint_files_1)<len(checkpoint_files_2):
             index_epochs = corresponding_training_time(len(checkpoint_files_1), len(checkpoint_files_2))
             for epoch in index_epochs:
-                checkpoint1 = torch.load(checkpoint_files_1[epoch], device=device)
+                checkpoint1 = torch.load(os.path.join(path_train_folder1, checkpoint_files_1[epoch]), map_location=device)
                 run_model1.load_state_dict(checkpoint1['model_state_dict'])
-                checkpoint2 = torch.load(checkpoint_files_2[index_epochs[epoch]], device=device)
+                checkpoint2 = torch.load(os.path.join(path_train_folder2, checkpoint_files_2[index_epochs[epoch]]), map_location=device)
                 run_model2.load_state_dict(checkpoint2['model_state_dict'])
                 models_to_compare.extend([(run_model1, run_model2)])
         else : 
             index_epochs = corresponding_training_time(len(checkpoint_files_2), len(checkpoint_files_1))
             for epoch in index_epochs:
-                checkpoint1 = torch.load(checkpoint_files_1[index_epochs[epoch]], device=device)
+                checkpoint1 = torch.load(os.path.join(path_train_folder1, checkpoint_files_1[index_epochs[epoch]]), map_location=device)
                 run_model1.load_state_dict(checkpoint1['model_state_dict'])
-                checkpoint2 = torch.load(checkpoint_files_2[epoch], device=device)
+                checkpoint2 = torch.load(os.path.join(path_train_folder2, checkpoint_files_2[epoch]), map_location=device)
                 run_model2.load_state_dict(checkpoint2['model_state_dict'])
                 models_to_compare.extend([(run_model1, run_model2)])
 
