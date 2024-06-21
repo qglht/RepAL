@@ -14,7 +14,7 @@ def generate_and_submit_scripts():
     script_template = """#!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=5:00:00
-#SBATCH --job-name={n_delay}_{delay_interval}_job
+#SBATCH --job-name={n_delay}_{delay_interval}_{ordered}_job
 #SBATCH --gres=gpu:1
 #SBATCH --partition=small
 #SBATCH --mail-type=ALL
@@ -27,14 +27,21 @@ module load python/anaconda3
 source activate dsa
 poetry install
 
-nvidia-smi --query-gpu=timestamp,index,name,utilization.gpu,utilization.memory --format=csv,nounits -l 300 > gpu_usage/dsa/{n_delay}_{delay_interval}_gpu_usage.log &
-nvidia-smi pmon -c 1 -s um > gpu_usage/dsa/{n_delay}_{delay_interval}_gpu_processes.log &
+(poetry run python -m src.dsa_optimization --n_delay {n_delay} --delay_interval {delay_interval} --ordered {ordered} --overwrite True) &
 
-MONITOR_PID=$!
+# PID of the application
+APP_PID=$!
 
-poetry run python -m src.dsa_optimization --n_delay {n_delay} --delay_interval {delay_interval}
+# Monitor GPU status every 300 seconds (5 minutes) until the application finishes
+while kill -0 $APP_PID 2>/dev/null; do
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - Checking GPU status during the application run:" >> gpu_usage/{n_delay}_{delay_interval}_{ordered}_gpu_usage.log
+    nvidia-smi >> gpu_usage/{n_delay}_{delay_interval}_{ordered}_gpu_usage.log  # Append output to log file
+    sleep 300 
+done
 
-kill $MONITOR_PID
+wait $APP_PID
+
+
 """
     number_parameters_delays = 10
     number_parameters_intervals = 5
@@ -44,14 +51,15 @@ kill $MONITOR_PID
     for delay in n_delays[::-1]:
         delay_interval = np.linspace(1, int(200/delay), number_parameters_intervals, dtype=int)
         for space in delay_interval[::-1]:
-            script_content = script_template.format(n_delay=delay, delay_interval=space)
-            script_filename = f"sbatch/dsa/{delay}_{space}_script.sh"
+            for ordered in [True, False]:
+                script_content = script_template.format(n_delay=delay, delay_interval=space, ordered=ordered)
+                script_filename = f"sbatch/dsa/{delay}_{space}_{ordered}_script.sh"
 
-            with open(script_filename, 'w') as script_file:
-                script_file.write(script_content)
+                with open(script_filename, 'w') as script_file:
+                    script_file.write(script_content)
 
-            # Submit the job to the cluster
-            call(f"sbatch {script_filename}", shell=True)
+                # Submit the job to the cluster
+                call(f"sbatch {script_filename}", shell=True)
 
 if __name__ == "__main__":
     generate_and_submit_scripts()

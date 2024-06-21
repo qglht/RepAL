@@ -26,7 +26,7 @@ def dsa_computation(args: argparse.Namespace) -> None:
 
     rank=50
 
-    dsa_optimisation_compositionality(rank, args.n_delay, args.delay_interval, devices[0], overwrite=True)
+    dsa_optimisation_compositionality(rank, args.n_delay, args.delay_interval, devices[0], args.ordered, args.overwrite)
     return
 
 if __name__ == "__main__":
@@ -42,6 +42,18 @@ if __name__ == "__main__":
         type=int,
         default=1,
         help="The delay interval to compute DSA",
+    )
+    parser.add_argument(
+        "--ordered",
+        type=bool,
+        default=False,
+        help="if taking into account order or not"
+    )
+    parser.add_argument(
+        "--overwrite",
+        type=bool,
+        default=False,
+        help="if overwriting or not"
     )
     args = parser.parse_args()
     dsa_computation(args)

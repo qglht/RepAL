@@ -147,8 +147,8 @@ def compute_dissimilarity(rnn_type, activation, hidden_size, lr, model, group,de
     h_trans, explained_variance = main.compute_pca(h, n_components=n_components)
     return h_trans[("AntiPerceptualDecisionMakingDelayResponseT", "stimulus")].detach().numpy(), explained_variance
 
-def dsa_optimisation_compositionality(rank, n_delays, delay_interval, device, order=True, overwrite=True):
-    path_file = f'data/dsa_results/{rank}_{n_delays}_{delay_interval}.csv' if not order else f'data/dsa_results/{rank}_{n_delays}_{delay_interval}_ordered.csv'
+def dsa_optimisation_compositionality(rank, n_delays, delay_interval, device, ordered=True, overwrite=True):
+    path_file = f'data/dsa_results/{rank}_{n_delays}_{delay_interval}.csv' if not ordered else f'data/dsa_results/{rank}_{n_delays}_{delay_interval}_ordered.csv'
     if os.path.exists(path_file) and not overwrite:
         return
     else:
@@ -189,7 +189,7 @@ def dsa_optimisation_compositionality(rank, n_delays, delay_interval, device, or
         grouped_by_shared_elements = {i:[] for i in range(4)}
         for comp_motif_1 in model_names:
             for comp_motif_2 in model_names:
-                if order:
+                if ordered:
                     grouped_by_shared_elements[same_order(comp_motif_1, comp_motif_2)].extend([(comp_motif_1, comp_motif_2)])
                 else:
                     set_1 = set(comp_motif_1)
