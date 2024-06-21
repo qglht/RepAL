@@ -16,7 +16,7 @@ from itertools import permutations
 path = "models_trained_8_models_per_group/tanh_128_0.001__True_train_nopretrain/epoch_19_checkpoint.pth"
 
 def load_model(path):
-    model = torch.load(path)
+    model = torch.load(path, map_location=torch.device('cpu'))
     return model
 
 config = load_config("config.yaml")
@@ -31,13 +31,8 @@ hp = {
 hp, log, optimizer = main.set_hyperparameters(
     model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=all_rules
 )
+run_model = main.Run_Model(hp, RNNLayer, 'cpu')
 ipdb.set_trace()
-run_model = main.load_model(
-        path,
-        hp,
-        RNNLayer,
-        device="cpu",
-    )
 
 
     

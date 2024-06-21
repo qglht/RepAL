@@ -48,12 +48,12 @@ def pipeline(group, rnn_type, activation, hidden_size, lr, batch_size, device):
         "activation": activation,
         "n_rnn": hidden_size,
         "learning_rate": lr,
-        "l2_h": 0.000001,
-        "l2_weight": 0.000001,
+        "l2_h": 0.0001,
+        "l2_weight": 0.0001,
         "num_epochs": 50,
         "batch_size_train":batch_size
     }
-    model_name = f"{rnn_type}_{activation}_{hidden_size}_{lr}"
+    model_name = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}"
     path_pretrain_folder = os.path.join(f"models/{group}", model_name + f"_pretrain")
     path_pretrain_model = os.path.join(f"models/{group}", model_name + f"_pretrain.pth")
     path_train_folder = os.path.join(f"models/{group}", model_name + f"_train")
