@@ -19,6 +19,10 @@ warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprec
 # Set environment variable to ignore Gym deprecation warnings
 os.environ['GYM_IGNORE_DEPRECATION_WARNINGS'] = '1'
 
+def same_order(comp_motif_1, comp_motif_2)-> bool:
+    return len([i for i in range(len(comp_motif_1)) if comp_motif_1[i] == comp_motif_2[i]])
+
+
 def normalize_within_unit_volume(tensor):
     # Ensure the input is a PyTorch tensor
     if not isinstance(tensor, torch.Tensor):
@@ -143,9 +147,9 @@ def compute_dissimilarity(rnn_type, activation, hidden_size, lr, model, group,de
     h_trans, explained_variance = main.compute_pca(h, n_components=n_components)
     return h_trans[("AntiPerceptualDecisionMakingDelayResponseT", "stimulus")].detach().numpy(), explained_variance
 
-def dsa_optimisation_compositionality(rank, n_delays, delay_interval, device):
-    path_file = f'data/dsa_results/{rank}_{n_delays}_{delay_interval}.csv'
-    if os.path.exists(path_file):
+def dsa_optimisation_compositionality(rank, n_delays, delay_interval, device, order=True, overwrite=True):
+    path_file = f'data/dsa_results/{rank}_{n_delays}_{delay_interval}.csv' if not order else f'data/dsa_results/{rank}_{n_delays}_{delay_interval}_ordered.csv'
+    if os.path.exists(path_file) and not overwrite:
         return
     else:
         config = load_config("config.yaml")
@@ -185,26 +189,47 @@ def dsa_optimisation_compositionality(rank, n_delays, delay_interval, device):
         grouped_by_shared_elements = {i:[] for i in range(4)}
         for comp_motif_1 in model_names:
             for comp_motif_2 in model_names:
-                set_1 = set(comp_motif_1)
-                set_2 = set(comp_motif_2)
-                grouped_by_shared_elements[len(set_1.intersection(set_2))].extend([(comp_motif_1, comp_motif_2)])
+                if order:
+                    grouped_by_shared_elements[same_order(comp_motif_1, comp_motif_2)].extend([(comp_motif_1, comp_motif_2)])
+                else:
+                    set_1 = set(comp_motif_1)
+                    set_2 = set(comp_motif_2)
+                    grouped_by_shared_elements[len(set_1.intersection(set_2))].extend([(comp_motif_1, comp_motif_2)])
     
         similarities_grouped_by_shared_elements = {i:[] for i in range(4)}
         for key in grouped_by_shared_elements:
             for tuple1, tuple2 in grouped_by_shared_elements[key]:
                 similarities_grouped_by_shared_elements[key].append(similarities[model_names.index(tuple1), model_names.index(tuple2)])
 
-        # compute median of similarities for each group and plot similarity vs number of shared elements
-        median_similarities = {key: np.median(value) for key, value in similarities_grouped_by_shared_elements.items()}
-        std_devs = {key: np.std(value) for key, value in similarities_grouped_by_shared_elements.items()}
+        # # compute median of similarities for each group and plot similarity vs number of shared elements
+        # median_similarities = {key: np.median(value) for key, value in similarities_grouped_by_shared_elements.items()}
+        # std_devs = {key: np.std(value) for key, value in similarities_grouped_by_shared_elements.items()}
 
-        # Prepare data for plotting
-        keys = list(median_similarities.keys())
-        median_values = list(median_similarities.values())
-        std_dev_values = list(std_devs.values())
+        # # Prepare data for plotting
+        # keys = list(median_similarities.keys())
+        # median_values = list(median_similarities.values())
+        # std_dev_values = list(std_devs.values())
 
-        df = pd.DataFrame({'Number of shared elements': keys, 'Median similarity': median_values, 'Standard deviation': std_dev_values})
-        
+        # df = pd.DataFrame({'Number of shared elements': keys, 'Median similarity': median_values, 'Standard deviation': std_dev_values})
+        # Prepare lists to store DataFrame rows
+        data = []
+
+        # Iterate over the shared elements
+        for num_shared_elements, similarities in similarities_grouped_by_shared_elements.items():
+            tuples = grouped_by_shared_elements[num_shared_elements]
+            
+            # Zip the similarities with the corresponding element pairs
+            for (element1, element2), similarity in zip(tuples, similarities):
+                # Sort the elements to ensure uniqueness
+                sorted_pair = sorted([element1, element2])
+                data.append([num_shared_elements, sorted_pair[0], sorted_pair[1], similarity])
+
+        # Create DataFrame
+        df = pd.DataFrame(data, columns=["number of shared elements", "element1", "element2", "similarity"])
+
+        # Drop duplicates
+        df = df.drop_duplicates(subset=["element1", "element2"])
+
         # check if the directory exists
         if not os.path.exists('data/dsa_results'):
             os.makedirs('data/dsa_results')

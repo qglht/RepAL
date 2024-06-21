@@ -17,11 +17,16 @@ os.environ['GYM_IGNORE_DEPRECATION_WARNINGS'] = '1'
 
 def dsa_computation(args: argparse.Namespace) -> None:
 
-    device = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
+    num_gpus = torch.cuda.device_count()  # Get the number of GPUs available
+    devices = (
+        [torch.device(f"cuda:{i}") for i in range(num_gpus)]
+        if num_gpus > 0
+        else [torch.device("cpu")]
+    )
 
     rank=50
 
-    dsa_optimisation_compositionality(rank, args.n_delay, args.delay_interval, device)
+    dsa_optimisation_compositionality(rank, args.n_delay, args.delay_interval, devices[0], overwrite=True)
     return
 
 if __name__ == "__main__":
