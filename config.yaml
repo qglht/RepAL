@@ -25,12 +25,12 @@ rnn:
       - True
       - False
 groups:
-  master:
-    pretrain:
-      ruleset: []
-    train:
-      ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
-      frozen: False
+  # master:
+  #   pretrain:
+  #     ruleset: []
+  #   train:
+  #     ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+  #     frozen: False
   pretrain_frozen:
     pretrain: 
       ruleset: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT]
@@ -43,27 +43,45 @@ groups:
     train:
       ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
       frozen: False
-  delay: 
+  # delay: 
+  #   pretrain:
+  #     ruleset: []
+  #   train:
+  #     ruleset: [PerceptualDecisionMakingDelayResponseT]
+  #     frozen: False
+  # anti:
+  #   pretrain:
+  #     ruleset: []
+  #   train:
+  #     ruleset: [AntiPerceptualDecisionMakingT]
+  #     frozen: False
+  # basic:
+  #   pretrain:
+  #     ruleset: []
+  #   train:
+  #     ruleset: [PerceptualDecisionMakingT]
+  #     frozen: False
+  # untrained:
+  #   pretrain:
+  #     ruleset: []
+  #   train:
+  #     ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+  #     frozen: True
+  pretrained_PDM_APDM:
     pretrain:
-      ruleset: []
+      ruleset: [PerceptualDecisionMakingT, AntiPerceptualDecisionMakingT]
     train:
-      ruleset: [PerceptualDecisionMakingDelayResponseT]
-      frozen: False
-  anti:
+      ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+      frozen: True
+  pretrained_APDM_DPDM:
     pretrain:
-      ruleset: []
+      ruleset: [AntiPerceptualDecisionMakingT,PerceptualDecisionMakingDelayResponseT]
     train:
-      ruleset: [AntiPerceptualDecisionMakingT]
-      frozen: False
-  basic:
+      ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+      frozen: True
+  pretrained_PDM_DPDM:
     pretrain:
-      ruleset: []
-    train:
-      ruleset: [PerceptualDecisionMakingT]
-      frozen: False
-  untrained:
-    pretrain:
-      ruleset: []
+      ruleset: [PerceptualDecisionMakingT,PerceptualDecisionMakingDelayResponseT]
     train:
       ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
       frozen: True
