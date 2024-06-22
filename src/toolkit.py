@@ -50,8 +50,10 @@ def initialize_model(rnn_type, activation, hidden_size, lr, batch_size, device):
     run_model = main.Run_Model(hp, RNNLayer, device)
 
     return run_model, hp
-def corresponding_training_time(n,p):
-    return [min([abs(int(i/(n-1))-int(j/(p-1))) for j in range(p)]) for i in range(n)]
+
+def corresponding_training_time(n, p):
+    # Find the argmin over j for each i
+    return [min(range(p), key=lambda j: abs(int(100 * i / (n - 1)) - int(100 * j / (p - 1)))) for i in range(n)]
 
 def get_curves(model, rules, components):
     h = main.representation(model, rules)
@@ -206,22 +208,15 @@ def dissimilarity_over_learning(group1, group2, rnn_type, activation, hidden_siz
     procrustes_measure = similarity.make("measure.netrep.procrustes-angular-score")
     if checkpoint_files_1 and checkpoint_files_2:
         # get the models to compare
-        if len(checkpoint_files_1)<len(checkpoint_files_2):
-            index_epochs = corresponding_training_time(len(checkpoint_files_1), len(checkpoint_files_2))
-            for epoch in index_epochs:
-                checkpoint1 = torch.load(os.path.join(path_train_folder1, checkpoint_files_1[epoch]), map_location=device)
-                run_model1.load_state_dict(checkpoint1['model_state_dict'])
-                checkpoint2 = torch.load(os.path.join(path_train_folder2, checkpoint_files_2[index_epochs[epoch]]), map_location=device)
-                run_model2.load_state_dict(checkpoint2['model_state_dict'])
-                models_to_compare.extend([(run_model1, run_model2)])
-        else : 
-            index_epochs = corresponding_training_time(len(checkpoint_files_2), len(checkpoint_files_1))
-            for epoch in index_epochs:
-                checkpoint1 = torch.load(os.path.join(path_train_folder1, checkpoint_files_1[index_epochs[epoch]]), map_location=device)
-                run_model1.load_state_dict(checkpoint1['model_state_dict'])
-                checkpoint2 = torch.load(os.path.join(path_train_folder2, checkpoint_files_2[epoch]), map_location=device)
-                run_model2.load_state_dict(checkpoint2['model_state_dict'])
-                models_to_compare.extend([(run_model1, run_model2)])
+        index_epochs = corresponding_training_time(len(checkpoint_files_1), len(checkpoint_files_2))
+        for epoch in index_epochs:
+            checkpoint1 = torch.load(os.path.join(path_train_folder1, checkpoint_files_1[index_epochs.index(epoch)]), map_location=device)
+            run_model1.load_state_dict(checkpoint1['model_state_dict'])
+            print(f"checkpoint 1 {checkpoint1['log']}")
+            checkpoint2 = torch.load(os.path.join(path_train_folder2, checkpoint_files_2[index_epochs[epoch]]), map_location=device)
+            run_model2.load_state_dict(checkpoint2['model_state_dict'])
+            print(f"checkpoint 2 {checkpoint2['log']}")
+            models_to_compare.extend([(run_model1, run_model2)])
 
         # compute the curves for models and dissimilarities
         curves = [(get_curves(tuple_model[0], all_rules, components=15), get_curves(tuple_model[1], all_rules, components=15)) for tuple_model in models_to_compare]
