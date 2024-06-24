@@ -27,7 +27,7 @@ def find_checkpoints(name):
 
 def initialize_model(rnn_type, activation, hidden_size, lr, batch_size, device):
     config = load_config("config.yaml")
-    all_rules = config['all_rules']
+    all_rules = config['rules_analysis']
     hp = {
         "rnn_type": rnn_type,
         "activation": activation,
@@ -57,7 +57,7 @@ def get_curves(model, rules, components):
 
 
 config = load_config("config.yaml")
-all_rules = config["all_rules"]
+all_rules = config["rules_analysis"]
 rnn_type = "leaky_rnn"
 activation = "tanh"
 hidden_size = 128
@@ -84,24 +84,37 @@ cka_measure = similarity.make("measure.sim_metric.cka-angular-score")
 procrustes_measure = similarity.make("measure.netrep.procrustes-angular-score")
 if checkpoint_files_1 and checkpoint_files_2:
     # get the models to compare
-    index_epochs = corresponding_training_time(len(checkpoint_files_1), len(checkpoint_files_2))
-    ipdb.set_trace()
-    for epoch in index_epochs:
-        checkpoint1 = torch.load(os.path.join(path_train_folder1, checkpoint_files_1[index_epochs.index(epoch)]), map_location=device)
-        run_model1.load_state_dict(checkpoint1['model_state_dict'])
-        print(f"checkpoint 1 {checkpoint1['log']}")
-        checkpoint2 = torch.load(os.path.join(path_train_folder2, checkpoint_files_2[index_epochs[epoch]]), map_location=device)
-        run_model2.load_state_dict(checkpoint2['model_state_dict'])
-        print(f"checkpoint 2 {checkpoint2['log']}")
-        models_to_compare.extend([(run_model1, run_model2)])
+    if len(checkpoint_files_1) < len(checkpoint_files_2):
+        print("checkpoint_files_1 < checkpoint_files_2")
+        index_epochs = corresponding_training_time(len(checkpoint_files_1), len(checkpoint_files_2))
+        for epoch in index_epochs:
+            checkpoint1 = torch.load(os.path.join(path_train_folder1, checkpoint_files_1[index_epochs.index(epoch)]), map_location=device)
+            run_model1.load_state_dict(checkpoint1['model_state_dict'])
+            print(f"checkpoint 1 {checkpoint1['log']}")
+            checkpoint2 = torch.load(os.path.join(path_train_folder2, checkpoint_files_2[epoch]), map_location=device)
+            run_model2.load_state_dict(checkpoint2['model_state_dict'])
+            print(f"checkpoint 2 {checkpoint2['log']}")
+            models_to_compare.extend([(run_model1, run_model2)])
+    else:
+        print("checkpoint_files_1 > checkpoint_files_2")
+        index_epochs = corresponding_training_time(len(checkpoint_files_2), len(checkpoint_files_1))
+        for epoch in index_epochs:
+            checkpoint1 = torch.load(os.path.join(path_train_folder1, checkpoint_files_1[epoch]), map_location=device)
+            run_model1.load_state_dict(checkpoint1['model_state_dict'])
+            print(f"checkpoint 1 {checkpoint1['log']}")
+            checkpoint2 = torch.load(os.path.join(path_train_folder2, checkpoint_files_2[index_epochs.index(epoch)]), map_location=device)
+            run_model2.load_state_dict(checkpoint2['model_state_dict'])
+            print(f"checkpoint 2 {checkpoint2['log']}")
+            models_to_compare.extend([(run_model1, run_model2)])
+
 
     # compute the curves for models and dissimilarities
     curves = [(get_curves(tuple_model[0], all_rules, components=15), get_curves(tuple_model[1], all_rules, components=15)) for tuple_model in models_to_compare]
-    for epoch in index_epochs:
-        dissimilarities_over_learning["cka"].append(1-cka_measure(curves[epoch][0], curves[epoch][1]))
-        dissimilarities_over_learning["procrustes"].append(1-procrustes_measure(curves[epoch][0], curves[epoch][1]))
+    for epoch_index in range(len(index_epochs)):
+        dissimilarities_over_learning["cka"].append(1-cka_measure(curves[epoch_index][0], curves[epoch_index][1]))
+        dissimilarities_over_learning["procrustes"].append(1-procrustes_measure(curves[epoch_index][0], curves[epoch_index][1]))
         dsa_comp = DSA.DSA(
-            curves[epoch][0], curves[epoch][1],
+            curves[epoch_index][0], curves[epoch_index][1],
             n_delays=config["dsa"]["n_delays"],
             rank=config["dsa"]["rank"],
             delay_interval=config["dsa"]["delay_interval"],
