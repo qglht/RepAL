@@ -48,9 +48,9 @@ wait $APP_PID
 
     n_delays = np.linspace(5, 50, number_parameters_delays, dtype=int)
 
-    for delay in n_delays[::-1]:
+    for delay in n_delays:
         delay_interval = np.linspace(1, int(200/delay), number_parameters_intervals, dtype=int)
-        for space in delay_interval[::-1]:
+        for space in delay_interval:
             for ordered in [True, False]:
                 script_content = script_template.format(n_delay=delay, delay_interval=space, ordered=ordered)
                 script_filename = f"sbatch/dsa/{delay}_{space}_{ordered}_script.sh"
