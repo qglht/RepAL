@@ -14,7 +14,7 @@ warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprec
 # Set environment variable to ignore Gym deprecation warnings
 os.environ['GYM_IGNORE_DEPRECATION_WARNINGS'] = '1'
 
-def dissimilarity_over_learning(args: argparse.Namespace) -> None:
+def dissimilarity(args: argparse.Namespace) -> None:
     config = load_config("config.yaml")
 
     dissimilarities = {"group1":[], "group2":[], "rnn_type":[], "activation":[], "hidden_size":[], "lr":[], "batch_size":[], "cka":[], "procrustes":[], "dsa":[]}
@@ -55,4 +55,4 @@ if __name__ == "__main__":
         help="group to compare 2",
     )
     args = parser.parse_args()
-    dissimilarity_over_learning(args)
+    dissimilarity(args)
