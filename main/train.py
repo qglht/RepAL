@@ -222,7 +222,7 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False):
     if not retrain:
         checkpoint_files = find_checkpoints(name)
         if checkpoint_files:
-            latest_checkpoint = os.path.join(checkpoint_dir, checkpoint_files[-1])
+            latest_checkpoint = os.path.join(name, checkpoint_files[-1])
             checkpoint = torch.load(latest_checkpoint, map_location=run_model.device)
             run_model.load_state_dict(checkpoint['model_state_dict'])
             start_epoch = checkpoint['epoch'] + 1
