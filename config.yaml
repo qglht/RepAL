@@ -26,12 +26,12 @@ rnn:
       - True
       - False
 groups:
-  # master:
-  #   pretrain:
-  #     ruleset: []
-  #   train:
-  #     ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
-  #     frozen: False
+  master:
+    pretrain:
+      ruleset: []
+    train:
+      ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+      frozen: False
   pretrain_frozen:
     pretrain: 
       ruleset: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT]
@@ -44,30 +44,30 @@ groups:
     train:
       ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
       frozen: False
-  # delay: 
-  #   pretrain:
-  #     ruleset: []
-  #   train:
-  #     ruleset: [PerceptualDecisionMakingDelayResponseT]
-  #     frozen: False
-  # anti:
-  #   pretrain:
-  #     ruleset: []
-  #   train:
-  #     ruleset: [AntiPerceptualDecisionMakingT]
-  #     frozen: False
-  # basic:
-  #   pretrain:
-  #     ruleset: []
-  #   train:
-  #     ruleset: [PerceptualDecisionMakingT]
-  #     frozen: False
-  # untrained:
-  #   pretrain:
-  #     ruleset: []
-  #   train:
-  #     ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
-  #     frozen: True
+  delay: 
+    pretrain:
+      ruleset: []
+    train:
+      ruleset: [PerceptualDecisionMakingDelayResponseT]
+      frozen: False
+  anti:
+    pretrain:
+      ruleset: []
+    train:
+      ruleset: [AntiPerceptualDecisionMakingT]
+      frozen: False
+  basic:
+    pretrain:
+      ruleset: []
+    train:
+      ruleset: [PerceptualDecisionMakingT]
+      frozen: False
+  untrained:
+    pretrain:
+      ruleset: []
+    train:
+      ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+      frozen: True
   # pretrained_PDM_APDM:
   #   pretrain:
   #     ruleset: [PerceptualDecisionMakingT, AntiPerceptualDecisionMakingT]

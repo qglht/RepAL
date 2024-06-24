@@ -44,7 +44,7 @@ wait $APP_PID
 
 """
     config = load_config("config.yaml")
-    groups = list(config["groups"].keys())
+    groups = ["anti", "basic","delay","master","pretrain_frozen","pretrain_unfrozen","untrained"]
 
     for i in range(len(groups)):
         group_i = groups[i]
