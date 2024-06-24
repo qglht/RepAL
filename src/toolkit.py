@@ -156,9 +156,9 @@ def generate_data(env):
     )
     main.generate_data(env, hp, mode="test", num_pregenerated=1000)
 
-def compute_dissimilarity(rnn_type, activation, hidden_size, lr, model, group,device, n_components=3):
+def get_dynamics_model(rnn_type, activation, hidden_size, lr, model, group,device, n_components=3):
     # Load configuration and set hyperparameters
-    config = load_config("../config.yaml")
+    config = load_config("config.yaml")
     ruleset = config["rules_analysis"][-1]
     all_rules = config["rules_analysis"]
 
@@ -175,7 +175,7 @@ def compute_dissimilarity(rnn_type, activation, hidden_size, lr, model, group,de
         model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=ruleset
     )
     run_model = main.load_model(
-        f"../models/{group}/{model}",
+        f"models/{group}/{model}",
         hp,
         RNNLayer,
         device=device,
