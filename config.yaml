@@ -134,8 +134,8 @@ analysis:
   trimming_method: time_average
   model: models/model.pth
 dsa:
-  n_delays: 50
-  delay_interval: 4
+  n_delays: 20
+  delay_interval: 10
   rank: 50
   device: cuda
 simulations:
