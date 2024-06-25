@@ -182,7 +182,8 @@ def get_dynamics_model(rnn_type, activation, hidden_size, lr, model, group,devic
     )
     h = main.representation(run_model, all_rules)
     h_trans, explained_variance = main.compute_pca(h, n_components=n_components)
-    return h_trans[("AntiPerceptualDecisionMakingDelayResponseT", "stimulus")].detach().numpy(), explained_variance
+    tensor_on_cpu = h_trans[("AntiPerceptualDecisionMakingDelayResponseT", "stimulus")].cpu()
+    return tensor_on_cpu.detach().numpy(), explained_variance
 
 def dissimilarity_over_learning(group1, group2, rnn_type, activation, hidden_size, lr, batch_size, device):
     config = load_config("config.yaml")
