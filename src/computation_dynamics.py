@@ -27,5 +27,6 @@ if __name__ == "__main__":
             data.append(df)
     data = pd.concat(data)
     data_groupes_mean_dissimilarity = data.groupby(['group1', 'group2'])[["cka","procrustes","dsa"]].mean().reset_index()
+    data_models = data[data['model1'] == data['model2']].groupby(['group1', 'group2','model1','model2'])[["cka","procrustes","dsa"]].mean().reset_index()
     ipdb.set_trace()
     

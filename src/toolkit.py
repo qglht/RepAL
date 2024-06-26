@@ -53,7 +53,7 @@ def initialize_model(rnn_type, activation, hidden_size, lr, batch_size, device):
 
 def corresponding_training_time(n, p):
     # Find the argmin over j for each i
-    return [min(range(p), key=lambda j: abs(int(100 * i / (n - 1)) - int(100 * j / (p - 1)))) for i in range(n)]
+    return [min(range(p), key=lambda j: abs(int(100 * i / n) - int(100 * j / p))) for i in range(n)]
 
 def get_curves(model, rules, components):
     h = main.representation(model, rules)
