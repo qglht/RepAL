@@ -34,7 +34,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
     config = load_config("config.yaml")
     num_gpus = torch.cuda.device_count()  # Get the number of GPUs available
     devices = [torch.device(f"cuda:{i}") for i in range(num_gpus)] if num_gpus > 0 else [torch.device("cpu")]
-    
+    print(f"Number of GPUs available: {num_gpus}")
     tasks = []
     device_index = 0
     for rnn_type in config["rnn"]["parameters"]["rnn_type"]:
@@ -42,7 +42,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
             for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
                 for lr in config["rnn"]["parameters"]["learning_rate"]:
                     for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
-                        device = devices[device_index % num_gpus] if num_gpus > 0 else "cpu" # Assign each task to a different GPU 
+                        device = devices[device_index % len(devices)] if num_gpus > 0 else "cpu" # Assign each task to a different GPU 
                         tasks.append((args, rnn_type, activation, hidden_size, lr, batch_size, device))
                         device_index += 1
     if num_gpus > 0:
