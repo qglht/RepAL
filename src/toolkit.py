@@ -57,8 +57,9 @@ def corresponding_training_time(n, p):
 
 def get_curves(model, rules, components):
     h = main.representation(model, rules)
-    h_trans, explained_variance = main.compute_pca(h, n_components=components)
-    return h_trans[("AntiPerceptualDecisionMakingDelayResponseT", "stimulus")].detach().numpy()
+    h_trans, _ = main.compute_pca(h, n_components=components)
+    tensor_on_cpu = h_trans[("AntiPerceptualDecisionMakingDelayResponseT", "stimulus")].cpu()
+    return tensor_on_cpu.detach().numpy()
 
 def normalize_within_unit_volume(tensor):
     # Ensure the input is a PyTorch tensor
