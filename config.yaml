@@ -128,11 +128,6 @@ groups:
   #   train:
   #     ruleset: [AntiGoNogoDelayResponseT]
   #     frozen: True
-analysis:
-  epochs: [stim1]
-  rule: [delayanti]
-  trimming_method: time_average
-  model: models/model.pth
 dsa:
   n_delays: 20
   delay_interval: 10
