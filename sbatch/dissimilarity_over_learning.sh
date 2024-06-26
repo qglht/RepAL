@@ -2,7 +2,7 @@
 #SBATCH --nodes=1
 #SBATCH --time=24:00:00
 #SBATCH --job-name=dissimilarity_over_learning
-#SBATCH --gres=gpu:0
+#SBATCH --gres=gpu:8
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=80 
 #SBATCH --partition=small 

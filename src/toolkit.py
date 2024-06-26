@@ -210,26 +210,20 @@ def dissimilarity_over_learning(group1, group2, rnn_type, activation, hidden_siz
     if checkpoint_files_1 and checkpoint_files_2:
         # get the models to compare
         if len(checkpoint_files_1) < len(checkpoint_files_2):
-            print("checkpoint_files_1 < checkpoint_files_2")
             index_epochs = corresponding_training_time(len(checkpoint_files_1), len(checkpoint_files_2))
             for epoch in index_epochs:
                 checkpoint1 = torch.load(os.path.join(path_train_folder1, checkpoint_files_1[index_epochs.index(epoch)]), map_location=device)
                 run_model1.load_state_dict(checkpoint1['model_state_dict'])
-                print(f"checkpoint 1 {checkpoint1['log']}")
                 checkpoint2 = torch.load(os.path.join(path_train_folder2, checkpoint_files_2[epoch]), map_location=device)
                 run_model2.load_state_dict(checkpoint2['model_state_dict'])
-                print(f"checkpoint 2 {checkpoint2['log']}")
                 models_to_compare.extend([(run_model1, run_model2)])
         else:
-            print("checkpoint_files_1 > checkpoint_files_2")
             index_epochs = corresponding_training_time(len(checkpoint_files_2), len(checkpoint_files_1))
             for epoch in index_epochs:
                 checkpoint1 = torch.load(os.path.join(path_train_folder1, checkpoint_files_1[epoch]), map_location=device)
                 run_model1.load_state_dict(checkpoint1['model_state_dict'])
-                print(f"checkpoint 1 {checkpoint1['log']}")
                 checkpoint2 = torch.load(os.path.join(path_train_folder2, checkpoint_files_2[index_epochs.index(epoch)]), map_location=device)
                 run_model2.load_state_dict(checkpoint2['model_state_dict'])
-                print(f"checkpoint 2 {checkpoint2['log']}")
                 models_to_compare.extend([(run_model1, run_model2)])
 
         # compute the curves for models and dissimilarities
@@ -245,6 +239,7 @@ def dissimilarity_over_learning(group1, group2, rnn_type, activation, hidden_siz
             verbose=True,
             iters=1000,
             lr=1e-2,
+            device=device
         )
         dissimilarities_over_learning["dsa"].append(dsa_comp.fit_score())
         return dissimilarities_over_learning        
