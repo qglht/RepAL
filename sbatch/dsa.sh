@@ -4,13 +4,13 @@
 #SBATCH --nodes=1
 
 # set max wallclock time
-#SBATCH --time=24:00:00
+#SBATCH --time=1:00:00
 
 # set name of job
-#SBATCH --job-name=job123
+#SBATCH --job-name=MASTER_DSA
 
 # set number of GPUs
-#SBATCH --gres=gpu:8
+#SBATCH --gres=gpu:0
 
 # mail alert at start, end and abortion of execution
 #SBATCH --mail-type=ALL
@@ -27,16 +27,4 @@ source activate dsa  # If necessary, depends on cluster setup
 poetry install  # Install additional Python packages as needed
 
 # Run the application and monitor GPU status in parallel
-(poetry run python -m src.dsa_optimization) &
-
-# PID of the application
-APP_PID=$!
-
-# Monitor GPU status every 60 seconds until the application finishes
-while kill -0 $APP_PID 2>/dev/null; do
-    echo "Checking GPU status during the application run:"
-    nvidia-smi
-    sleep 300
-done
-
-wait $APP_PID
+poetry run python -m src.dsa_best_parameters

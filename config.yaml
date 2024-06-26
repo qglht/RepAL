@@ -1,4 +1,5 @@
-all_rules: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT, AntiPerceptualDecisionMakingDelayResponseT]
+all_rules: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT, AntiPerceptualDecisionMakingDelayResponseT] #[GoNogoT, AntiGoNogoT, GoNogoDelayResponseT, AntiGoNogoDelayResponseT]
+rules_analysis: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT, AntiPerceptualDecisionMakingDelayResponseT]
 rnn:
   parameters:
     rnn_type: 
@@ -16,8 +17,14 @@ rnn:
       - 0.0001
       - 0.001
     batch_size_train:
-      - 64
       - 128
+      - 256
+    freeze:
+      - True
+      - False
+    nopretrain:
+      - True
+      - False
 groups:
   master:
     pretrain:
@@ -61,14 +68,74 @@ groups:
     train:
       ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
       frozen: True
+  # pretrained_PDM_APDM:
+  #   pretrain:
+  #     ruleset: [PerceptualDecisionMakingT, AntiPerceptualDecisionMakingT]
+  #   train:
+  #     ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+  #     frozen: True
+  # pretrained_APDM_DPDM:
+  #   pretrain:
+  #     ruleset: [AntiPerceptualDecisionMakingT,PerceptualDecisionMakingDelayResponseT]
+  #   train:
+  #     ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+  #     frozen: True
+  # pretrained_PDM_DPDM:
+  #   pretrain:
+  #     ruleset: [PerceptualDecisionMakingT,PerceptualDecisionMakingDelayResponseT]
+  #   train:
+  #     ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+  #     frozen: True
+  # master-gonogo:
+  #   pretrain:
+  #     ruleset: []
+  #   train:
+  #     ruleset: [AntiGoNogoDelayResponseT]
+  #     frozen: False
+  # pretrain_frozen-gonogo:
+  #   pretrain:
+  #     ruleset: [GoNogoT, AntiGoNogoT, GoNogoDelayResponseT]
+  #   train:
+  #     ruleset: [AntiGoNogoDelayResponseT]
+  #     frozen: True
+  # pretrain_unfrozen-gonogo:
+  #   pretrain:
+  #     ruleset: [GoNogoT, AntiGoNogoT, GoNogoDelayResponseT]
+  #   train:
+  #     ruleset: [AntiGoNogoDelayResponseT]
+  #     frozen: False
+  # delay-gonogo:
+  #   pretrain:
+  #     ruleset: []
+  #   train:
+  #     ruleset: [GoNogoDelayResponseT]
+  #     frozen: False
+  # anti-gonogo:
+  #   pretrain:
+  #     ruleset: []
+  #   train:
+  #     ruleset: [AntiGoNogoT]
+  #     frozen: False
+  # basic-gonogo:
+  #   pretrain:
+  #     ruleset: []
+  #   train:
+  #     ruleset: [GoNogoT]
+  #     frozen: False
+  # untrained-gonogo:
+  #   pretrain:
+  #     ruleset: []
+  #   train:
+  #     ruleset: [AntiGoNogoDelayResponseT]
+  #     frozen: True
 analysis:
   epochs: [stim1]
   rule: [delayanti]
   trimming_method: time_average
   model: models/model.pth
 dsa:
-  n_delays: 10
-  delay_interval: 5
+  n_delays: 20
+  delay_interval: 10
   rank: 50
   device: cuda
 simulations:

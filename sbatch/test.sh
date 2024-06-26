@@ -1,44 +1,31 @@
 #!/bin/bash
-
-# set the number of nodes
 #SBATCH --nodes=1
-
-# set max wallclock time
-#SBATCH --time=1:00:00
-
-# set name of job
-#SBATCH --job-name=job123
-
-# set number of GPUs
-#SBATCH --gres=gpu:1
-
-# mail alert at start, end and abortion of execution
+#SBATCH --time=24:00:00
+#SBATCH --job-name=master_job
+#SBATCH --gres=gpu:8
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=80  # 10 CPUs per GPU * 8 GPUs
+#SBATCH --partition=small
 #SBATCH --mail-type=ALL
-
-# send mail to this address
 #SBATCH --mail-user=oxfd2547@ox.ac.uk
 
-# load necessary modules or activate your environment
 module load cuda/11.2
 module load pytorch/1.9.0
 module load python/anaconda3
 
-source activate dsa  # If necessary, depends on cluster setup
-poetry install  # Install additional Python packages as needed
+source activate dsa
+poetry install
 
-# Check GPU status before running the application
-echo "Checking GPU status before running the application:"
-nvidia-smi
-
-# Run the application and monitor GPU status in parallel
-(poetry run python -m src.test) &
+(poetry run python -m src.train_group --group master) & 
 
 # PID of the application
 APP_PID=$!
 
-# Monitor GPU status every 60 seconds until the application finishes
+# Monitor GPU status every 300 seconds (5 minutes) until the application finishes
 while kill -0 $APP_PID 2>/dev/null; do
-    echo "Checking GPU status during the application run:"
-    nvidia-smi
-    sleep 60
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - Checking GPU status during the application run:" >> gpu_usage/master_gpu_usage.log
+    nvidia-smi >> gpu_usage/master_gpu_usage.log  # Append output to log file
+    sleep 300 
 done
+
+wait $APP_PID
