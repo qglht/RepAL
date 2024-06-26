@@ -36,7 +36,7 @@ wait $APP_PID
 """
     groups_to_compare_over_learning = [("pretrain_frozen","pretrain_unfrozen"),("pretrain_frozen","master"),("pretrain_unfrozen","master")]
 
-    for group in range(len(groups_to_compare_over_learning)):
+    for group in groups_to_compare_over_learning:
         script_content = script_template.format(group1=group[0], group2=group[1])
         script_filename = f"sbatch/dissimilarities_over_learning/{group[0]}_{group[1]}_script.sh"
 
