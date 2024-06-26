@@ -26,6 +26,6 @@ if __name__ == "__main__":
             df = pd.read_csv(os.path.join(path, file))
             data.append(df)
     data = pd.concat(data)
-    data = data.groupby(['group1', 'group2'])[["cka","procrustes","dsa"]].mean().reset_index()
+    data_groupes_mean_dissimilarity = data.groupby(['group1', 'group2'])[["cka","procrustes","dsa"]].mean().reset_index()
     ipdb.set_trace()
     

@@ -244,7 +244,7 @@ def dissimilarity_over_learning(group1, group2, rnn_type, activation, hidden_siz
             dissimilarities_over_learning["dsa"].append(dsa_comp.fit_score())
         return dissimilarities_over_learning        
     else:
-        raise dissimilarities_over_learning
+        return dissimilarities_over_learning
 
 def dsa_optimisation_compositionality(rank, n_delays, delay_interval, device, ordered=True, overwrite=True):
     path_file = f'data/dsa_results/{rank}_{n_delays}_{delay_interval}.csv' if not ordered else f'data/dsa_results/{rank}_{n_delays}_{delay_interval}_ordered.csv'
