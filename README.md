@@ -9,7 +9,7 @@
 
 The code is mainly divided into 2 parts:
 
-### 1 : The dynamical similarity analysis part
+### 1 : Simulations
 
 Use 3D attractor dynamics to show if RepAL metric is relevant to capture compositional problem solving and compositional learning. 
 
