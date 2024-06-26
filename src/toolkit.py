@@ -227,24 +227,24 @@ def dissimilarity_over_learning(group1, group2, rnn_type, activation, hidden_siz
                 models_to_compare.extend([(run_model1, run_model2)])
 
         # compute the curves for models and dissimilarities
-    curves = [(get_curves(tuple_model[0], all_rules, components=15), get_curves(tuple_model[1], all_rules, components=15)) for tuple_model in models_to_compare]
-    for epoch_index in range(len(index_epochs)):
-        dissimilarities_over_learning["cka"].append(1-cka_measure(curves[epoch_index][0], curves[epoch_index][1]))
-        dissimilarities_over_learning["procrustes"].append(1-procrustes_measure(curves[epoch_index][0], curves[epoch_index][1]))
-        dsa_comp = DSA.DSA(
-            curves[epoch_index][0], curves[epoch_index][1],
-            n_delays=config["dsa"]["n_delays"],
-            rank=config["dsa"]["rank"],
-            delay_interval=config["dsa"]["delay_interval"],
-            verbose=True,
-            iters=1000,
-            lr=1e-2,
-            device=device
-        )
-        dissimilarities_over_learning["dsa"].append(dsa_comp.fit_score())
+        curves = [(get_curves(tuple_model[0], all_rules, components=15), get_curves(tuple_model[1], all_rules, components=15)) for tuple_model in models_to_compare]
+        for epoch_index in range(len(index_epochs)):
+            dissimilarities_over_learning["cka"].append(1-cka_measure(curves[epoch_index][0], curves[epoch_index][1]))
+            dissimilarities_over_learning["procrustes"].append(1-procrustes_measure(curves[epoch_index][0], curves[epoch_index][1]))
+            dsa_comp = DSA.DSA(
+                curves[epoch_index][0], curves[epoch_index][1],
+                n_delays=config["dsa"]["n_delays"],
+                rank=config["dsa"]["rank"],
+                delay_interval=config["dsa"]["delay_interval"],
+                verbose=True,
+                iters=1000,
+                lr=1e-2,
+                device=device
+            )
+            dissimilarities_over_learning["dsa"].append(dsa_comp.fit_score())
         return dissimilarities_over_learning        
     else:
-        raise FileNotFoundError
+        raise dissimilarities_over_learning
 
 def dsa_optimisation_compositionality(rank, n_delays, delay_interval, device, ordered=True, overwrite=True):
     path_file = f'data/dsa_results/{rank}_{n_delays}_{delay_interval}.csv' if not ordered else f'data/dsa_results/{rank}_{n_delays}_{delay_interval}_ordered.csv'
