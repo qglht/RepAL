@@ -42,12 +42,16 @@ def dissimilarity(args: argparse.Namespace) -> None:
             for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
                 for lr in config["rnn"]["parameters"]["learning_rate"]:
                     for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
-                        device = devices[device_index % num_gpus]  # Assign each task to a different GPU
+                        device = devices[device_index % num_gpus] if num_gpus > 0 else "cpu" # Assign each task to a different GPU 
                         tasks.append((args, rnn_type, activation, hidden_size, lr, batch_size, device))
                         device_index += 1
-    
-    with Pool(processes=num_gpus) as pool:
-        results = pool.map(dissimilarity_task, tasks)
+    if num_gpus > 0:
+        with Pool(processes=num_gpus) as pool:
+            results = pool.map(dissimilarity_task, tasks)
+    else:
+        results = []
+        for task in tasks:
+            results.append(dissimilarity_task(task))
     
     dissimilarities = {"group1": [], "group2": [], "rnn_type": [], "activation": [], "hidden_size": [], "lr": [], "batch_size": [], "cka": [], "procrustes": [], "dsa": []}
     for result in results:
@@ -55,7 +59,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
             dissimilarities[key].append(result[key])
     
     dissimilarities_df = pd.DataFrame(dissimilarities)
-    dissimilarities_df.to_csv(f"dissimilarities_over_learning_{args.group1}_{args.group2}.csv", index=False)
+    dissimilarities_df.to_csv(f"data/dissimilarities_over_learning/{args.group1}_{args.group2}.csv", index=False)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train the model")

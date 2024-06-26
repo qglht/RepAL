@@ -8,10 +8,6 @@
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=oxfd2547@ox.ac.uk
 
-#define the groups to compare
-group1 = "pretrain_frozen"
-group2 = "pretrain_unfrozen"
-
 module load cuda/11.2
 module load pytorch/1.9.0
 module load python/anaconda3
@@ -19,7 +15,7 @@ module load python/anaconda3
 source activate dsa
 poetry install
 
-(poetry run python -m src.dissimilarity_over_learning --group1 ${group1} --group2 ${group2}) & 
+(poetry run python -m src.dissimilarity_over_learning --group1 pretrain_frozen --group2 pretrain_unfrozen) & 
 
 # PID of the application
 APP_PID=$!
