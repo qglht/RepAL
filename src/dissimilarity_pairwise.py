@@ -58,7 +58,7 @@ def parse_model_info(model_name):
     return model_type, activation, hidden_size, learning_rate, batch_size
 
 def dissimilarity(args: argparse.Namespace) -> None:
-
+    
     num_gpus = torch.cuda.device_count()  # Get the number of GPUs available
     devices = (
         [torch.device(f"cuda:{i}") for i in range(num_gpus)]

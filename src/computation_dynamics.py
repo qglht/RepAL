@@ -23,12 +23,9 @@ if __name__ == "__main__":
     data = []
     for file in files:
         if file.endswith(".csv"):
-            # split the name of the file to get the parameters
-            parameters = file.split("_")
-            group1 = parameters[0]
-            group2 = parameters[1].split(".")[0]
             df = pd.read_csv(os.path.join(path, file))
-            df["group"] = (group1, group2)
             data.append(df)
     data = pd.concat(data)
+    data = data.groupby(['group1', 'group2'])[["cka","procrustes","dsa"]].mean().reset_index()
+    ipdb.set_trace()
     

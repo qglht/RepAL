@@ -46,20 +46,24 @@ wait $APP_PID
 
 """
     config = load_config("config.yaml")
-    groups = ["anti", "basic","delay","master","pretrain_frozen","pretrain_unfrozen","untrained"]
+    groups = ["pretrain_frozen","pretrain_unfrozen","master", "untrained"]
 
     for i in range(len(groups)):
         group_i = groups[i]
         for j in range(i, len(groups)):
-            group_j = groups[j]
-            script_content = script_template.format(group1=group_i, group2=group_j)
-            script_filename = f"sbatch/dissimilarity/{group_i}_{group_j}_script.sh"
+            # test if file does not exist already:
+            if os.path.exists(f"data/dissimilarities/{group_i}_{groups[j]}.csv"):
+                continue
+            else:
+                group_j = groups[j]
+                script_content = script_template.format(group1=group_i, group2=group_j)
+                script_filename = f"sbatch/dissimilarity/{group_i}_{group_j}_script.sh"
 
-            with open(script_filename, 'w') as script_file:
-                script_file.write(script_content)
+                with open(script_filename, 'w') as script_file:
+                    script_file.write(script_content)
 
-            # Submit the job to the cluster
-            call(f"sbatch {script_filename}", shell=True)
+                # Submit the job to the cluster
+                call(f"sbatch {script_filename}", shell=True)
 
 if __name__ == "__main__":
     generate_and_submit_scripts()
