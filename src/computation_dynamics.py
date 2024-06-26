@@ -31,7 +31,7 @@ if __name__ == "__main__":
     data_models_averaged = data_models.groupby(['group1', 'group2'])[["cka","procrustes","dsa"]].mean().reset_index()
     
     # plot heatmap of the dissimilarity between the groups
-    df = pd.DataFrame(data_groupes_mean_dissimilarity)
+    df = pd.DataFrame(data_models_averaged)
 
     # Pivot the dataframe to prepare for heatmap
     pivot_df = df.pivot(index='group1', columns='group2', values=['cka', 'procrustes', 'dsa'])
