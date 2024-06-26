@@ -28,8 +28,8 @@ def dissimilarity_task(params):
         "procrustes": dissimilarities_model["procrustes"],
         "dsa": dissimilarities_model["dsa"]
     }
-    print(f"dissimilarities dsa : {dissimilarities_model["dsa"]}")
-    print(f"Len of dissimilarities : dsa {len(dissimilarities_model["dsa"])}")
+    print(f"dissimilarities dsa : {dissimilarities_model['dsa']}")
+    print(f"Len of dissimilarities : dsa {len(dissimilarities_model['dsa'])}")
     return dissimilarities
 
 def dissimilarity(args: argparse.Namespace) -> None:
