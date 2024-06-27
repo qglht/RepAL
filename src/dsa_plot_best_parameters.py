@@ -36,7 +36,7 @@ if __name__ == "__main__":
     data.rename(columns={"number of shared elements":"number_of_shared_elements"}, inplace=True)
     # remove Nan values
     data = data.dropna()# plot on a single plot the Median similarity vs Number of shared elements for pair  (n_delay, delay_interval)
-    ipdb.set_trace()
+    # ipdb.set_trace()
     # Group by `n_delay` and `delay_interval`
     data = data.groupby(['n_delay', 'delay_interval','number of shared elements'])["similarity"].mean().reset_index()
     groups = data.groupby(['n_delay', 'delay_interval'])
