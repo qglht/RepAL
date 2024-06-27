@@ -205,6 +205,17 @@ def dissimilarity_over_learning(group1, group2, rnn_type, activation, hidden_siz
 
     # group models and establish correspondancy between epochs
     models_to_compare = []
+
+    # if pretrain in group1 and group2, load checkpoints at os.path.join(f"models/{group}", model_name + f"_pretrain.pth")
+    if "pretrain" in group1 and "pretrain" in group2:
+        path_pretrain_folder1 = os.path.join(f"models/{group1}", model_name + f"_pretrain.pth")
+        path_pretrain_folder2 = os.path.join(f"models/{group2}", model_name + f"_pretrain.pth")
+        model_pretrain_group1 = torch.load(path_pretrain_folder1, map_location=device)
+        run_model1.load_state_dict(model_pretrain_group1['model_state_dict'])
+        model_pretrain_group2 = torch.load(path_pretrain_folder2, map_location=device)
+        run_model2.load_state_dict(model_pretrain_group2['model_state_dict'])
+        models_to_compare.extend([(run_model1, run_model2)])
+
     dissimilarities_over_learning = {"cka":[],"dsa":[],"procrustes":[]}
     cka_measure = similarity.make("measure.sim_metric.cka-angular-score")
     procrustes_measure = similarity.make("measure.netrep.procrustes-angular-score")
@@ -249,89 +260,86 @@ def dissimilarity_over_learning(group1, group2, rnn_type, activation, hidden_siz
 
 def dsa_optimisation_compositionality(rank, n_delays, delay_interval, device, ordered=True, overwrite=True):
     path_file = f'data/dsa_results/{rank}_{n_delays}_{delay_interval}.csv' if not ordered else f'data/dsa_results/{rank}_{n_delays}_{delay_interval}_ordered.csv'
-    if os.path.exists(path_file) and not overwrite:
-        return
-    else:
-        config = load_config("config.yaml")
-        # Define parameters
-        dt = config['simulations']['dt']
-        num_steps = config['simulations']['num_steps']
-        num_samples = config['simulations']['num_samples']
-        lorenz_parameters = config['simulations']['lorenz_parameters']
+    config = load_config("config.yaml")
+    # Define parameters
+    dt = config['simulations']['dt']
+    num_steps = config['simulations']['num_steps']
+    num_samples = config['simulations']['num_samples']
+    lorenz_parameters = config['simulations']['lorenz_parameters']
 
-        # Run simulations line
-        simulations_line = simulation_line(num_steps, num_samples)
+    # Run simulations line
+    simulations_line = simulation_line(num_steps, num_samples)
 
-        # Run simulations curve
-        simulations_curve = simulation_lorenz(dt, lorenz_parameters['one_attractor'][1], num_samples, num_steps)
+    # Run simulations curve
+    simulations_curve = simulation_lorenz(dt, lorenz_parameters['one_attractor'][1], num_samples, num_steps)
 
-        # Run simulations Pattern1
-        simulations_pattern1 = simulation_lorenz(dt, lorenz_parameters['two_stable_attractors'][0], num_samples, num_steps)
+    # Run simulations Pattern1
+    simulations_pattern1 = simulation_lorenz(dt, lorenz_parameters['two_stable_attractors'][0], num_samples, num_steps)
 
-        # Run simulations Pattern2
-        simulations_pattern2 = simulation_lorenz(dt, lorenz_parameters['two_stable_attractors'][2], num_samples, num_steps)
+    # Run simulations Pattern2
+    simulations_pattern2 = simulation_lorenz(dt, lorenz_parameters['two_stable_attractors'][2], num_samples, num_steps)
 
-        # Run simulations line-curve-line-curve
-        combined_simulations_line_curve_line = combine_simulations([simulations_line, simulations_curve, np.flip(simulations_line, axis=0), np.flip(simulations_curve, axis=0)], method='attach')
+    # Run simulations line-curve-line-curve
+    combined_simulations_line_curve_line = combine_simulations([simulations_line, simulations_curve, np.flip(simulations_line, axis=0), np.flip(simulations_curve, axis=0)], method='attach')
 
-        motif_basis = [simulations_line, simulations_curve, simulations_pattern1,simulations_pattern2,combined_simulations_line_curve_line]
-        motif_names = ['Line', 'Curve', 'Pattern1', 'Pattern2','Line-Curve-Line-Curve']
-        motif_dict = {motif_names[i]: motif_basis[i] for i in range(len(motif_basis))}
-        all_simulations_length_3 = list(permutations(motif_names, 3))
-        all_simulations_combined = {permutation: combine_simulations([motif_dict[permutation[0]], motif_dict[permutation[1]], motif_dict[permutation[2]]],method='attach') for permutation in all_simulations_length_3}
+    motif_basis = [simulations_line, simulations_curve, simulations_pattern1,simulations_pattern2,combined_simulations_line_curve_line]
+    motif_names = ['Line', 'Curve', 'Pattern1', 'Pattern2','Line-Curve-Line-Curve']
+    motif_dict = {motif_names[i]: motif_basis[i] for i in range(len(motif_basis))}
+    all_simulations_length_3 = list(permutations(motif_names, 3))
+    all_simulations_combined = {permutation: combine_simulations([motif_dict[permutation[0]], motif_dict[permutation[1]], motif_dict[permutation[2]]],method='attach') for permutation in all_simulations_length_3}
 
-        model = list(all_simulations_combined.values())
-        model_names = list(all_simulations_combined.keys())
+    model = list(all_simulations_combined.values())
+    model_names = list(all_simulations_combined.keys())
 
-        dsa = DSA.DSA(model,n_delays=n_delays,rank=rank,delay_interval=delay_interval,verbose=True,iters=1000,lr=1e-2, device=device)
-        similarities = dsa.fit_score()
+    dsa = DSA.DSA(model,n_delays=n_delays,rank=rank,delay_interval=delay_interval,verbose=True,iters=1000,lr=1e-2, device=device)
+    similarities = dsa.fit_score()
 
-        grouped_by_shared_elements = {i:[] for i in range(4)}
-        for comp_motif_1 in model_names:
-            for comp_motif_2 in model_names:
-                if ordered:
-                    grouped_by_shared_elements[same_order(comp_motif_1, comp_motif_2)].extend([(comp_motif_1, comp_motif_2)])
-                else:
-                    set_1 = set(comp_motif_1)
-                    set_2 = set(comp_motif_2)
-                    grouped_by_shared_elements[len(set_1.intersection(set_2))].extend([(comp_motif_1, comp_motif_2)])
-    
-        similarities_grouped_by_shared_elements = {i:[] for i in range(4)}
-        for key in grouped_by_shared_elements:
-            for tuple1, tuple2 in grouped_by_shared_elements[key]:
-                similarities_grouped_by_shared_elements[key].append(similarities[model_names.index(tuple1), model_names.index(tuple2)])
+    grouped_by_shared_elements = {i:[] for i in range(4)}
+    for comp_motif_1 in model_names:
+        for comp_motif_2 in model_names:
+            if ordered:
+                grouped_by_shared_elements[same_order(comp_motif_1, comp_motif_2)].extend([(comp_motif_1, comp_motif_2)])
+            else:
+                set_1 = set(comp_motif_1)
+                set_2 = set(comp_motif_2)
+                grouped_by_shared_elements[len(set_1.intersection(set_2))].extend([(comp_motif_1, comp_motif_2)])
 
-        # # compute median of similarities for each group and plot similarity vs number of shared elements
-        # median_similarities = {key: np.median(value) for key, value in similarities_grouped_by_shared_elements.items()}
-        # std_devs = {key: np.std(value) for key, value in similarities_grouped_by_shared_elements.items()}
+    similarities_grouped_by_shared_elements = {i:[] for i in range(4)}
+    for key in grouped_by_shared_elements:
+        for tuple1, tuple2 in grouped_by_shared_elements[key]:
+            similarities_grouped_by_shared_elements[key].append(similarities[model_names.index(tuple1), model_names.index(tuple2)])
 
-        # # Prepare data for plotting
-        # keys = list(median_similarities.keys())
-        # median_values = list(median_similarities.values())
-        # std_dev_values = list(std_devs.values())
+    # # compute median of similarities for each group and plot similarity vs number of shared elements
+    # median_similarities = {key: np.median(value) for key, value in similarities_grouped_by_shared_elements.items()}
+    # std_devs = {key: np.std(value) for key, value in similarities_grouped_by_shared_elements.items()}
 
-        # df = pd.DataFrame({'Number of shared elements': keys, 'Median similarity': median_values, 'Standard deviation': std_dev_values})
-        # Prepare lists to store DataFrame rows
-        data = []
+    # # Prepare data for plotting
+    # keys = list(median_similarities.keys())
+    # median_values = list(median_similarities.values())
+    # std_dev_values = list(std_devs.values())
 
-        # Iterate over the shared elements
-        for num_shared_elements, similarities in similarities_grouped_by_shared_elements.items():
-            tuples = grouped_by_shared_elements[num_shared_elements]
-            
-            # Zip the similarities with the corresponding element pairs
-            for (element1, element2), similarity in zip(tuples, similarities):
-                # Sort the elements to ensure uniqueness
-                sorted_pair = sorted([element1, element2])
-                data.append([num_shared_elements, sorted_pair[0], sorted_pair[1], similarity])
+    # df = pd.DataFrame({'Number of shared elements': keys, 'Median similarity': median_values, 'Standard deviation': std_dev_values})
+    # Prepare lists to store DataFrame rows
+    data = []
 
-        # Create DataFrame
-        df = pd.DataFrame(data, columns=["number of shared elements", "element1", "element2", "similarity"])
+    # Iterate over the shared elements
+    for num_shared_elements, similarities in similarities_grouped_by_shared_elements.items():
+        tuples = grouped_by_shared_elements[num_shared_elements]
+        
+        # Zip the similarities with the corresponding element pairs
+        for (element1, element2), similarity in zip(tuples, similarities):
+            # Sort the elements to ensure uniqueness
+            sorted_pair = sorted([element1, element2])
+            data.append([num_shared_elements, sorted_pair[0], sorted_pair[1], similarity])
 
-        # Drop duplicates
-        df = df.drop_duplicates(subset=["element1", "element2"])
+    # Create DataFrame
+    df = pd.DataFrame(data, columns=["number of shared elements", "element1", "element2", "similarity"])
 
-        # check if the directory exists
-        if not os.path.exists('data/dsa_results'):
-            os.makedirs('data/dsa_results')
-        df.to_csv(path_file)
-        return 
+    # Drop duplicates
+    df = df.drop_duplicates(subset=["element1", "element2"])
+
+    # check if the directory exists
+    if not os.path.exists('data/dsa_results'):
+        os.makedirs('data/dsa_results')
+    df.to_csv(path_file)
+    return 

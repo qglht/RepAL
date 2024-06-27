@@ -128,14 +128,9 @@ groups:
   #   train:
   #     ruleset: [AntiGoNogoDelayResponseT]
   #     frozen: True
-analysis:
-  epochs: [stim1]
-  rule: [delayanti]
-  trimming_method: time_average
-  model: models/model.pth
 dsa:
-  n_delays: 20
-  delay_interval: 10
+  n_delays: 15
+  delay_interval: 13
   rank: 50
   device: cuda
 simulations:

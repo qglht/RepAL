@@ -4,6 +4,7 @@
 
 - install poetry : curl -sSL https://install.python-poetry.org | python3 -
 - run the following command to install necessary dependancies : poetry install 
+- create folders for models and data: mkdir models data
 
 ## How to use
 

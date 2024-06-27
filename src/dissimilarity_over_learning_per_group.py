@@ -1,9 +1,9 @@
 import warnings
 import os
 import argparse
-from dsa_analysis import load_config
 import torch
 import pandas as pd
+from dsa_analysis import load_config
 from src.toolkit import dissimilarity_over_learning
 
 # Suppress specific Gym warnings
@@ -15,18 +15,21 @@ os.environ['GYM_IGNORE_DEPRECATION_WARNINGS'] = '1'
 
 def dissimilarity_task(params):
     args, rnn_type, activation, hidden_size, lr, batch_size, device = params
-    dissimilarities = {"group1": [], "group2": [], "rnn_type": [], "activation": [], "hidden_size": [], "lr": [], "batch_size": [], "cka": [], "procrustes": [], "dsa": []}
     dissimilarities_model = dissimilarity_over_learning(args.group1, args.group2, rnn_type, activation, hidden_size, lr, batch_size, device)
-    dissimilarities["group1"] = args.group1
-    dissimilarities["group2"] = args.group2
-    dissimilarities["rnn_type"] = rnn_type
-    dissimilarities["activation"] = activation
-    dissimilarities["hidden_size"] = hidden_size
-    dissimilarities["lr"] = lr
-    dissimilarities["batch_size"] = batch_size
-    dissimilarities["cka"] = dissimilarities_model["cka"]
-    dissimilarities["procrustes"] = dissimilarities_model["procrustes"]
-    dissimilarities["dsa"] = dissimilarities_model["dsa"]
+    dissimilarities = {
+        "group1": args.group1,
+        "group2": args.group2,
+        "rnn_type": rnn_type,
+        "activation": activation,
+        "hidden_size": hidden_size,
+        "lr": lr,
+        "batch_size": batch_size,
+        "cka": dissimilarities_model["cka"],
+        "procrustes": dissimilarities_model["procrustes"],
+        "dsa": dissimilarities_model["dsa"]
+    }
+    print(f"dissimilarities dsa : {dissimilarities_model['dsa']}")
+    print(f"Len of dissimilarities : dsa {len(dissimilarities_model['dsa'])}")
     return dissimilarities
 
 def dissimilarity(args: argparse.Namespace) -> None:
@@ -36,19 +39,18 @@ def dissimilarity(args: argparse.Namespace) -> None:
     print(f"Number of GPUs available: {num_gpus}")
     device_index = 0
     results = []
+    
+    diss_index = 0
     for rnn_type in config["rnn"]["parameters"]["rnn_type"]:
         for activation in config["rnn"]["parameters"]["activations"]:
             for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
                 for lr in config["rnn"]["parameters"]["learning_rate"]:
                     for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
+                        print(f"Index : {100*diss_index/64}")
                         results.append(dissimilarity_task((args, rnn_type, activation, hidden_size, lr, batch_size, devices[device_index])))
     
-    dissimilarities = {"group1": [], "group2": [], "rnn_type": [], "activation": [], "hidden_size": [], "lr": [], "batch_size": [], "cka": [], "procrustes": [], "dsa": []}
-    for result in results:
-        for key in dissimilarities.keys():
-            dissimilarities[key].append(result[key])
-    
-    dissimilarities_df = pd.DataFrame(dissimilarities)
+    # Create DataFrame keeping lists intact
+    dissimilarities_df = pd.DataFrame(results)
     dissimilarities_df.to_csv(f"data/dissimilarities_over_learning/{args.group1}_{args.group2}.csv", index=False)
 
 if __name__ == "__main__":
@@ -68,4 +70,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     dissimilarity(args)
-
