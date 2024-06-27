@@ -49,8 +49,8 @@ wait $APP_PID
     n_delays = np.linspace(1, 50, number_parameters_delays, dtype=int)
     delay_interval = np.linspace(1, 50, number_parameters_intervals, dtype=int)
 
-    for delay in n_delays:
-        for space in delay_interval:
+    for delay in n_delays[::-1]:
+        for space in delay_interval[::-1]:
             if space < int(200/delay):
                 for ordered in [True, False]:
                     path_file = f'data/dsa_results/50_{delay}_{space}.csv' if not ordered else f'data/dsa_results/50_{delay}_{space}_ordered.csv'
