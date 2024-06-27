@@ -205,6 +205,17 @@ def dissimilarity_over_learning(group1, group2, rnn_type, activation, hidden_siz
 
     # group models and establish correspondancy between epochs
     models_to_compare = []
+
+    # if pretrain in group1 and group2, load checkpoints at os.path.join(f"models/{group}", model_name + f"_pretrain.pth")
+    if "pretrain" in group1 and "pretrain" in group2:
+        path_pretrain_folder1 = os.path.join(f"models/{group1}", model_name + f"_pretrain.pth")
+        path_pretrain_folder2 = os.path.join(f"models/{group2}", model_name + f"_pretrain.pth")
+        model_pretrain_group1 = torch.load(path_pretrain_folder1, map_location=device)
+        run_model1.load_state_dict(model_pretrain_group1['model_state_dict'])
+        model_pretrain_group2 = torch.load(path_pretrain_folder2, map_location=device)
+        run_model2.load_state_dict(model_pretrain_group2['model_state_dict'])
+        models_to_compare.extend([(run_model1, run_model2)])
+
     dissimilarities_over_learning = {"cka":[],"dsa":[],"procrustes":[]}
     cka_measure = similarity.make("measure.sim_metric.cka-angular-score")
     procrustes_measure = similarity.make("measure.netrep.procrustes-angular-score")
