@@ -26,7 +26,9 @@ def dissimilarity_task(params):
         "batch_size": batch_size,
         "cka": dissimilarities_model["cka"],
         "procrustes": dissimilarities_model["procrustes"],
-        "dsa": dissimilarities_model["dsa"]
+        "dsa": dissimilarities_model["dsa"],
+        "accuracy_1": dissimilarities_model["accuracy_1"],
+        "accuracy_2": dissimilarities_model["accuracy_2"],
     }
     print(f"dissimilarities dsa : {dissimilarities_model['dsa']}")
     print(f"Len of dissimilarities : dsa {len(dissimilarities_model['dsa'])}")
