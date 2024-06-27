@@ -129,8 +129,8 @@ groups:
   #     ruleset: [AntiGoNogoDelayResponseT]
   #     frozen: True
 dsa:
-  n_delays: 20
-  delay_interval: 10
+  n_delays: 15
+  delay_interval: 13
   rank: 50
   device: cuda
 simulations:

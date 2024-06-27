@@ -23,7 +23,7 @@ if __name__ == "__main__":
     data = []
     for file in files:
         if file.endswith(".csv"):
-            if not file.endswith("ordered.csv"):
+            if file.endswith("ordered.csv"):
                 # split the name of the file to get the parameters
                 parameters = file.split("_")
                 n_delay = int(parameters[1])
@@ -33,7 +33,6 @@ if __name__ == "__main__":
                 df["delay_interval"] = delay_interval
                 data.append(df)
     data = pd.concat(data)
-    ipdb.set_trace()
     data.rename(columns={"number of shared elements":"number_of_shared_elements"}, inplace=True)
     # remove Nan values
     data = data.dropna()# plot on a single plot the Median similarity vs Number of shared elements for pair  (n_delay, delay_interval)
