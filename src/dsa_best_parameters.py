@@ -53,14 +53,16 @@ wait $APP_PID
         for space in delay_interval:
             if space < int(200/delay):
                 for ordered in [True, False]:
-                    script_content = script_template.format(n_delay=delay, delay_interval=space, ordered=ordered)
-                    script_filename = f"sbatch/dsa/{delay}_{space}_{ordered}_script.sh"
+                    path_file = f'data/dsa_results/50_{delay}_{space}.csv' if not ordered else f'data/dsa_results/50_{delay}_{space}_ordered.csv'
+                    if not os.path.exists(path_file):
+                        script_content = script_template.format(n_delay=delay, delay_interval=space, ordered=ordered)
+                        script_filename = f"sbatch/dsa/{delay}_{space}_{ordered}_script.sh"
 
-                    with open(script_filename, 'w') as script_file:
-                        script_file.write(script_content)
+                        with open(script_filename, 'w') as script_file:
+                            script_file.write(script_content)
 
-                    # Submit the job to the cluster
-                    call(f"sbatch {script_filename}", shell=True)
+                        # Submit the job to the cluster
+                        call(f"sbatch {script_filename}", shell=True)
 
 if __name__ == "__main__":
     generate_and_submit_scripts()
