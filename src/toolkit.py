@@ -11,6 +11,7 @@ import DSA
 import pandas as pd
 import numpy as np
 from itertools import permutations
+from main.train import accuracy
 import similarity
 
 # Suppress specific Gym warnings
@@ -208,15 +209,23 @@ def dissimilarity_over_learning(group1, group2, rnn_type, activation, hidden_siz
 
     # if pretrain in group1 and group2, load checkpoints at os.path.join(f"models/{group}", model_name + f"_pretrain.pth")
     if "pretrain" in group1 and "pretrain" in group2:
-        path_pretrain_folder1 = os.path.join(f"models/{group1}", model_name + f"_pretrain.pth")
-        path_pretrain_folder2 = os.path.join(f"models/{group2}", model_name + f"_pretrain.pth")
-        model_pretrain_group1 = torch.load(path_pretrain_folder1, map_location=device)
-        run_model1.load_state_dict(model_pretrain_group1['model_state_dict'])
-        model_pretrain_group2 = torch.load(path_pretrain_folder2, map_location=device)
-        run_model2.load_state_dict(model_pretrain_group2['model_state_dict'])
-        models_to_compare.extend([(run_model1, run_model2)])
+        path_pretrain_1 = os.path.join(f"models/{group1}", model_name + f"_pretrain.pth")
+        path_pretrain_2 = os.path.join(f"models/{group2}", model_name + f"_pretrain.pth")
+        run_model_1 = main.load_model(
+                        path_pretrain_1,
+                        hp1,
+                        RNNLayer,
+                        device=device,
+                    )
+        run_model_2 = main.load_model(
+                        path_pretrain_2,
+                        hp2,
+                        RNNLayer,
+                        device=device,
+        )   
+        models_to_compare.extend([(run_model_1, run_model_2)])
 
-    dissimilarities_over_learning = {"cka":[],"dsa":[],"procrustes":[]}
+    dissimilarities_over_learning = {"cka":[],"dsa":[],"procrustes":[],"accuracy_1":[], "accuracy_2":[]}
     cka_measure = similarity.make("measure.sim_metric.cka-angular-score")
     procrustes_measure = similarity.make("measure.netrep.procrustes-angular-score")
     if checkpoint_files_1 and checkpoint_files_2:
@@ -226,17 +235,26 @@ def dissimilarity_over_learning(group1, group2, rnn_type, activation, hidden_siz
             for epoch in index_epochs:
                 checkpoint1 = torch.load(os.path.join(path_train_folder1, checkpoint_files_1[index_epochs.index(epoch)]), map_location=device)
                 run_model1.load_state_dict(checkpoint1['model_state_dict'])
+                accuracy_1 = checkpoint1['log']['perf_min']
                 checkpoint2 = torch.load(os.path.join(path_train_folder2, checkpoint_files_2[epoch]), map_location=device)
                 run_model2.load_state_dict(checkpoint2['model_state_dict'])
+                accuracy_2 = checkpoint2['log']['perf_min']
                 models_to_compare.extend([(run_model1, run_model2)])
+                dissimilarities_over_learning["accuracy_1"].append(accuracy_1)
+                dissimilarities_over_learning["accuracy_2"].append(accuracy_2)
         else:
             index_epochs = corresponding_training_time(len(checkpoint_files_2), len(checkpoint_files_1))
             for epoch in index_epochs:
                 checkpoint1 = torch.load(os.path.join(path_train_folder1, checkpoint_files_1[epoch]), map_location=device)
                 run_model1.load_state_dict(checkpoint1['model_state_dict'])
+                accuracy_1 = checkpoint1['log']['perf_min']
                 checkpoint2 = torch.load(os.path.join(path_train_folder2, checkpoint_files_2[index_epochs.index(epoch)]), map_location=device)
                 run_model2.load_state_dict(checkpoint2['model_state_dict'])
+                accuracy_2 = checkpoint2['log']['perf_min']
                 models_to_compare.extend([(run_model1, run_model2)])
+                dissimilarities_over_learning["accuracy_1"].append(accuracy_1)
+                dissimilarities_over_learning["accuracy_2"].append(accuracy_2)
+                
 
         # compute the curves for models and dissimilarities
         curves = [(get_curves(tuple_model[0], all_rules, components=15), get_curves(tuple_model[1], all_rules, components=15)) for tuple_model in models_to_compare]
