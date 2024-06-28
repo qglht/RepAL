@@ -112,10 +112,10 @@ def dissimilarity(args: argparse.Namespace) -> None:
             "group1": args.group1,
             "group2": args.group2,
             "cka": dissimilarities["cka"][i],
-            "procrustes": dissimilarities["procrustes"][i],  # Corrected typo
+            "procrustes": dissimilarities["procrustes"][i],
             "dsa": dissimilarities["dsa"][i],
-            "explained_variance_group1": explained_variance[args.group1][i],
-            "explained_variance_group2": explained_variance[args.group2][i],
+            "explained_variance_group1": explained_variances[args.group1][i],
+            "explained_variance_group2": explained_variances[args.group2][i],
         }
         # Append the row dictionary to the list
         rows.append(row)
