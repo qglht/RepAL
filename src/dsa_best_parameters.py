@@ -10,6 +10,7 @@ import multiprocessing
 from src.toolkit import pipeline
 from src.dsa_optimization import dsa_computation
 
+
 def generate_and_submit_scripts():
     script_template = """#!/bin/bash
 #SBATCH --nodes=1
@@ -51,18 +52,27 @@ wait $APP_PID
 
     for delay in n_delays[::-1]:
         for space in delay_interval[::-1]:
-            if space < int(200/delay):
+            if space < int(200 / delay):
                 for ordered in [True, False]:
-                    path_file = f'data/dsa_results/50_{delay}_{space}.csv' if not ordered else f'data/dsa_results/50_{delay}_{space}_ordered.csv'
+                    path_file = (
+                        f"data/dsa_results/50_{delay}_{space}.csv"
+                        if not ordered
+                        else f"data/dsa_results/50_{delay}_{space}_ordered.csv"
+                    )
                     if not os.path.exists(path_file):
-                        script_content = script_template.format(n_delay=delay, delay_interval=space, ordered=ordered)
-                        script_filename = f"sbatch/dsa/{delay}_{space}_{ordered}_script.sh"
+                        script_content = script_template.format(
+                            n_delay=delay, delay_interval=space, ordered=ordered
+                        )
+                        script_filename = (
+                            f"sbatch/dsa/{delay}_{space}_{ordered}_script.sh"
+                        )
 
-                        with open(script_filename, 'w') as script_file:
+                        with open(script_filename, "w") as script_file:
                             script_file.write(script_content)
 
                         # Submit the job to the cluster
                         call(f"sbatch {script_filename}", shell=True)
+
 
 if __name__ == "__main__":
     generate_and_submit_scripts()
