@@ -38,6 +38,12 @@ groups:
     train:
       ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
       frozen: True
+  pretrain_frozen_same_init:
+    pretrain: 
+      ruleset: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT]
+    train:
+      ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+      frozen: True
   pretrain_unfrozen:
     pretrain: 
       ruleset: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT]
