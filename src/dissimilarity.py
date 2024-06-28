@@ -52,8 +52,6 @@ wait $APP_PID
         "pretrain_unfrozen",
         "master",
         "untrained",
-        "delay",
-        "anti",
         "basic",
     ]
 
