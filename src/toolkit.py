@@ -358,14 +358,13 @@ def dissimilarity_over_learning(
         return dissimilarities_over_learning
 
 
-def dsa_optimisation_compositionality(
-    rank, n_delays, delay_interval, device, ordered=True, overwrite=True
-):
+def dsa_optimisation_compositionality(rank, n_delays, delay_interval, device, ordered):
     path_file = (
         f"data/dsa_results/{rank}_{n_delays}_{delay_interval}.csv"
         if not ordered
         else f"data/dsa_results/{rank}_{n_delays}_{delay_interval}_ordered.csv"
     )
+    print(f"Saving to: {path_file}")
     config = load_config("config.yaml")
     # Define parameters
     dt = config["simulations"]["dt"]
@@ -500,5 +499,6 @@ def dsa_optimisation_compositionality(
     # check if the directory exists
     if not os.path.exists("data/dsa_results"):
         os.makedirs("data/dsa_results")
+    print(f"saving file to {path_file}")
     df.to_csv(path_file)
     return

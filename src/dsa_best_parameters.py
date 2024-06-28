@@ -28,7 +28,7 @@ module load python/anaconda3
 source activate dsa
 poetry install
 
-(poetry run python -m src.dsa_optimization --n_delay {n_delay} --delay_interval {delay_interval} --ordered {ordered} --overwrite True) &
+(poetry run python -m src.dsa_optimization --n_delay {n_delay} --delay_interval {delay_interval} --ordered {ordered}) &
 
 # PID of the application
 APP_PID=$!
@@ -53,25 +53,17 @@ wait $APP_PID
     for delay in n_delays[::-1]:
         for space in delay_interval[::-1]:
             if space < int(200 / delay):
-                for ordered in [True, False]:
-                    path_file = (
-                        f"data/dsa_results/50_{delay}_{space}.csv"
-                        if not ordered
-                        else f"data/dsa_results/50_{delay}_{space}_ordered.csv"
+                for ordered in [False]:
+                    script_content = script_template.format(
+                        n_delay=delay, delay_interval=space, ordered=ordered
                     )
-                    if not os.path.exists(path_file):
-                        script_content = script_template.format(
-                            n_delay=delay, delay_interval=space, ordered=ordered
-                        )
-                        script_filename = (
-                            f"sbatch/dsa/{delay}_{space}_{ordered}_script.sh"
-                        )
+                    script_filename = f"sbatch/dsa/{delay}_{space}_{ordered}_script.sh"
 
-                        with open(script_filename, "w") as script_file:
-                            script_file.write(script_content)
+                    with open(script_filename, "w") as script_file:
+                        script_file.write(script_content)
 
-                        # Submit the job to the cluster
-                        call(f"sbatch {script_filename}", shell=True)
+                    # Submit the job to the cluster
+                    call(f"sbatch {script_filename}", shell=True)
 
 
 if __name__ == "__main__":

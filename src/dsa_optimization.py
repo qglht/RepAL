@@ -13,7 +13,8 @@ warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
 warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprecated.*")
 
 # Set environment variable to ignore Gym deprecation warnings
-os.environ['GYM_IGNORE_DEPRECATION_WARNINGS'] = '1'
+os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
+
 
 def dsa_computation(args: argparse.Namespace) -> None:
 
@@ -24,10 +25,13 @@ def dsa_computation(args: argparse.Namespace) -> None:
         else [torch.device("cpu")]
     )
 
-    rank=50
+    rank = 50
 
-    dsa_optimisation_compositionality(rank, args.n_delay, args.delay_interval, devices[0], args.ordered, args.overwrite)
+    dsa_optimisation_compositionality(
+        rank, args.n_delay, args.delay_interval, devices[0], args.ordered
+    )
     return
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Dsa optimisation")
@@ -47,13 +51,7 @@ if __name__ == "__main__":
         "--ordered",
         type=bool,
         default=False,
-        help="if taking into account order or not"
-    )
-    parser.add_argument(
-        "--overwrite",
-        type=bool,
-        default=False,
-        help="if overwriting or not"
+        help="if taking into account order or not",
     )
     args = parser.parse_args()
     dsa_computation(args)
