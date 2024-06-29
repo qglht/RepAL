@@ -1,6 +1,7 @@
 import os
 from subprocess import call
 
+
 def generate_and_submit_scripts():
     script_template = """#!/bin/bash
 #SBATCH --nodes=1
@@ -34,17 +35,23 @@ done
 wait $APP_PID
 
 """
-    groups_to_compare_over_learning = [("pretrain_frozen","pretrain_unfrozen"),("pretrain_frozen","master"),("pretrain_unfrozen","master")]
+    groups_to_compare_over_learning = [
+        ("pretrain_frozen_same_init", "pretrain_unfrozen"),
+        ("pretrain_frozen_same_init", "master"),
+    ]
 
     for group in groups_to_compare_over_learning:
         script_content = script_template.format(group1=group[0], group2=group[1])
-        script_filename = f"sbatch/dissimilarities_over_learning/{group[0]}_{group[1]}_script.sh"
+        script_filename = (
+            f"sbatch/dissimilarities_over_learning/{group[0]}_{group[1]}_script.sh"
+        )
 
-        with open(script_filename, 'w') as script_file:
+        with open(script_filename, "w") as script_file:
             script_file.write(script_content)
 
         # Submit the job to the cluster
         call(f"sbatch {script_filename}", shell=True)
+
 
 if __name__ == "__main__":
     generate_and_submit_scripts()
