@@ -44,24 +44,18 @@ wait $APP_PID
 
 """
     number_parameters_delays = 10
-    number_parameters_intervals = 10
 
     n_delays = np.linspace(1, 50, number_parameters_delays, dtype=int)
-    delay_interval = np.linspace(1, 50, number_parameters_intervals, dtype=int)
-
     for delay in n_delays[::-1]:
-        for space in delay_interval[::-1]:
-            if space < int(200 / delay):
-                script_content = script_template.format(
-                    n_delay=delay, delay_interval=space
-                )
-                script_filename = f"sbatch/dsa/{delay}_{space}_noordered_script.sh"
+        space = int(200 / delay)
+        script_content = script_template.format(n_delay=delay, delay_interval=space)
+        script_filename = f"sbatch/dsa/{delay}_{space}_noordered_script.sh"
 
-                with open(script_filename, "w") as script_file:
-                    script_file.write(script_content)
+        with open(script_filename, "w") as script_file:
+            script_file.write(script_content)
 
-                # Submit the job to the cluster
-                call(f"sbatch {script_filename}", shell=True)
+        # Submit the job to the cluster
+        call(f"sbatch {script_filename}", shell=True)
 
 
 if __name__ == "__main__":
