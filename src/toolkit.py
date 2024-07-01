@@ -410,7 +410,8 @@ def dissimilarity_within_learning(
                     map_location=device,
                 )
                 run_model.load_state_dict(checkpoint["model_state_dict"])
-                accuracy = checkpoint["log"]["perf_min"]
+                accuracy = float(checkpoint["log"]["perf_min"])
+                # convert accuracy to float if it was a string
                 models_to_compare.extend([run_model])
                 accuracies.append(accuracy)
 
@@ -421,6 +422,7 @@ def dissimilarity_within_learning(
             ]
 
             groups = []
+            print(f"accuracies : {accuracies}")
             for i in range(len(sampling) - 1):
                 print(f"Computing group {i}")
                 print(f"len curves : {len(curves)}")
