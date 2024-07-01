@@ -443,7 +443,7 @@ def dissimilarity_within_learning(
                             model1 = groups[i][index_model1]
                             model2 = groups[j][index_model2]
 
-                            dissimilarities_cka.append(1 - cka_measure(model1, moxdel2))
+                            dissimilarities_cka.append(1 - cka_measure(model1, model2))
                             dissimilarities_procrustes.append(
                                 1 - procrustes_measure(model1, model2)
                             )
