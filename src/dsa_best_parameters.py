@@ -14,7 +14,7 @@ def generate_and_submit_scripts():
     script_template = """#!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=5:00:00
-#SBATCH --job-name={n_delay}_{delay_interval}_{ordered}_job
+#SBATCH --job-name={n_delay}_{delay_interval}_job
 #SBATCH --gres=gpu:1
 #SBATCH --partition=small
 #SBATCH --mail-type=ALL
