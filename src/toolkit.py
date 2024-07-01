@@ -17,7 +17,6 @@ import pandas as pd
 import numpy as np
 from itertools import permutations
 from main.train import accuracy
-import ipdb
 import similarity
 
 # Suppress specific Gym warnings
@@ -423,7 +422,6 @@ def dissimilarity_within_learning(
 
             groups = []
             print(f"accuracies : {accuracies}")
-            ipdb.set_trace()
             for i in range(len(sampling) - 1):
                 print(f"Computing group {i}")
                 print(f"len curves : {len(curves)}")
