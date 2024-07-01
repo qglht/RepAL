@@ -8,8 +8,6 @@ from dsa_analysis import load_config
 import torch
 import multiprocessing
 from src.toolkit import pipeline
-from src.dsa_optimization import dsa_computation
-
 
 def generate_and_submit_scripts():
     script_template = """#!/bin/bash

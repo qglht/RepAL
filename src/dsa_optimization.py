@@ -17,7 +17,6 @@ os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
 
 def dsa_computation(args: argparse.Namespace) -> None:
-
     num_gpus = torch.cuda.device_count()  # Get the number of GPUs available
     devices = (
         [torch.device(f"cuda:{i}") for i in range(num_gpus)]
@@ -49,9 +48,15 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--ordered",
-        type=bool,
-        default=False,
+        action="store_true",
         help="if taking into account order or not",
     )
+    parser.add_argument(
+        "--no-ordered",
+        action="store_false",
+        dest="ordered",
+        help="if not taking into account order",
+    )
+    parser.set_defaults(ordered=False)
     args = parser.parse_args()
     dsa_computation(args)

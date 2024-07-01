@@ -361,7 +361,7 @@ def dissimilarity_over_learning(
 def dsa_optimisation_compositionality(rank, n_delays, delay_interval, device, ordered):
     path_file = (
         f"data/dsa_results/{rank}_{n_delays}_{delay_interval}.csv"
-        if not ordered
+        if ordered == False
         else f"data/dsa_results/{rank}_{n_delays}_{delay_interval}_ordered.csv"
     )
     print(f"Saving to: {path_file}")
