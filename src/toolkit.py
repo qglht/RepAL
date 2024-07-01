@@ -422,7 +422,7 @@ def dissimilarity_within_learning(
         for i in range(len(sampling) - 1):
             index_start = int(sampling[i] * len(curves) / 100)
             index_end = int((sampling[i + 1]) * len(curves) / 100)
-            groups[sampling[i]].append(curves[index_start:index_end])
+            groups.append(curves[index_start:index_end])
             accuracies_grouped.append(np.mean(accuracies[index_start:index_end]))
 
         # compute similarities across groups gathered by sampling
