@@ -17,6 +17,7 @@ import pandas as pd
 import numpy as np
 from itertools import permutations
 from main.train import accuracy
+import ipdb
 import similarity
 
 # Suppress specific Gym warnings
@@ -401,74 +402,79 @@ def dissimilarity_within_learning(
     procrustes_measure = similarity.make("measure.netrep.procrustes-angular-score")
 
     if checkpoint_files:
+        if len(checkpoint_files) > 3:
+            # load all the checkpoints
+            for epoch in range(len(checkpoint_files)):
+                checkpoint = torch.load(
+                    os.path.join(path_train_folder, checkpoint_files[epoch]),
+                    map_location=device,
+                )
+                run_model.load_state_dict(checkpoint["model_state_dict"])
+                accuracy = checkpoint["log"]["perf_min"]
+                models_to_compare.extend([run_model])
+                accuracies.append(accuracy)
 
-        # load all the checkpoints
-        for epoch in range(len(checkpoint_files)):
-            checkpoint = torch.load(
-                os.path.join(path_train_folder, checkpoint_files[epoch]),
-                map_location=device,
-            )
-            run_model.load_state_dict(checkpoint["model_state_dict"])
-            accuracy = checkpoint["log"]["perf_min"]
-            models_to_compare.extend([run_model])
-            accuracies.append(accuracy)
+            # compute the curves for models and dissimilarities
+            curves = [
+                get_curves(model, all_rules, components=15)
+                for model in models_to_compare
+            ]
 
-        # compute the curves for models and dissimilarities
-        curves = [
-            get_curves(model, all_rules, components=15) for model in models_to_compare
-        ]
+            groups = []
+            for i in range(len(sampling) - 1):
+                print(f"Computing group {i}")
+                print(f"len curves : {len(curves)}")
+                index_start = int(sampling[i] * len(curves) / 100)
+                index_end = int((sampling[i + 1]) * len(curves) / 100)
+                groups.append(curves[index_start:index_end])
+                accuracies_grouped.append(np.mean(accuracies[index_start:index_end]))
 
-        groups = []
-        for i in range(len(sampling) - 1):
-            index_start = int(sampling[i] * len(curves) / 100)
-            index_end = int((sampling[i + 1]) * len(curves) / 100)
-            groups.append(curves[index_start:index_end])
-            accuracies_grouped.append(np.mean(accuracies[index_start:index_end]))
+            # compute similarities across groups gathered by sampling
 
-        # compute similarities across groups gathered by sampling
+            for i in range(len(groups)):
+                for j in range(i, len(groups)):
+                    dissimilarities_cka = []
+                    dissimilarities_procrustes = []
+                    dissimilarities_dsa = []
+                    p = min(len(groups[i]), len(groups[j]))
+                    for index_model1 in range(p):
+                        for index_model2 in range(index_model1, p):
+                            model1 = groups[i][index_model1]
+                            model2 = groups[j][index_model2]
 
-        for i in range(len(groups)):
-            for j in range(i, len(groups)):
-                dissimilarities_cka = []
-                dissimilarities_procrustes = []
-                dissimilarities_dsa = []
-                p = min(len(groups[i]), len(groups[j]))
-                for index_model1 in range(p):
-                    for index_model2 in range(index_model1, p):
-                        model1 = groups[i][index_model1]
-                        model2 = groups[j][index_model2]
+                            dissimilarities_cka.append(1 - cka_measure(model1, moxdel2))
+                            dissimilarities_procrustes.append(
+                                1 - procrustes_measure(model1, model2)
+                            )
+                            dsa_comp = DSA.DSA(
+                                model1,
+                                model2,
+                                n_delays=config["dsa"]["n_delays"],
+                                rank=config["dsa"]["rank"],
+                                delay_interval=config["dsa"]["delay_interval"],
+                                verbose=True,
+                                iters=1000,
+                                lr=1e-2,
+                                device=device,
+                            )
+                            dissimilarities_dsa.append(dsa_comp.fit_score())
 
-                        dissimilarities_cka.append(1 - cka_measure(model1, moxdel2))
-                        dissimilarities_procrustes.append(
-                            1 - procrustes_measure(model1, model2)
+                    if p > 0:
+                        cka_similarities[i, j] = np.mean(dissimilarities_cka)
+                        cka_similarities[j, i] = cka_similarities[i, j]
+                        procrustes_similarities[i, j] = np.mean(
+                            dissimilarities_procrustes
                         )
-                        dsa_comp = DSA.DSA(
-                            model1,
-                            model2,
-                            n_delays=config["dsa"]["n_delays"],
-                            rank=config["dsa"]["rank"],
-                            delay_interval=config["dsa"]["delay_interval"],
-                            verbose=True,
-                            iters=1000,
-                            lr=1e-2,
-                            device=device,
-                        )
-                        dissimilarities_dsa.append(dsa_comp.fit_score())
-
-                if p > 0:
-                    cka_similarities[i, j] = np.mean(dissimilarities_cka)
-                    cka_similarities[j, i] = cka_similarities[i, j]
-                    procrustes_similarities[i, j] = np.mean(dissimilarities_procrustes)
-                    procrustes_similarities[j, i] = procrustes_similarities[i, j]
-                    dsa_similarities[i, j] = np.mean(dissimilarities_dsa)
-                    dsa_similarities[j, i] = dsa_similarities[i, j]
-                else:  # fill with nan
-                    cka_similarities[i, j] = np.nan
-                    cka_similarities[j, i] = np.nan
-                    procrustes_similarities[i, j] = np.nan
-                    procrustes_similarities[j, i] = np.nan
-                    dsa_similarities[i, j] = np.nan
-                    dsa_similarities[j, i] = np.nan
+                        procrustes_similarities[j, i] = procrustes_similarities[i, j]
+                        dsa_similarities[i, j] = np.mean(dissimilarities_dsa)
+                        dsa_similarities[j, i] = dsa_similarities[i, j]
+                    else:  # fill with nan
+                        cka_similarities[i, j] = np.nan
+                        cka_similarities[j, i] = np.nan
+                        procrustes_similarities[i, j] = np.nan
+                        procrustes_similarities[j, i] = np.nan
+                        dsa_similarities[i, j] = np.nan
+                        dsa_similarities[j, i] = np.nan
 
     return {
         "cka": cka_similarities,
