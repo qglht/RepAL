@@ -2,7 +2,7 @@ import warnings
 
 import main
 from main import RNNLayer
-from dsa_analysis import dsa, load_config
+from dsa_analysis import load_config
 import torch
 import os
 import pandas as pd
