@@ -47,7 +47,13 @@ def worker(task_queue, lock, output_file):
         params = task_queue.get()
         if params is None:
             break
-        result = dissimilarity_task(params)
+        try:
+            result = dissimilarity_task(params)
+        except RuntimeError as e:
+            print(f"Runtime error: {e}")
+            task_queue.task_done()
+            continue
+
         task_queue.task_done()
 
         # Write results to CSV
@@ -60,6 +66,9 @@ def worker(task_queue, lock, output_file):
                 index=False,
             )
 
+        # Release GPU memory
+        torch.cuda.empty_cache()
+
 
 def dissimilarity(args: argparse.Namespace) -> None:
     config = load_config("config.yaml")
@@ -71,28 +80,28 @@ def dissimilarity(args: argparse.Namespace) -> None:
     )
     print(f"Number of GPUs available: {num_gpus}")
 
-    # Create a queue for tasks
-    task_queue = Queue()
+    # Create a queue for each GPU
+    task_queues = [Queue() for _ in devices]
     lock = Lock()
 
     # Define output file
     output_file = f"data/dissimilarities_within_learning/{args.group}.csv"
 
-    # Start worker threads
+    # Start worker threads, one per GPU
     threads = []
-    for _ in devices:
-        t = Thread(target=worker, args=(task_queue, lock, output_file))
+    for i, device in enumerate(devices):
+        t = Thread(target=worker, args=(task_queues[i], lock, output_file))
         t.start()
         threads.append(t)
 
-    # Enqueue tasks in a round-robin fashion
-    device_index = 0
+    # Enqueue tasks in a round-robin fashion across the GPU-specific queues
+    queue_index = 0
     for rnn_type in config["rnn"]["parameters"]["rnn_type"]:
         for activation in config["rnn"]["parameters"]["activations"]:
             for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
                 for lr in config["rnn"]["parameters"]["learning_rate"]:
                     for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
-                        task_queue.put(
+                        task_queues[queue_index].put(
                             (
                                 args,
                                 rnn_type,
@@ -100,17 +109,18 @@ def dissimilarity(args: argparse.Namespace) -> None:
                                 hidden_size,
                                 lr,
                                 batch_size,
-                                devices[device_index],
+                                devices[queue_index],
                             )
                         )
-                        device_index = (device_index + 1) % num_gpus
+                        queue_index = (queue_index + 1) % num_gpus
 
     # Stop workers
-    for _ in devices:
-        task_queue.put(None)
+    for q in task_queues:
+        q.put(None)
 
     # Wait for all tasks to be processed
-    task_queue.join()
+    for q in task_queues:
+        q.join()
 
     # Wait for all threads to finish
     for t in threads:
