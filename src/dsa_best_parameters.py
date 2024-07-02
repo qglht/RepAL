@@ -13,7 +13,7 @@ from src.toolkit import pipeline
 def generate_and_submit_scripts():
     script_template = """#!/bin/bash
 #SBATCH --nodes=1
-#SBATCH --time=5:00:00
+#SBATCH --time=8:00:00
 #SBATCH --job-name={n_delay}_{delay_interval}_job
 #SBATCH --gres=gpu:1
 #SBATCH --partition=small
