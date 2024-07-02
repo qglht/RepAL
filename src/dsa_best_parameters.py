@@ -49,7 +49,7 @@ wait $APP_PID
 
     for delay in n_delays:
         space = int(200 / delay)
-        if not f"data/dsa_results/50_{delay}_{space}.csv":
+        if not os.path.exists(f"data/dsa_results/50_{delay}_{space}.csv"):
             script_content = script_template.format(n_delay=delay, delay_interval=space)
             script_filename = f"sbatch/dsa/{delay}_{space}_noordered_script.sh"
 
