@@ -27,7 +27,7 @@ module load python/anaconda3
 source activate dsa
 poetry install
 
-(poetry run python -m src.dsa_optimization --n_delay {n_delay} --delay_interval {delay_interval} --no-ordered) &
+(poetry run python -m src.dsa_optimization --n_delay {n_delay} --delay_interval {delay_interval} --ordered) &
 
 # PID of the application
 APP_PID=$!
@@ -49,9 +49,9 @@ wait $APP_PID
 
     for delay in n_delays:
         space = int(200 / delay)
-        if not os.path.exists(f"data/dsa_results/50_{delay}_{space}.csv"):
+        if not os.path.exists(f"data/dsa_results/50_{delay}_{space}_ordered.csv"):
             script_content = script_template.format(n_delay=delay, delay_interval=space)
-            script_filename = f"sbatch/dsa/{delay}_{space}_noordered_script.sh"
+            script_filename = f"sbatch/dsa/{delay}_{space}_ordered_script.sh"
 
             with open(script_filename, "w") as script_file:
                 script_file.write(script_content)
