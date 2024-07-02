@@ -16,58 +16,60 @@ warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprec
 os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
 
-def dissimilarity_task(params):
-    args, rnn_type, activation, hidden_size, lr, batch_size, device = params
-    dissimilarities_model = dissimilarity_within_learning(
-        args.group,
-        rnn_type,
-        activation,
-        hidden_size,
-        lr,
-        batch_size,
-        device,
-    )
-    dissimilarities = {
-        "group": args.group,
-        "rnn_type": rnn_type,
-        "activation": activation,
-        "hidden_size": hidden_size,
-        "lr": lr,
-        "batch_size": batch_size,
-        "cka": dissimilarities_model["cka"],
-        "procrustes": dissimilarities_model["procrustes"],
-        "dsa": dissimilarities_model["dsa"],
-        "accuracy": dissimilarities_model["accuracy"],
-    }
-    return dissimilarities
+class DissimilarityWorker(Thread):
+    def __init__(self, task_queue, lock, output_file):
+        super().__init__()
+        self.task_queue = task_queue
+        self.lock = lock
+        self.output_file = output_file
 
+    def run(self):
+        while True:
+            params = self.task_queue.get()
+            if params is None:
+                self.task_queue.task_done()
+                break
+            try:
+                result = self.dissimilarity_task(params)
+            except RuntimeError as e:
+                print(f"Runtime error: {e}")
+                self.task_queue.task_done()
+                continue
 
-def worker(task_queue, lock, output_file):
-    while True:
-        params = task_queue.get()
-        if params is None:
-            break
-        try:
-            result = dissimilarity_task(params)
-        except RuntimeError as e:
-            print(f"Runtime error: {e}")
-            task_queue.task_done()
-            continue
+            self.task_queue.task_done()
+            with self.lock:
+                df = pd.DataFrame([result])
+                df.to_csv(
+                    self.output_file,
+                    mode="a",
+                    header=not os.path.exists(self.output_file),
+                    index=False,
+                )
 
-        task_queue.task_done()
-
-        # Write results to CSV
-        with lock:
-            df = pd.DataFrame([result])
-            df.to_csv(
-                output_file,
-                mode="a",
-                header=not os.path.exists(output_file),
-                index=False,
-            )
-
-        # Release GPU memory
-        torch.cuda.empty_cache()
+    def dissimilarity_task(self, params):
+        args, rnn_type, activation, hidden_size, lr, batch_size, device = params
+        dissimilarities_model = dissimilarity_within_learning(
+            args.group,
+            rnn_type,
+            activation,
+            hidden_size,
+            lr,
+            batch_size,
+            device,
+        )
+        dissimilarities = {
+            "group": args.group,
+            "rnn_type": rnn_type,
+            "activation": activation,
+            "hidden_size": hidden_size,
+            "lr": lr,
+            "batch_size": batch_size,
+            "cka": dissimilarities_model["cka"],
+            "procrustes": dissimilarities_model["procrustes"],
+            "dsa": dissimilarities_model["dsa"],
+            "accuracy": dissimilarities_model["accuracy"],
+        }
+        return dissimilarities
 
 
 def dissimilarity(args: argparse.Namespace) -> None:
@@ -80,19 +82,19 @@ def dissimilarity(args: argparse.Namespace) -> None:
     )
     print(f"Number of GPUs available: {num_gpus}")
 
-    # Create a queue for each GPU
-    task_queues = [Queue() for _ in devices]
+    # Create a lock for writing to the output file
     lock = Lock()
 
     # Define output file
     output_file = f"data/dissimilarities_within_learning/{args.group}.csv"
 
-    # Start worker threads, one per GPU
-    threads = []
+    # Create a worker thread for each GPU
+    workers = []
     for i, device in enumerate(devices):
-        t = Thread(target=worker, args=(task_queues[i], lock, output_file))
-        t.start()
-        threads.append(t)
+        task_queue = Queue()
+        worker = DissimilarityWorker(task_queue, lock, output_file)
+        worker.start()
+        workers.append(worker)
 
     # Enqueue tasks in a round-robin fashion across the GPU-specific queues
     queue_index = 0
@@ -101,30 +103,25 @@ def dissimilarity(args: argparse.Namespace) -> None:
             for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
                 for lr in config["rnn"]["parameters"]["learning_rate"]:
                     for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
-                        task_queues[queue_index].put(
-                            (
-                                args,
-                                rnn_type,
-                                activation,
-                                hidden_size,
-                                lr,
-                                batch_size,
-                                devices[queue_index],
-                            )
+                        tasks = (
+                            args,
+                            rnn_type,
+                            activation,
+                            hidden_size,
+                            lr,
+                            batch_size,
+                            devices[queue_index],
                         )
                         queue_index = (queue_index + 1) % num_gpus
+                        workers[queue_index].task_queue.put(tasks)
 
     # Stop workers
-    for q in task_queues:
-        q.put(None)
+    for worker in workers:
+        worker.task_queue.put(None)
 
     # Wait for all tasks to be processed
-    for q in task_queues:
-        q.join()
-
-    # Wait for all threads to finish
-    for t in threads:
-        t.join()
+    for worker in workers:
+        worker.join()
 
 
 if __name__ == "__main__":
