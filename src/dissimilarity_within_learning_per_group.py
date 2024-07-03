@@ -15,8 +15,9 @@ warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprec
 os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
 
-def dissimilarity_task(params):
-    group, rnn_type, activation, hidden_size, lr, batch_size, device = params
+def dissimilarity_task(
+    group, rnn_type, activation, hidden_size, lr, batch_size, device
+):
 
     # Reinitialize the model and modules to avoid conflicts
     dissimilarities_model = dissimilarity_within_learning(
