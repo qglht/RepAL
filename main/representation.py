@@ -8,6 +8,9 @@ from torch import linalg as LA
 from torch.cuda.amp import autocast
 from main import get_dataloader, get_class_instance
 
+# import PCA
+from sklearn.decomposition import PCA
+
 #### Not modified for neurogym yet!!
 
 
@@ -37,71 +40,75 @@ def get_indexes(dt, timing, seq_length, h, rule):
 
 
 def representation(model, rules):
-
     hp = model.hp
-    if isinstance(rules, str):
-        rules = [rules]
-    elif rules is None:
-        rules = hp["rules"]
+    rules = [rules] if isinstance(rules, str) else (rules or hp["rules"])
     activations = OrderedDict()
-    dataloaders = {
-        rule: get_dataloader(
-            env=rule,
-            batch_size=hp["batch_size_train"],
-            num_workers=16,
-            shuffle=False,
-            mode="test",
-        )
-        for rule in rules
-    }
-    for rule in rules:
-        # TODO : think about taking the good mode for the task otherwise the timing will be wrong
-        # seq leng is the length of the cumulated timing
-        env = get_class_instance(rule, config=hp)
-        timing = env.timing
-        seq_length = int(sum([v for k, v in timing.items()]) / hp["dt"])
-        # concatenate the activations for all trials
-        for inputs, labels, mask in dataloaders[rule]["test"]:
-            with torch.no_grad():
-                inputs, labels, mask = (
-                    inputs.permute(1, 0, 2).to(model.device, non_blocking=True),
+
+    # Batch-loading optimizations:
+    with torch.no_grad():
+        for rule in rules:
+            env = get_class_instance(rule, config=hp)
+            timing = env.timing
+            seq_length = int(sum(timing.values()) / hp["dt"])
+
+            dataloader = get_dataloader(
+                env=rule,
+                batch_size=hp["batch_size_train"],
+                num_workers=0,
+                shuffle=False,
+                mode="test",
+            )[
+                "test"
+            ]  # Directly access the test dataloader
+
+            for inputs, labels, mask in dataloader:
+                inputs = inputs.permute(1, 0, 2).to(model.device, non_blocking=True)
+                labels = (
                     labels.permute(1, 0)
                     .to(model.device, non_blocking=True)
                     .flatten()
-                    .long(),
+                    .long()
+                )
+                mask = (
                     mask.permute(1, 0)
                     .to(model.device, non_blocking=True)
                     .flatten()
-                    .long(),
+                    .long()
                 )
-            with torch.no_grad(), autocast():
-                _, _, _, h, _ = model(inputs, labels, mask)
-            h_byepoch = get_indexes(hp["dt"], timing, seq_length, h, rule)
-            for key, value in h_byepoch.items():
-                if key not in activations:
-                    activations[key] = value
-                else:
-                    activations[key] = torch.cat([activations[key], value], dim=1)
+
+                with autocast():
+                    _, _, _, h, _ = model(inputs, labels, mask)
+
+                h_byepoch = get_indexes(hp["dt"], timing, seq_length, h, rule)
+                for key, value in h_byepoch.items():
+                    activations.setdefault(key, []).append(
+                        value
+                    )  # Accumulate in a list
+
+    # Merge accumulated activations:
+    for key, values in activations.items():
+        activations[key] = torch.cat(
+            values, dim=1
+        )  # Concatenate the tensors along the batch dimension
 
     return activations
 
 
 def compute_pca(h, n_components=3):
-
-    # only keep the stimulus period for dsa computation
     h = {k: v for k, v in h.items() if k[1] == "stimulus"}
-
-    # Concatenate across rules and epochs to create dataset
     data = torch.cat(list(h.values()), dim=0)
     data_2d = data.reshape(-1, data.shape[-1])
 
-    # Reduce to 3 components for visualization
-    U, S, V = LA.svd(data_2d, full_matrices=False)
-    data_trans_2d = U[:, :n_components] @ torch.diag(S[:n_components])
-    data_trans = data_trans_2d.reshape(data.shape[0], data.shape[1], n_components)
+    # Using PCA directly for dimensionality reduction:
+    pca = PCA(n_components=n_components)
+    data_trans_2d = torch.tensor(pca.fit_transform(data_2d.cpu().numpy())).to(
+        data_2d.device
+    )  # Convert back to PyTorch tensor
 
-    # Compute explained variance for the reduction step
-    explained_variance_ratio = (S[:n_components] ** 2) / (S**2).sum()
+    # Compute explained variance ratio using PCA
+    explained_variance_ratio = pca.explained_variance_ratio_.sum()
+
+    data_trans = data_trans_2d.reshape(data.shape[0], data.shape[1], n_components)
 
     # Package back to dictionary
     h_trans = OrderedDict()
@@ -111,4 +118,4 @@ def compute_pca(h, n_components=3):
         h_trans[key] = data_trans[i_start:i_end, :, :]
         i_start = i_end
 
-    return h_trans, explained_variance_ratio.cumsum(dim=0)[-1].item()
+    return h_trans, explained_variance_ratio

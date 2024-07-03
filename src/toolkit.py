@@ -447,18 +447,16 @@ def dissimilarity_within_learning(
                 accuracies.append(accuracy)
 
             print(f"computing representations for model {model_name} for group {group}")
+            print(f"len checkpoints : {len(checkpoint_files)}")
             # compute the curves for models and dissimilarities
-            curves = [
-                get_curves(model, all_rules, components=15)
-                for model in models_to_compare
-            ]
+
+            curves = []
+            for model in models_to_compare:
+                curves.append(get_curves(model, all_rules, components=15))
             print(f"grouping accuracies for model {model_name} for group {group}")
 
             groups = []
-            print(f"accuracies : {accuracies}")
             for i in range(len(sampling) - 1):
-                print(f"Computing group {i}")
-                print(f"len curves : {len(curves)}")
                 index_start = int(sampling[i] * len(curves) / 100)
                 index_end = int((sampling[i + 1]) * len(curves) / 100)
                 groups.append(curves[index_start:index_end])
@@ -467,8 +465,6 @@ def dissimilarity_within_learning(
             # compute similarities across groups gathered by sampling
             print(f"computing similarities for model {model_name} for group {group}")
             print(f"Len groups : {len(groups)}")
-            for i in range(len(groups)):
-                print(f"len of group {i} : {len(groups[i])}")
 
             group_done = 0
             for i in range(len(groups)):

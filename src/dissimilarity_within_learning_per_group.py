@@ -103,13 +103,11 @@ def dissimilarity(args: argparse.Namespace) -> None:
 
     # Enqueue tasks in a round-robin fashion across the GPU-specific queues
     queue_index = 0
-    models_done = 0
     for rnn_type in config["rnn"]["parameters"]["rnn_type"]:
         for activation in config["rnn"]["parameters"]["activations"]:
             for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
                 for lr in config["rnn"]["parameters"]["learning_rate"]:
                     for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
-                        print(f"Index : {100*models_done/64}")
                         tasks = (
                             args,
                             rnn_type,
@@ -124,7 +122,6 @@ def dissimilarity(args: argparse.Namespace) -> None:
                             queue_index = (queue_index + 1) % num_gpus
                         else:
                             task_queues[0].put(tasks)
-                        models_done += 1
 
     # Stop workers
     for task_queue in task_queues:
