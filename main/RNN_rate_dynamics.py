@@ -5,7 +5,8 @@ from torch import nn, jit
 import math
 import ipdb
 
-class RNNCell_base(jit.ScriptModule):  # (nn.Module):
+
+class RNNCell_base(nn.Module):  # (nn.Module): jit.ScriptModule
     #     __constants__ = ['bias']
 
     def __init__(self, input_size, hidden_size, nonlinearity, bias):
@@ -52,8 +53,11 @@ class RNNCell(RNNCell_base):  # Euler integration of rate-neuron network dynamic
         hidden = self.decay * hidden + (1 - self.decay) * activity
         return hidden
 
+
 class LeakyGRUCell(RNNCell_base):
-    def __init__(self, input_size, hidden_size, nonlinearity=None, decay=0.9, bias=True):
+    def __init__(
+        self, input_size, hidden_size, nonlinearity=None, decay=0.9, bias=True
+    ):
         super().__init__(input_size, hidden_size, nonlinearity, bias)
         self.decay = decay
 
@@ -68,7 +72,7 @@ class LeakyGRUCell(RNNCell_base):
         self.reset_parameters()
 
     def forward(self, input, hidden):
-        gates = (input @ self.weight_ih.t() + hidden @ self.weight_hh.t() + self.bias)
+        gates = input @ self.weight_ih.t() + hidden @ self.weight_hh.t() + self.bias
         resetgate, updategate, newgate = gates.chunk(3, 1)
 
         resetgate = torch.sigmoid(resetgate)
@@ -79,6 +83,7 @@ class LeakyGRUCell(RNNCell_base):
         hidden = (1 - updategate) * hidden + updategate * new_hidden
 
         return hidden
+
 
 class RNNLayer(nn.Module):
     def __init__(self, cell_type, *args):
