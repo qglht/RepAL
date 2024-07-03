@@ -11,7 +11,8 @@ warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
 warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprecated.*")
 
 # Set environment variable to ignore Gym deprecation warnings
-os.environ['GYM_IGNORE_DEPRECATION_WARNINGS'] = '1'
+os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
+
 
 def train(args: argparse.Namespace) -> None:
     multiprocessing.set_start_method("spawn", force=True)
@@ -41,13 +42,21 @@ def train(args: argparse.Namespace) -> None:
                         device = devices[
                             i % len(devices)
                         ]  # Cycle through available devices
-                        tasks.append((args.group, rnn_type, activation, hidden_size, lr, batch_size, device))
+                        tasks.append(
+                            (
+                                args.group,
+                                rnn_type,
+                                activation,
+                                hidden_size,
+                                lr,
+                                batch_size,
+                                device,
+                            )
+                        )
                         i += 1
 
     # Create a process for each task
-    processes = [
-        multiprocessing.Process(target=pipeline, args=task) for task in tasks
-    ]
+    processes = [multiprocessing.Process(target=pipeline, args=task) for task in tasks]
 
     # Start all processes
     for process in processes:
@@ -56,6 +65,7 @@ def train(args: argparse.Namespace) -> None:
     # Wait for all processes to finish
     for process in processes:
         process.join()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train the model")
