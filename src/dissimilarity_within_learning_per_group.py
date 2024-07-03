@@ -30,13 +30,14 @@ class DissimilarityWorker(Thread):
             if params is None:
                 self.task_queue.task_done()
                 break
-            try:
-                result = self.dissimilarity_task(params)
-            except RuntimeError as e:
-                print(f"Runtime error: {e}")
-                self.task_queue.task_done()
-                continue
-
+            print(f"Processing task with params: {params}")
+            # try:
+            result = self.dissimilarity_task(params)
+            # except RuntimeError as e:
+            #     print(f"Runtime error: {e}")
+            #     self.task_queue.task_done()
+            #     continue
+            print(f"Task completed with result: {result}")
             self.task_queue.task_done()
             with self.lock:
                 df = pd.DataFrame([result])

@@ -1,6 +1,8 @@
 from pdb import run
 import warnings
 
+from matplotlib.pylab import f
+
 import main
 from main import RNNLayer
 from dsa_analysis import load_config
@@ -469,12 +471,14 @@ def dissimilarity_within_learning(
             for i in range(len(groups)):
                 for j in range(i, len(groups)):
                     print(f"perc group done : {100*group_done/(len(groups)**2)}")
+                    group_done += 1
                     dissimilarities_cka = []
                     dissimilarities_procrustes = []
                     dissimilarities_dsa = []
                     p = min(len(groups[i]), len(groups[j]))
                     for index_model1 in range(p):
                         for index_model2 in range(index_model1, p):
+                            print(f"index model 1 : {100*index_model1/p}")
                             model1 = groups[i][index_model1]
                             model2 = groups[j][index_model2]
 
