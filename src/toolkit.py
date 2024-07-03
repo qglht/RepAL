@@ -1,3 +1,4 @@
+from pdb import run
 import warnings
 
 import main
@@ -19,6 +20,9 @@ from itertools import permutations
 from main.train import accuracy
 import similarity
 import copy
+from collections import OrderedDict
+import torch
+from torch import nn, jit
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
@@ -66,6 +70,25 @@ def initialize_model(rnn_type, activation, hidden_size, lr, batch_size, device):
     run_model = main.Run_Model(hp, RNNLayer, device)
 
     return run_model, hp
+
+
+def load_model_jit(run_model_copy, checkpoint):
+    # Load state dict into the new model, handling scripting:
+    if isinstance(run_model_copy, torch.jit.RecursiveScriptModule):
+        # Remove "_c." prefix from keys for scripted models
+        new_state_dict = OrderedDict()
+        for k, v in checkpoint["model_state_dict"].items():
+            if k.startswith("_c."):
+                name = k[3:]  # remove `_c.` prefix
+                new_state_dict[name] = v
+            else:
+                new_state_dict[k] = v
+        run_model_copy.load_state_dict(new_state_dict)
+    else:
+        # Load state dict directly for non-scripted models
+        run_model_copy.load_state_dict(checkpoint["model_state_dict"])
+
+    return run_model_copy
 
 
 def corresponding_training_time(n, p):
@@ -294,13 +317,13 @@ def dissimilarity_over_learning(
                     ),
                     map_location=device,
                 )
-                run_model1_copy.load_state_dict(checkpoint1["model_state_dict"])
+                run_model1_copy = load_model_jit(run_model1_copy, checkpoint1)
                 accuracy_1 = checkpoint1["log"]["perf_min"]
                 checkpoint2 = torch.load(
                     os.path.join(path_train_folder2, checkpoint_files_2[epoch]),
                     map_location=device,
                 )
-                run_model2_copy.load_state_dict(checkpoint2["model_state_dict"])
+                run_model2_copy = load_model_jit(run_model2_copy, checkpoint2)
                 accuracy_2 = checkpoint2["log"]["perf_min"]
                 models_to_compare.extend([(run_model1_copy, run_model2_copy)])
                 dissimilarities_over_learning["accuracy_1"].append(accuracy_1)
@@ -316,7 +339,7 @@ def dissimilarity_over_learning(
                     os.path.join(path_train_folder1, checkpoint_files_1[epoch]),
                     map_location=device,
                 )
-                run_model1_copy.load_state_dict(checkpoint1["model_state_dict"])
+                run_model1_copy = load_model_jit(run_model1_copy, checkpoint1)
                 accuracy_1 = checkpoint1["log"]["perf_min"]
                 checkpoint2 = torch.load(
                     os.path.join(
@@ -325,7 +348,7 @@ def dissimilarity_over_learning(
                     ),
                     map_location=device,
                 )
-                run_model2_copy.load_state_dict(checkpoint2["model_state_dict"])
+                run_model2_copy = load_model_jit(run_model2_copy, checkpoint2)
                 accuracy_2 = checkpoint2["log"]["perf_min"]
                 models_to_compare.extend([(run_model1_copy, run_model2_copy)])
                 dissimilarities_over_learning["accuracy_1"].append(accuracy_1)
@@ -409,17 +432,19 @@ def dissimilarity_within_learning(
         if len(checkpoint_files) > 3:
             # load all the checkpoints
             for epoch in range(len(checkpoint_files)):
-                run_model_copy = copy.deepcopy(run_model)
                 checkpoint = torch.load(
                     os.path.join(path_train_folder, checkpoint_files[epoch]),
                     map_location=device,
                 )
-                run_model_copy.load_state_dict(checkpoint["model_state_dict"])
+                run_model_copy = copy.deepcopy(run_model)
+                run_model_copy = load_model_jit(run_model_copy, checkpoint)
+
                 accuracy = float(checkpoint["log"]["perf_min"][-1])
                 # convert accuracy to float if it was a string
                 models_to_compare.extend([run_model_copy])
                 accuracies.append(accuracy)
 
+            print(f"computing representations for group {group}")
             # compute the curves for models and dissimilarities
             curves = [
                 get_curves(model, all_rules, components=15)

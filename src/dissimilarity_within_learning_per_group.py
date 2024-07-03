@@ -78,11 +78,9 @@ class DissimilarityWorker(Thread):
 def dissimilarity(args: argparse.Namespace) -> None:
     config = load_config("config.yaml")
     num_gpus = torch.cuda.device_count()  # Get the number of GPUs available
-    devices = (
-        [torch.device(f"cuda:{i}") for i in range(num_gpus)]
-        if num_gpus > 0
-        else [torch.device("cpu")]
-    )
+    devices = [torch.device("cpu")]  # default value is now cpu
+    if num_gpus > 0:
+        devices = [torch.device(f"cuda:{i}") for i in range(num_gpus)]
     print(f"Number of GPUs available: {num_gpus}")
 
     # Create a lock for writing to the output file
@@ -117,8 +115,11 @@ def dissimilarity(args: argparse.Namespace) -> None:
                             batch_size,
                             devices[queue_index],
                         )
-                        task_queues[queue_index].put(tasks)
-                        queue_index = (queue_index + 1) % num_gpus
+                        if num_gpus > 0:
+                            task_queues[queue_index].put(tasks)
+                            queue_index = (queue_index + 1) % num_gpus
+                        else:
+                            task_queues[0].put(tasks)
 
     # Stop workers
     for task_queue in task_queues:
