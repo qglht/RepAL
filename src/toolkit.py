@@ -466,6 +466,9 @@ def dissimilarity_within_learning(
 
             # compute similarities across groups gathered by sampling
             print(f"computing similarities for model {model_name} for group {group}")
+            print(f"Len groups : {len(groups)}")
+            for i in range(len(groups)):
+                print(f"len of group {i} : {len(groups[i])}")
 
             group_done = 0
             for i in range(len(groups)):
