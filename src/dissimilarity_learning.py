@@ -6,10 +6,10 @@ def generate_and_submit_scripts():
     script_template = """#!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=24:00:00
-#SBATCH --job-name=dissimilarity_over_learning
-#SBATCH --gres=gpu:1
+#SBATCH --job-name=dissimilarity_over_learning_{group1}_{group2}
+#SBATCH --gres=gpu:8
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=10 
+#SBATCH --cpus-per-task=80
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=oxfd2547@ox.ac.uk
 
