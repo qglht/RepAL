@@ -19,8 +19,8 @@ def dissimilarity_task(
     group1, group2, rnn_type, activation, hidden_size, lr, batch_size, device
 ):
     dissimilarities_model = dissimilarity_over_learning(
-        args.group1,
-        args.group2,
+        group1,
+        group2,
         rnn_type,
         activation,
         hidden_size,
