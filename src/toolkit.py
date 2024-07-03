@@ -383,9 +383,11 @@ def dissimilarity_over_learning(
                 device=device,
             )
             dissimilarities_over_learning["dsa"].append(dsa_comp.fit_score())
-        return dissimilarities_over_learning
-    else:
-        return dissimilarities_over_learning
+
+    for key, value in dissimilarities_over_learning.items():
+        dissimilarities_over_learning[key] = np.array(value)
+
+    return dissimilarities_over_learning
 
 
 def dissimilarity_within_learning(

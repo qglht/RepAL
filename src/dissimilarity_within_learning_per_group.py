@@ -1,14 +1,11 @@
 import warnings
 import os
 import argparse
-from matplotlib.pylab import f
 import torch
-import pandas as pd
 from dsa_analysis import load_config
 from src.toolkit import dissimilarity_within_learning
-from threading import Thread, Lock
-from queue import Queue
 import numpy as np
+import multiprocessing
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
@@ -18,124 +15,92 @@ warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprec
 os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
 
-class DissimilarityWorker(Thread):
-    def __init__(self, task_queue, lock, output_file):
-        super().__init__()
-        self.task_queue = task_queue
-        self.lock = lock
-        self.output_file = output_file
+def dissimilarity_task(params):
+    group, rnn_type, activation, hidden_size, lr, batch_size, device = params
 
-    def run(self):
-        while True:
-            params = self.task_queue.get()
-            if params is None:
-                self.task_queue.task_done()
-                break
-            print(f"Processing task with params: {params}")
-            result = self.dissimilarity_task(params)
-            print(f"Task completed with result: {result}")
-            self.task_queue.task_done()
+    # Reinitialize the model and modules to avoid conflicts
+    dissimilarities_model = dissimilarity_within_learning(
+        group,
+        rnn_type,
+        activation,
+        hidden_size,
+        lr,
+        batch_size,
+        device,
+    )
 
-            for measure in ["cka", "procrustes", "dsa", "accuracy"]:
-                args, rnn_type, activation, hidden_size, lr, batch_size, _ = (
-                    params  # Extract parameters for filename
-                )
-                npz_filename = f"{args.group}/{measure}/{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}.npz"  # Construct filename
-                # create directory if it does not exist
-                if not os.path.exists(
-                    f"data/dissimilarities_within_learning/{args.group}/{measure}"
-                ):
-                    os.makedirs(f"data/dissimilarities_within_learning/{args.group}")
-                    os.makedirs(
-                        f"data/dissimilarities_within_learning/{args.group}/{measure}"
-                    )
-                npz_filename = os.path.join(
-                    "data/dissimilarities_within_learning", npz_filename
-                )
-                np.savez_compressed(npz_filename, result[measure])
-
-    def dissimilarity_task(self, params):
-        args, rnn_type, activation, hidden_size, lr, batch_size, device = params
-
-        # Reinitialize the model and modules to avoid conflicts
-        dissimilarities_model = dissimilarity_within_learning(
-            args.group,
-            rnn_type,
-            activation,
-            hidden_size,
-            lr,
-            batch_size,
-            device,
+    for measure in ["cka", "procrustes", "dsa", "accuracy"]:
+        npz_filename = f"{group}/{measure}/{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}.npz"  # Construct filename
+        # create directory if it does not exist
+        if not os.path.exists(
+            f"data/dissimilarities_within_learning/{group}/{measure}"
+        ):
+            os.makedirs(
+                f"data/dissimilarities_within_learning/{group}/{measure}",
+                exist_ok=True,
+            )
+        npz_filename = os.path.join(
+            "data/dissimilarities_within_learning", npz_filename
         )
-
-        dissimilarities = {
-            "group": args.group,
-            "rnn_type": rnn_type,
-            "activation": activation,
-            "hidden_size": hidden_size,
-            "lr": lr,
-            "batch_size": batch_size,
-            "cka": dissimilarities_model["cka"],
-            "procrustes": dissimilarities_model["procrustes"],
-            "dsa": dissimilarities_model["dsa"],
-            "accuracy": dissimilarities_model["accuracy"],
-        }
-        return dissimilarities
+        np.savez_compressed(npz_filename, dissimilarities_model[measure])
+    return dissimilarities_model
 
 
 def dissimilarity(args: argparse.Namespace) -> None:
+    multiprocessing.set_start_method("spawn", force=True)
     config = load_config("config.yaml")
+
+    # Create a list of all tasks to run
+    tasks = []
     num_gpus = torch.cuda.device_count()  # Get the number of GPUs available
-    devices = [torch.device("cpu")]  # default value is now cpu
-    if num_gpus > 0:
-        devices = [torch.device(f"cuda:{i}") for i in range(num_gpus)]
-    print(f"Number of GPUs available: {num_gpus}")
+    devices = (
+        [torch.device(f"cuda:{i}") for i in range(num_gpus)]
+        if num_gpus > 0
+        else [torch.device("cpu")]
+    )
+    i = 0
+    print(f"devices used : {devices}")
+    print(f"number of devices : {num_gpus}")
 
-    # Create a lock for writing to the output file
-    lock = Lock()
+    if not os.path.exists(f"data/dissimilarities_within_learning/{args.group}"):
+        os.makedirs(
+            f"data/dissimilarities_within_learning/{args.group}",
+            exist_ok=True,
+        )
 
-    # Define output file
-    output_file = f"data/dissimilarities_within_learning/{args.group}.csv"
-
-    # Create a worker thread for each GPU
-    workers = []
-    task_queues = []
-    for i, device in enumerate(devices):
-        task_queue = Queue()
-        task_queues.append(task_queue)
-        worker = DissimilarityWorker(task_queue, lock, output_file)
-        worker.start()
-        workers.append(worker)
-
-    # Enqueue tasks in a round-robin fashion across the GPU-specific queues
-    queue_index = 0
     for rnn_type in config["rnn"]["parameters"]["rnn_type"]:
         for activation in config["rnn"]["parameters"]["activations"]:
             for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
                 for lr in config["rnn"]["parameters"]["learning_rate"]:
                     for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
-                        tasks = (
-                            args,
-                            rnn_type,
-                            activation,
-                            hidden_size,
-                            lr,
-                            batch_size,
-                            devices[queue_index],
+                        device = devices[
+                            i % len(devices)
+                        ]  # Cycle through available devices
+                        tasks.append(
+                            (
+                                args.group,
+                                rnn_type,
+                                activation,
+                                hidden_size,
+                                lr,
+                                batch_size,
+                                device,
+                            )
                         )
-                        if num_gpus > 0:
-                            task_queues[queue_index].put(tasks)
-                            queue_index = (queue_index + 1) % num_gpus
-                        else:
-                            task_queues[0].put(tasks)
+                        i += 1
 
-    # Stop workers
-    for task_queue in task_queues:
-        task_queue.put(None)
+    # Create a process for each task
+    processes = [
+        multiprocessing.Process(target=dissimilarity_task, args=task) for task in tasks
+    ]
 
-    # Wait for all tasks to be processed
-    for worker in workers:
-        worker.join()
+    # Start all processes
+    for process in processes:
+        process.start()
+
+    # Wait for all processes to finish
+    for process in processes:
+        process.join()
 
 
 if __name__ == "__main__":
