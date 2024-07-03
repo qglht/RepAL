@@ -29,12 +29,12 @@ class DissimilarityWorker(Thread):
             if params is None:
                 self.task_queue.task_done()
                 break
-            try:
-                result = self.dissimilarity_task(params)
-            except RuntimeError as e:
-                print(f"Runtime error: {e}")
-                self.task_queue.task_done()
-                continue
+            # try:
+            result = self.dissimilarity_task(params)
+            # except RuntimeError as e:
+            #     print(f"Runtime error: {e}")
+            #     self.task_queue.task_done()
+            #     continue
 
             self.task_queue.task_done()
             with self.lock:
@@ -89,9 +89,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
     lock = Lock()
 
     # Define output file
-    output_file = (
-        f"data/dissimilarities_within_learning/{args.group1}_{args.group2}.csv"
-    )
+    output_file = f"data/dissimilarities_over_learning/{args.group1}_{args.group2}.csv"
 
     # Create a worker thread for each GPU
     workers = []
