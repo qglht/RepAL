@@ -444,12 +444,13 @@ def dissimilarity_within_learning(
                 models_to_compare.extend([run_model_copy])
                 accuracies.append(accuracy)
 
-            print(f"computing representations for group {group}")
+            print(f"computing representations for model {model_name} for group {group}")
             # compute the curves for models and dissimilarities
             curves = [
                 get_curves(model, all_rules, components=15)
                 for model in models_to_compare
             ]
+            print(f"grouping accuracies for model {model_name} for group {group}")
 
             groups = []
             print(f"accuracies : {accuracies}")
@@ -462,9 +463,12 @@ def dissimilarity_within_learning(
                 accuracies_grouped.append(np.mean(accuracies[index_start:index_end]))
 
             # compute similarities across groups gathered by sampling
+            print(f"computing similarities for model {model_name} for group {group}")
 
+            group_done = 0
             for i in range(len(groups)):
                 for j in range(i, len(groups)):
+                    print(f"perc group done : {100*group_done/(len(groups)**2)}")
                     dissimilarities_cka = []
                     dissimilarities_procrustes = []
                     dissimilarities_dsa = []
@@ -507,6 +511,8 @@ def dissimilarity_within_learning(
                         procrustes_similarities[j, i] = np.nan
                         dsa_similarities[i, j] = np.nan
                         dsa_similarities[j, i] = np.nan
+
+            print(f"similarities finished for model {model_name} for group {group}")
 
     return {
         "cka": cka_similarities,
