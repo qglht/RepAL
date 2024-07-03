@@ -475,30 +475,32 @@ def dissimilarity_within_learning(
                     dissimilarities_procrustes = []
                     dissimilarities_dsa = []
                     p = min(len(groups[i]), len(groups[j]))
-                    for index_model1 in range(p):
-                        for index_model2 in range(index_model1, p):
-                            print(f"index model 1 : {100*index_model1/p}")
-                            model1 = groups[i][index_model1]
-                            model2 = groups[j][index_model2]
-
-                            dissimilarities_cka.append(1 - cka_measure(model1, model2))
-                            dissimilarities_procrustes.append(
-                                1 - procrustes_measure(model1, model2)
-                            )
-                            dsa_comp = DSA.DSA(
-                                model1,
-                                model2,
-                                n_delays=config["dsa"]["n_delays"],
-                                rank=config["dsa"]["rank"],
-                                delay_interval=config["dsa"]["delay_interval"],
-                                verbose=True,
-                                iters=1000,
-                                lr=1e-2,
-                                device=device,
-                            )
-                            dissimilarities_dsa.append(dsa_comp.fit_score())
-
                     if p > 0:
+                        for index_model1 in range(p):
+                            for index_model2 in range(index_model1, p):
+                                print(f"index model 1 : {100*index_model1/p}")
+                                model1 = groups[i][index_model1]
+                                model2 = groups[j][index_model2]
+
+                                dissimilarities_cka.append(
+                                    1 - cka_measure(model1, model2)
+                                )
+                                dissimilarities_procrustes.append(
+                                    1 - procrustes_measure(model1, model2)
+                                )
+                                dsa_comp = DSA.DSA(
+                                    model1,
+                                    model2,
+                                    n_delays=config["dsa"]["n_delays"],
+                                    rank=config["dsa"]["rank"],
+                                    delay_interval=config["dsa"]["delay_interval"],
+                                    verbose=True,
+                                    iters=1000,
+                                    lr=1e-2,
+                                    device=device,
+                                )
+                                dissimilarities_dsa.append(dsa_comp.fit_score())
+
                         cka_similarities[i, j] = np.mean(dissimilarities_cka)
                         cka_similarities[j, i] = cka_similarities[i, j]
                         procrustes_similarities[i, j] = np.mean(
@@ -507,16 +509,10 @@ def dissimilarity_within_learning(
                         procrustes_similarities[j, i] = procrustes_similarities[i, j]
                         dsa_similarities[i, j] = np.mean(dissimilarities_dsa)
                         dsa_similarities[j, i] = dsa_similarities[i, j]
-                    else:  # fill with nan
-                        cka_similarities[i, j] = np.nan
-                        cka_similarities[j, i] = np.nan
-                        procrustes_similarities[i, j] = np.nan
-                        procrustes_similarities[j, i] = np.nan
-                        dsa_similarities[i, j] = np.nan
-                        dsa_similarities[j, i] = np.nan
 
             print(f"similarities finished for model {model_name} for group {group}")
 
+    accuracies_grouped = np.array(accuracies_grouped)
     return {
         "cka": cka_similarities,
         "procrustes": procrustes_similarities,

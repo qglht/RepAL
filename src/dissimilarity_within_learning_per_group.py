@@ -8,6 +8,7 @@ from dsa_analysis import load_config
 from src.toolkit import dissimilarity_within_learning
 from threading import Thread, Lock
 from queue import Queue
+import numpy as np
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
@@ -31,22 +32,27 @@ class DissimilarityWorker(Thread):
                 self.task_queue.task_done()
                 break
             print(f"Processing task with params: {params}")
-            # try:
             result = self.dissimilarity_task(params)
-            # except RuntimeError as e:
-            #     print(f"Runtime error: {e}")
-            #     self.task_queue.task_done()
-            #     continue
             print(f"Task completed with result: {result}")
             self.task_queue.task_done()
-            with self.lock:
-                df = pd.DataFrame([result])
-                df.to_csv(
-                    self.output_file,
-                    mode="a",
-                    header=not os.path.exists(self.output_file),
-                    index=False,
+
+            for measure in ["cka", "procrustes", "dsa", "accuracy"]:
+                args, rnn_type, activation, hidden_size, lr, batch_size, _ = (
+                    params  # Extract parameters for filename
                 )
+                npz_filename = f"{args.group}/{measure}/{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}.npz"  # Construct filename
+                # create directory if it does not exist
+                if not os.path.exists(
+                    f"data/dissimilarities_within_learning/{args.group}/{measure}"
+                ):
+                    os.makedirs(f"data/dissimilarities_within_learning/{args.group}")
+                    os.makedirs(
+                        f"data/dissimilarities_within_learning/{args.group}/{measure}"
+                    )
+                npz_filename = os.path.join(
+                    "data/dissimilarities_within_learning", npz_filename
+                )
+                np.savez_compressed(npz_filename, result[measure])
 
     def dissimilarity_task(self, params):
         args, rnn_type, activation, hidden_size, lr, batch_size, device = params
