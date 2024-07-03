@@ -48,6 +48,8 @@ class DissimilarityWorker(Thread):
 
     def dissimilarity_task(self, params):
         args, rnn_type, activation, hidden_size, lr, batch_size, device = params
+
+        # Reinitialize the model and modules to avoid conflicts
         dissimilarities_model = dissimilarity_within_learning(
             args.group,
             rnn_type,
@@ -57,6 +59,7 @@ class DissimilarityWorker(Thread):
             batch_size,
             device,
         )
+
         dissimilarities = {
             "group": args.group,
             "rnn_type": rnn_type,
@@ -90,8 +93,10 @@ def dissimilarity(args: argparse.Namespace) -> None:
 
     # Create a worker thread for each GPU
     workers = []
+    task_queues = []
     for i, device in enumerate(devices):
         task_queue = Queue()
+        task_queues.append(task_queue)
         worker = DissimilarityWorker(task_queue, lock, output_file)
         worker.start()
         workers.append(worker)
@@ -112,12 +117,12 @@ def dissimilarity(args: argparse.Namespace) -> None:
                             batch_size,
                             devices[queue_index],
                         )
+                        task_queues[queue_index].put(tasks)
                         queue_index = (queue_index + 1) % num_gpus
-                        workers[queue_index].task_queue.put(tasks)
 
     # Stop workers
-    for worker in workers:
-        worker.task_queue.put(None)
+    for task_queue in task_queues:
+        task_queue.put(None)
 
     # Wait for all tasks to be processed
     for worker in workers:

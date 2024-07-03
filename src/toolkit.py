@@ -18,6 +18,7 @@ import numpy as np
 from itertools import permutations
 from main.train import accuracy
 import similarity
+import copy
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
@@ -254,19 +255,19 @@ def dissimilarity_over_learning(
         path_pretrain_2 = os.path.join(
             f"models/{group2}", model_name + f"_pretrain.pth"
         )
-        run_model_1 = main.load_model(
+        run_model1_pretrain = main.load_model(
             path_pretrain_1,
             hp1,
             RNNLayer,
             device=device,
         )
-        run_model_2 = main.load_model(
+        run_model2_pretrain = main.load_model(
             path_pretrain_2,
             hp2,
             RNNLayer,
             device=device,
         )
-        models_to_compare.extend([(run_model_1, run_model_2)])
+        models_to_compare.extend([(run_model1_pretrain, run_model2_pretrain)])
 
     dissimilarities_over_learning = {
         "cka": [],
@@ -284,6 +285,8 @@ def dissimilarity_over_learning(
                 len(checkpoint_files_1), len(checkpoint_files_2)
             )
             for epoch in index_epochs:
+                run_model1_copy = copy.deepcopy(run_model1)
+                run_model2_copy = copy.deepcopy(run_model2)
                 checkpoint1 = torch.load(
                     os.path.join(
                         path_train_folder1,
@@ -291,15 +294,15 @@ def dissimilarity_over_learning(
                     ),
                     map_location=device,
                 )
-                run_model1.load_state_dict(checkpoint1["model_state_dict"])
+                run_model1_copy.load_state_dict(checkpoint1["model_state_dict"])
                 accuracy_1 = checkpoint1["log"]["perf_min"]
                 checkpoint2 = torch.load(
                     os.path.join(path_train_folder2, checkpoint_files_2[epoch]),
                     map_location=device,
                 )
-                run_model2.load_state_dict(checkpoint2["model_state_dict"])
+                run_model2_copy.load_state_dict(checkpoint2["model_state_dict"])
                 accuracy_2 = checkpoint2["log"]["perf_min"]
-                models_to_compare.extend([(run_model1, run_model2)])
+                models_to_compare.extend([(run_model1_copy, run_model2_copy)])
                 dissimilarities_over_learning["accuracy_1"].append(accuracy_1)
                 dissimilarities_over_learning["accuracy_2"].append(accuracy_2)
         else:
@@ -307,11 +310,13 @@ def dissimilarity_over_learning(
                 len(checkpoint_files_2), len(checkpoint_files_1)
             )
             for epoch in index_epochs:
+                run_model1_copy = copy.deepcopy(run_model1)
+                run_model2_copy = copy.deepcopy(run_model2)
                 checkpoint1 = torch.load(
                     os.path.join(path_train_folder1, checkpoint_files_1[epoch]),
                     map_location=device,
                 )
-                run_model1.load_state_dict(checkpoint1["model_state_dict"])
+                run_model1_copy.load_state_dict(checkpoint1["model_state_dict"])
                 accuracy_1 = checkpoint1["log"]["perf_min"]
                 checkpoint2 = torch.load(
                     os.path.join(
@@ -320,9 +325,9 @@ def dissimilarity_over_learning(
                     ),
                     map_location=device,
                 )
-                run_model2.load_state_dict(checkpoint2["model_state_dict"])
+                run_model2_copy.load_state_dict(checkpoint2["model_state_dict"])
                 accuracy_2 = checkpoint2["log"]["perf_min"]
-                models_to_compare.extend([(run_model1, run_model2)])
+                models_to_compare.extend([(run_model1_copy, run_model2_copy)])
                 dissimilarities_over_learning["accuracy_1"].append(accuracy_1)
                 dissimilarities_over_learning["accuracy_2"].append(accuracy_2)
 
@@ -383,13 +388,13 @@ def dissimilarity_within_learning(
     # if pretrain in group1 and group2, load checkpoints at os.path.join(f"models/{group}", model_name + f"_pretrain.pth")
     if "pretrain" in group:
         path_pretrain = os.path.join(f"models/{group}", model_name + f"_pretrain.pth")
-        run_model = main.load_model(
+        run_model_pretrain = main.load_model(
             path_pretrain,
             hp,
             RNNLayer,
             device=device,
         )
-        models_to_compare.extend([run_model])
+        models_to_compare.extend([run_model_pretrain])
 
     cka_similarities = np.empty((len(sampling) - 1, len(sampling) - 1))
     procrustes_similarities = np.empty((len(sampling) - 1, len(sampling) - 1))
@@ -404,14 +409,15 @@ def dissimilarity_within_learning(
         if len(checkpoint_files) > 3:
             # load all the checkpoints
             for epoch in range(len(checkpoint_files)):
+                run_model_copy = copy.deepcopy(run_model)
                 checkpoint = torch.load(
                     os.path.join(path_train_folder, checkpoint_files[epoch]),
                     map_location=device,
                 )
-                run_model.load_state_dict(checkpoint["model_state_dict"])
+                run_model_copy.load_state_dict(checkpoint["model_state_dict"])
                 accuracy = float(checkpoint["log"]["perf_min"][-1])
                 # convert accuracy to float if it was a string
-                models_to_compare.extend([run_model])
+                models_to_compare.extend([run_model_copy])
                 accuracies.append(accuracy)
 
             # compute the curves for models and dissimilarities
