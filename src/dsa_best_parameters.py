@@ -43,9 +43,9 @@ wait $APP_PID
 
 
 """
-    number_parameters_delays = 20
+    number_parameters_delays = 10
 
-    n_delays = np.linspace(10, 100, number_parameters_delays, dtype=int)
+    n_delays = np.linspace(10, 51, number_parameters_delays, dtype=int)
 
     for delay in n_delays:
         space = int(200 / delay)
