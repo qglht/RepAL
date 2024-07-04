@@ -320,13 +320,13 @@ def dissimilarity_over_learning(
                     map_location=device,
                 )
                 run_model1_copy = load_model_jit(run_model1_copy, checkpoint1)
-                accuracy_1 = checkpoint1["log"]["perf_min"]
+                accuracy_1 = float(checkpoint1["log"]["perf_min"][-1])
                 checkpoint2 = torch.load(
                     os.path.join(path_train_folder2, checkpoint_files_2[epoch]),
                     map_location=device,
                 )
                 run_model2_copy = load_model_jit(run_model2_copy, checkpoint2)
-                accuracy_2 = checkpoint2["log"]["perf_min"]
+                accuracy_2 = float(checkpoint2["log"]["perf_min"][-1])
                 models_to_compare.extend([(run_model1_copy, run_model2_copy)])
                 dissimilarities_over_learning["accuracy_1"].append(accuracy_1)
                 dissimilarities_over_learning["accuracy_2"].append(accuracy_2)
@@ -342,7 +342,7 @@ def dissimilarity_over_learning(
                     map_location=device,
                 )
                 run_model1_copy = load_model_jit(run_model1_copy, checkpoint1)
-                accuracy_1 = checkpoint1["log"]["perf_min"]
+                accuracy_1 = float(checkpoint1["log"]["perf_min"][-1])
                 checkpoint2 = torch.load(
                     os.path.join(
                         path_train_folder2,
@@ -351,7 +351,7 @@ def dissimilarity_over_learning(
                     map_location=device,
                 )
                 run_model2_copy = load_model_jit(run_model2_copy, checkpoint2)
-                accuracy_2 = checkpoint2["log"]["perf_min"]
+                accuracy_2 = float(checkpoint2["log"]["perf_min"][-1])
                 models_to_compare.extend([(run_model1_copy, run_model2_copy)])
                 dissimilarities_over_learning["accuracy_1"].append(accuracy_1)
                 dissimilarities_over_learning["accuracy_2"].append(accuracy_2)
