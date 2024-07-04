@@ -14,7 +14,7 @@ def generate_and_submit_scripts():
     script_template = """#!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=8:00:00
-#SBATCH --job-name={n_delay}_{delay_interval}_job
+#SBATCH --job-name={n_delay}_{delay_interval}_ordered_job
 #SBATCH --gres=gpu:1
 #SBATCH --partition=small
 #SBATCH --mail-type=ALL
@@ -27,15 +27,15 @@ module load python/anaconda3
 source activate dsa
 poetry install
 
-(poetry run python -m src.dsa_optimization --n_delay {n_delay} --delay_interval {delay_interval} --no-ordered) &
+(poetry run python -m src.dsa_optimization --n_delay {n_delay} --delay_interval {delay_interval} --ordered) &
 
 # PID of the application
 APP_PID=$!
 
 # Monitor GPU status every 300 seconds (5 minutes) until the application finishes
 while kill -0 $APP_PID 2>/dev/null; do
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - Checking GPU status during the application run:" >> gpu_usage/{n_delay}_{delay_interval}_noordered_gpu_usage.log
-    nvidia-smi >> gpu_usage/{n_delay}_{delay_interval}_noordered_gpu_usage.log  # Append output to log file
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - Checking GPU status during the application run:" >> gpu_usage/{n_delay}_{delay_interval}_ordered_gpu_usage.log
+    nvidia-smi >> gpu_usage/{n_delay}_{delay_interval}_ordered_gpu_usage.log  # Append output to log file
     sleep 300 
 done
 
@@ -49,9 +49,9 @@ wait $APP_PID
 
     for delay in n_delays:
         space = int(200 / delay)
-        if not os.path.exists(f"data/dsa_results/50_{delay}_{space}.csv"):
+        if not os.path.exists(f"data/dsa_results/50_{delay}_{space}_ordered.csv"):
             script_content = script_template.format(n_delay=delay, delay_interval=space)
-            script_filename = f"sbatch/dsa/{delay}_{space}_script.sh"
+            script_filename = f"sbatch/dsa/{delay}_{space}_ordered_script.sh"
 
             with open(script_filename, "w") as script_file:
                 script_file.write(script_content)
