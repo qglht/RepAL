@@ -37,6 +37,8 @@ wait $APP_PID
 """
     groups_to_compare_over_learning = [
         ("pretrain_frozen_same_init", "pretrain_unfrozen"),
+        ("pretrain_frozen", "pretrain_unfrozen"),
+        ("untrained", "master"),
         ("pretrain_frozen_same_init", "master"),
     ]
 
