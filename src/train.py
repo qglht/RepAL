@@ -20,7 +20,7 @@ def generate_and_submit_scripts(args: argparse.Namespace):
     script_template = """#!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=24:00:00
-#SBATCH --job-name={args.taskset}_{group}_job
+#SBATCH --job-name={taskset}_{group}_job
 #SBATCH --gres=gpu:8
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=80  
@@ -34,15 +34,15 @@ module load python/anaconda3
 source activate dsa
 poetry install
 
-(poetry run python -m src.train_group --taskset {args.taskset} --group {group}) & 
+(poetry run python -m src.train_group --taskset {taskset} --group {group}) & 
 
 # PID of the application
 APP_PID=$!
 
 # Monitor GPU status every 300 seconds (5 minutes) until the application finishes
 while kill -0 $APP_PID 2>/dev/null; do
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - Checking GPU status during the application run:" >> gpu_usage/{args.taskset}_{group}_gpu_usage.log
-    nvidia-smi >> gpu_usage/{args.taskset}_{group}_gpu_usage.log  # Append output to log file
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - Checking GPU status during the application run:" >> gpu_usage/{taskset}_{group}_gpu_usage.log
+    nvidia-smi >> gpu_usage/{taskset}_{group}_gpu_usage.log  # Append output to log file
     sleep 300 
 done
 
