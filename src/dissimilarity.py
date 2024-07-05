@@ -48,7 +48,6 @@ wait $APP_PID
 """
     config = load_config("config.yaml")
     groups = [
-        "pretrain_frozen_same_init",
         "pretrain_frozen",
         "pretrain_unfrozen",
         "master",
