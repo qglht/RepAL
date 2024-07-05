@@ -1,12 +1,13 @@
 import os
 from subprocess import call
+import argparse
 
 
-def generate_and_submit_scripts():
+def generate_and_submit_scripts(args: argparse.Namespace):
     script_template = """#!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=24:00:00
-#SBATCH --job-name=dissimilarity_over_learning_{group1}_{group2}
+#SBATCH --job-name=dissimilarity_over_learning_{taskset}_{group1}_{group2}
 #SBATCH --gres=gpu:8
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=80
@@ -20,15 +21,15 @@ module load python/anaconda3
 source activate dsa
 poetry install
 
-(poetry run python -m src.dissimilarity_over_learning_per_group --group1 {group1} --group2 {group2}) & 
+(poetry run python -m src.dissimilarity_over_learning_per_group --taskset {taskset} --group1 {group1} --group2 {group2}) & 
 
 # PID of the application
 APP_PID=$!
 
 # Monitor GPU status every 300 seconds (5 minutes) until the application finishes
 while kill -0 $APP_PID 2>/dev/null; do
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - Checking GPU status during the application run:" >> gpu_usage/learning_{group1}_{group2}_gpu_usage.log
-    nvidia-smi >> gpu_usage/learning_{group1}_{group2}_gpu_usage.log  # Append output to log file
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - Checking GPU status during the application run:" >> gpu_usage/learning_{taskset}_{group1}_{group2}_gpu_usage.log
+    nvidia-smi >> gpu_usage/learning_{taskset}_{group1}_{group2}_gpu_usage.log  # Append output to log file
     sleep 300 
 done
 
@@ -43,10 +44,10 @@ wait $APP_PID
     ]
 
     for group in groups_to_compare_over_learning:
-        script_content = script_template.format(group1=group[0], group2=group[1])
-        script_filename = (
-            f"sbatch/dissimilarities_over_learning/{group[0]}_{group[1]}_script.sh"
+        script_content = script_template.format(
+            taskset=args.taskset, group1=group[0], group2=group[1]
         )
+        script_filename = f"sbatch/dissimilarities_over_learning/{args.taskset}/{group[0]}_{group[1]}_script.sh"
 
         with open(script_filename, "w") as script_file:
             script_file.write(script_content)
@@ -56,4 +57,12 @@ wait $APP_PID
 
 
 if __name__ == "__main__":
-    generate_and_submit_scripts()
+    parser = argparse.ArgumentParser(description="Train the model")
+    parser.add_argument(
+        "--taskset",
+        type=str,
+        default="PDM",
+        help="taskset to compare dissimilarities on",
+    )
+    args = parser.parse_args()
+    generate_and_submit_scripts(args)

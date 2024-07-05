@@ -16,9 +16,10 @@ os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
 
 def dissimilarity_task(
-    group1, group2, rnn_type, activation, hidden_size, lr, batch_size, device
+    taskset, group1, group2, rnn_type, activation, hidden_size, lr, batch_size, device
 ):
     dissimilarities_model = dissimilarity_over_learning(
+        taskset,
         group1,
         group2,
         rnn_type,
@@ -29,7 +30,7 @@ def dissimilarity_task(
         device,
     )
 
-    base_dir = "data/dissimilarities_over_learning"
+    base_dir = f"data/dissimilarities_over_learning/{taskset}"
     measures = ["cka", "procrustes", "dsa", "accuracy_1", "accuracy_2"]
 
     for measure in measures:
@@ -60,10 +61,10 @@ def dissimilarity(args: argparse.Namespace) -> None:
     print(f"number of devices : {num_gpus}")
 
     if not os.path.exists(
-        f"data/dissimilarities_over_learning/{args.group1}_{args.group2}"
+        f"data/dissimilarities_over_learning/{args.taskset}/{args.group1}_{args.group2}"
     ):
         os.makedirs(
-            f"data/dissimilarities_over_learning/{args.group1}_{args.group2}",
+            f"data/dissimilarities_over_learning/{args.taskset}/{args.group1}_{args.group2}",
             exist_ok=True,
         )
 
@@ -77,6 +78,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                         ]  # Cycle through available devices
                         tasks.append(
                             (
+                                args.taskset,
                                 args.group1,
                                 args.group2,
                                 rnn_type,
@@ -105,6 +107,12 @@ def dissimilarity(args: argparse.Namespace) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train the model")
+    parser.add_argument(
+        "--taskset",
+        type=str,
+        default="PDM",
+        help="taskset to compare on",
+    )
     parser.add_argument(
         "--group1",
         type=str,

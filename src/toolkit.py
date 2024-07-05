@@ -129,12 +129,12 @@ def normalize_within_unit_volume(tensor):
     return normalized_tensor
 
 
-def pipeline(group, rnn_type, activation, hidden_size, lr, batch_size, device):
+def pipeline(taskset, group, rnn_type, activation, hidden_size, lr, batch_size, device):
     config = load_config("config.yaml")
-    rules_pretrain = config["groups"][group]["pretrain"]["ruleset"]
-    rules_train = config["groups"][group]["train"]["ruleset"]
-    freeze = config["groups"][group]["train"]["frozen"]
-    all_rules = config["all_rules"]
+    rules_pretrain = config[taskset]["groups"][group]["pretrain"]["ruleset"]
+    rules_train = config[taskset]["groups"][group]["train"]["ruleset"]
+    freeze = config[taskset]["groups"][group]["train"]["frozen"]
+    all_rules = config[taskset]["all_rules"]
     hp = {
         "rnn_type": rnn_type,
         "activation": activation,
@@ -146,13 +146,21 @@ def pipeline(group, rnn_type, activation, hidden_size, lr, batch_size, device):
         "batch_size_train": batch_size,
     }
     model_name = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}"
-    path_pretrain_folder = os.path.join(f"models/{group}", model_name + f"_pretrain")
-    path_pretrain_model = os.path.join(f"models/{group}", model_name + f"_pretrain.pth")
-    path_train_folder = os.path.join(f"models/{group}", model_name + f"_train")
-    path_train_model = os.path.join(f"models/{group}", model_name + f"_train.pth")
+    path_pretrain_folder = os.path.join(
+        f"models/{taskset}/{group}", model_name + f"_pretrain"
+    )
+    path_pretrain_model = os.path.join(
+        f"models/{taskset}/{group}", model_name + f"_pretrain.pth"
+    )
+    path_train_folder = os.path.join(
+        f"models/{taskset}/{group}", model_name + f"_train"
+    )
+    path_train_model = os.path.join(
+        f"models/{taskset}/{group}", model_name + f"_train.pth"
+    )
 
     # Pretraining
-    print(f"Pretraining model {model_name} for group {group}")
+    print(f"Pretraining model {model_name} for group {group} and taskset {taskset}")
     if not os.path.exists(path_pretrain_model):
         if rules_pretrain:
             hp, log, optimizer = main.set_hyperparameters(
@@ -200,9 +208,9 @@ def pipeline(group, rnn_type, activation, hidden_size, lr, batch_size, device):
     return
 
 
-def generate_data(env):
+def generate_data(taskset, env):
     config = load_config("config.yaml")
-    all_rules = config["all_rules"]
+    all_rules = config[taskset]["all_rules"]
     hp, _, _ = main.set_hyperparameters(model_dir="debug", hp={}, ruleset=all_rules)
     main.generate_data(env, hp, mode="train", num_pregenerated=10000)
 
@@ -213,12 +221,12 @@ def generate_data(env):
 
 
 def get_dynamics_model(
-    rnn_type, activation, hidden_size, lr, model, group, device, n_components=3
+    rnn_type, activation, hidden_size, lr, model, group, taskset, device, n_components=3
 ):
     # Load configuration and set hyperparameters
     config = load_config("config.yaml")
-    ruleset = config["rules_analysis"][-1]
-    all_rules = config["rules_analysis"]
+    ruleset = config[taskset]["rules_analysis"][-1]
+    all_rules = config[taskset]["rules_analysis"]
 
     hp = {
         "rnn_type": rnn_type,
@@ -233,29 +241,36 @@ def get_dynamics_model(
         model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=ruleset
     )
     run_model = main.load_model(
-        f"models/{group}/{model}",
+        f"models/{taskset}/{group}/{model}",
         hp,
         RNNLayer,
         device=device,
     )
     h = main.representation(run_model, all_rules)
     h_trans, explained_variance = main.compute_pca(h, n_components=n_components)
-    tensor_on_cpu = h_trans[
-        ("AntiPerceptualDecisionMakingDelayResponseT", "stimulus")
-    ].cpu()
+    if taskset == "PDM":
+        tensor_on_cpu = h_trans[
+            ("AntiPerceptualDecisionMakingDelayResponseT", "stimulus")
+        ].cpu()
+    else:
+        tensor_on_cpu = h_trans[("AntiGoNogoDelayResponseT", "stimulus")].cpu()
     return tensor_on_cpu.detach().numpy(), explained_variance
 
 
 def dissimilarity_over_learning(
-    group1, group2, rnn_type, activation, hidden_size, lr, batch_size, device
+    taskset, group1, group2, rnn_type, activation, hidden_size, lr, batch_size, device
 ):
     config = load_config("config.yaml")
-    all_rules = config["rules_analysis"]
+    all_rules = config[taskset]["rules_analysis"]
 
     # paths for checkpoints
     model_name = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}"
-    path_train_folder1 = os.path.join(f"models/{group1}", model_name + f"_train")
-    path_train_folder2 = os.path.join(f"models/{group2}", model_name + f"_train")
+    path_train_folder1 = os.path.join(
+        f"models/{taskset}/{group1}", model_name + f"_train"
+    )
+    path_train_folder2 = os.path.join(
+        f"models/{taskset}/{group2}", model_name + f"_train"
+    )
 
     # initialize model architectures
     run_model1, hp1 = initialize_model(
@@ -275,10 +290,10 @@ def dissimilarity_over_learning(
     # if pretrain in group1 and group2, load checkpoints at os.path.join(f"models/{group}", model_name + f"_pretrain.pth")
     if "pretrain" in group1 and "pretrain" in group2:
         path_pretrain_1 = os.path.join(
-            f"models/{group1}", model_name + f"_pretrain.pth"
+            f"models/{taskset}/{group1}", model_name + f"_pretrain.pth"
         )
         path_pretrain_2 = os.path.join(
-            f"models/{group2}", model_name + f"_pretrain.pth"
+            f"models/{taskset}/{group2}", model_name + f"_pretrain.pth"
         )
         run_model1_pretrain = main.load_model(
             path_pretrain_1,
@@ -391,15 +406,17 @@ def dissimilarity_over_learning(
 
 
 def dissimilarity_within_learning(
-    group, rnn_type, activation, hidden_size, lr, batch_size, device
+    taskset, group, rnn_type, activation, hidden_size, lr, batch_size, device
 ):
     config = load_config("config.yaml")
-    all_rules = config["rules_analysis"]
+    all_rules = config[taskset]["rules_analysis"]
     sampling = [0, 25, 50, 75, 100]
 
     # paths for checkpoints
     model_name = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}"
-    path_train_folder = os.path.join(f"models/{group}", model_name + f"_train")
+    path_train_folder = os.path.join(
+        f"models/{taskset}/{group}", model_name + f"_train"
+    )
 
     # initialize model architectures
     run_model, hp = initialize_model(
@@ -414,7 +431,9 @@ def dissimilarity_within_learning(
 
     # if pretrain in group1 and group2, load checkpoints at os.path.join(f"models/{group}", model_name + f"_pretrain.pth")
     if "pretrain" in group:
-        path_pretrain = os.path.join(f"models/{group}", model_name + f"_pretrain.pth")
+        path_pretrain = os.path.join(
+            f"models/{taskset}/{group}", model_name + f"_pretrain.pth"
+        )
         run_model_pretrain = main.load_model(
             path_pretrain,
             hp,

@@ -11,11 +11,11 @@ from src.toolkit import pipeline
 from src.dsa_optimization import dsa_computation
 
 
-def generate_and_submit_scripts():
+def generate_and_submit_scripts(args: argparse.Namespace):
     script_template = """#!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=24:00:00
-#SBATCH --job-name={group1}_VS_{group2}_job
+#SBATCH --job-name={taskset}_{group1}_VS_{group2}_job
 #SBATCH --gres=gpu:1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=10
@@ -30,15 +30,15 @@ module load python/anaconda3
 source activate dsa
 poetry install
 
-(poetry run python -m src.dissimilarity_pairwise --group1 {group1} --group2 {group2}) &
+(poetry run python -m src.dissimilarity_pairwise --taskset {taskset} --group1 {group1} --group2 {group2}) &
 
 # PID of the application
 APP_PID=$!
 
 # Monitor GPU status every 300 seconds (5 minutes) until the application finishes
 while kill -0 $APP_PID 2>/dev/null; do
-    echo "$(date '+%Y-%m-%d %H:%M:%S') - Checking GPU status during the application run:" >> gpu_usage/{group1}_VS_{group2}_gpu_usage.log
-    nvidia-smi >> gpu_usage/{group1}_VS_{group2}_gpu_usage.log  # Append output to log file
+    echo "$(date '+%Y-%m-%d %H:%M:%S') - Checking GPU status during the application run:" >> gpu_usage/{taskset}_{group1}_VS_{group2}_gpu_usage.log
+    nvidia-smi >> gpu_usage/{taskset}_{group1}_VS_{group2}_gpu_usage.log  # Append output to log file
     sleep 300 
 done
 
@@ -60,9 +60,15 @@ wait $APP_PID
         group_i = groups[i]
         for j in range(i, len(groups)):
             group_j = groups[j]
-            if not os.path.exists(f"results/dissimilarity/{group_i}_{group_j}.csv"):
-                script_content = script_template.format(group1=group_i, group2=group_j)
-                script_filename = f"sbatch/dissimilarity/{group_i}_{group_j}_script.sh"
+            if not os.path.exists(
+                f"results/dissimilarity/{args.taskset}/{group_i}_{group_j}.csv"
+            ):
+                script_content = script_template.format(
+                    taskset=args.taskset, group1=group_i, group2=group_j
+                )
+                script_filename = (
+                    f"sbatch/dissimilarity/{args.taskset}/{group_i}_{group_j}_script.sh"
+                )
 
                 with open(script_filename, "w") as script_file:
                     script_file.write(script_content)
@@ -72,4 +78,12 @@ wait $APP_PID
 
 
 if __name__ == "__main__":
-    generate_and_submit_scripts()
+    parser = argparse.ArgumentParser(description="Train the model")
+    parser.add_argument(
+        "--taskset",
+        type=str,
+        default="PDM",
+        help="The taskset to train the model on",
+    )
+    args = parser.parse_args()
+    generate_and_submit_scripts(args)

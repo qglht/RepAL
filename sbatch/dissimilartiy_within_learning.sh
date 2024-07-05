@@ -13,4 +13,4 @@ module load python/anaconda3
 source activate dsa
 poetry install
 
-poetry run python -m src.dissimilarity_within_learning
+poetry run python -m src.dissimilarity_within_learning --taskset GoNogo
