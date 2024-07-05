@@ -51,6 +51,30 @@ PDM:
       train:
         ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
         frozen: False
+    pretrained_basic_anti_frozen:
+      pretrain:
+        ruleset: [PerceptualDecisionMakingT, AntiPerceptualDecisionMakingT]
+      train:
+        ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+        frozen: True
+    pretrained_basic_anti_unfrozen:
+      pretrain:
+        ruleset: [PerceptualDecisionMakingT, AntiPerceptualDecisionMakingT]
+      train:
+        ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+        frozen: False
+    pretrained_basic_delay_frozen:
+      pretrain:
+        ruleset: [PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT]
+      train:
+        ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+        frozen: True
+    pretrained_basic_delay_unfrozen:
+      pretrain:
+        ruleset: [PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT]
+      train:
+        ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+        frozen: False
     delay: 
       pretrain:
         ruleset: []
@@ -97,6 +121,30 @@ GoNogo:
       train:
         ruleset: [AntiGoNogoDelayResponseT]
         frozen: False
+    pretrained_basic_anti_frozen:
+      pretrain:
+        ruleset: [GoNogoT, AntiGoNogoT]
+      train:
+        ruleset: [AntiGoNogoDelayResponseT]
+        frozen: True
+    pretrained_basic_anti_unfrozen:
+      pretrain:
+        ruleset: [GoNogoT, AntiGoNogoT]
+      train:
+        ruleset: [AntiGoNogoDelayResponseT]
+        frozen: False
+    pretrained_basic_delay_frozen:
+      pretrain:
+        ruleset: [GoNogoT, GoNogoDelayResponseT]
+      train:
+        ruleset: [AntiGoNogoDelayResponseT]
+        frozen: True
+    pretrained_basic_delay_unfrozen:
+      pretrain:
+        ruleset: [GoNogoT, GoNogoDelayResponseT]
+      train:
+        ruleset: [AntiGoNogoDelayResponseT]
+        frozen: False
     delay:
       pretrain:
         ruleset: []
@@ -121,25 +169,6 @@ GoNogo:
       train:
         ruleset: [AntiGoNogoDelayResponseT]
         frozen: True
-  # pretrained_PDM_APDM:
-  #   pretrain:
-  #     ruleset: [PerceptualDecisionMakingT, AntiPerceptualDecisionMakingT]
-  #   train:
-  #     ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
-  #     frozen: True
-  # pretrained_APDM_DPDM:
-  #   pretrain:
-  #     ruleset: [AntiPerceptualDecisionMakingT,PerceptualDecisionMakingDelayResponseT]
-  #   train:
-  #     ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
-  #     frozen: True
-  # pretrained_PDM_DPDM:
-  #   pretrain:
-  #     ruleset: [PerceptualDecisionMakingT,PerceptualDecisionMakingDelayResponseT]
-  #   train:
-  #     ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
-  #     frozen: True
-  
 dsa:
   n_delays: 50
   delay_interval: 4
