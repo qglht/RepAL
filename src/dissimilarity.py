@@ -60,7 +60,7 @@ wait $APP_PID
         for j in range(i, len(groups)):
             group_j = groups[j]
             if not os.path.exists(
-                f"results/dissimilarity/{args.taskset}/{group_i}_{group_j}.csv"
+                f"data/dissimilarities/{args.taskset}/{group_i}_{group_j}.csv"
             ):
                 script_content = script_template.format(
                     taskset=args.taskset, group1=group_i, group2=group_j
