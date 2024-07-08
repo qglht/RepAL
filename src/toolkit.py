@@ -52,9 +52,11 @@ def find_checkpoints(name):
     return checkpoint_files
 
 
-def initialize_model(rnn_type, activation, hidden_size, lr, batch_size, device):
+def initialize_model(
+    taskset, rnn_type, activation, hidden_size, lr, batch_size, device
+):
     config = load_config("config.yaml")
-    all_rules = config["rules_analysis"]
+    all_rules = config[taskset]["rules_analysis"]
     hp = {
         "rnn_type": rnn_type,
         "activation": activation,
@@ -274,10 +276,10 @@ def dissimilarity_over_learning(
 
     # initialize model architectures
     run_model1, hp1 = initialize_model(
-        rnn_type, activation, hidden_size, lr, batch_size, device
+        taskset, rnn_type, activation, hidden_size, lr, batch_size, device
     )
     run_model2, hp2 = initialize_model(
-        rnn_type, activation, hidden_size, lr, batch_size, device
+        taskset, rnn_type, activation, hidden_size, lr, batch_size, device
     )
 
     # get checkpoints in train path
@@ -420,7 +422,7 @@ def dissimilarity_within_learning(
 
     # initialize model architectures
     run_model, hp = initialize_model(
-        rnn_type, activation, hidden_size, lr, batch_size, device
+        taskset, rnn_type, activation, hidden_size, lr, batch_size, device
     )
 
     # get checkpoints in train path
