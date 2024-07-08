@@ -36,7 +36,16 @@ done
 wait $APP_PID
 
 """
-    groups_within_learning = ["pretrain_frozen", "pretrain_unfrozen", "master"]
+    groups_within_learning = [
+        "pretrain_frozen",
+        "pretrain_unfrozen",
+        "master",
+        "pretrained_basic_anti_frozen",
+        "pretrained_basic_anti_unfrozen",
+        "pretrained_basic_delay_frozen",
+        "pretrained_basic_delay_unfrozen",
+        "untrained",
+    ]
 
     for group in groups_within_learning:
         script_content = script_template.format(taskset=args.taskset, group=group)
