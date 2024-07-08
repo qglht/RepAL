@@ -170,8 +170,8 @@ GoNogo:
         ruleset: [AntiGoNogoDelayResponseT]
         frozen: True
 dsa:
-  n_delays: 33
-  delay_interval: 6
+  n_delays: 17
+  delay_interval: 1
   rank: 50
   device: cuda
 simulations:
@@ -185,22 +185,16 @@ simulations:
       }
   perturbations: 
     model1: 
-      epoch1: 0.01
-      epoch2: 0.008
-      epoch3: 0.006
-      epoch4: 0.004
-      epoch5: 0.002
+      epoch1: 0
+      epoch2: 0
+      epoch3: 0
     model2:
-      epoch1: 0.01
-      epoch2: 0.008
-      epoch3: 0.006
-      epoch4: 0.004
-      epoch5: 0.002
+      epoch1: 0
+      epoch2: 0
+      epoch3: 0
     model3: 
-      epoch1: 0.01
-      epoch2: 0.008
-      epoch3: 0.006
-      epoch4: 0.004
-      epoch5: 0.002
+      epoch1: 0
+      epoch2: 0
+      epoch3: 0
   sigma: 1
   order: [0,1,2,3]

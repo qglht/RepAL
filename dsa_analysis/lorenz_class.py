@@ -4,6 +4,7 @@ import ipdb
 from mpl_toolkits.mplot3d import Axes3D
 from scipy.ndimage import gaussian_filter1d, gaussian_filter
 from scipy.interpolate import CubicSpline, Rbf
+from copy import deepcopy
 
 # Set seed for reproducibility
 # np.random.seed(42)
@@ -127,7 +128,7 @@ class Simulation:
         model: str = "model1",
         epoch: str = "epoch1",
     ):
-        perturbed_curve = self.simulation.copy()
+        perturbed_curve = deepcopy(self.simulation)
         noise = np.random.normal(0, 1, size=(self.num_samples, self.num_steps, 3))
         perturbed_curve = (
             np.sqrt(1 - perturbation_scale**2) * perturbed_curve
