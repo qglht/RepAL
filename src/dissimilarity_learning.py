@@ -37,10 +37,16 @@ wait $APP_PID
 
 """
     groups_to_compare_over_learning = [
-        ("pretrain_frozen_same_init", "pretrain_unfrozen"),
         ("pretrain_frozen", "pretrain_unfrozen"),
         ("untrained", "master"),
-        ("pretrain_frozen_same_init", "master"),
+        ("pretrain_frozen", "master"),
+        ("pretrain_unfrozen", "master"),
+        ("pretrained_basic_anti_frozen", "master"),
+        ("pretrained_basic_delay_frozen", "master"),
+        ("pretrained_basic_anti_unfrozen", "pretrained_basic_anti_frozen"),
+        ("pretrained_basic_anti_unfrozen", "master"),
+        ("pretrained_basic_delay_unfrozen", "master"),
+        ("pretrained_basic_delay_unfrozen", "pretrained_basic_delay_frozen"),
     ]
 
     for group in groups_to_compare_over_learning:
