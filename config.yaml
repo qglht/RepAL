@@ -186,15 +186,21 @@ simulations:
   perturbations: 
     model1: 
       epoch1: 0.01
-      epoch2: 0.005
-      epoch3: 0.0025
+      epoch2: 0.008
+      epoch3: 0.006
+      epoch4: 0.004
+      epoch5: 0.002
     model2:
       epoch1: 0.01
-      epoch2: 0.005
-      epoch3: 0.0025
+      epoch2: 0.008
+      epoch3: 0.006
+      epoch4: 0.004
+      epoch5: 0.002
     model3: 
       epoch1: 0.01
-      epoch2: 0.005
-      epoch3: 0.0025 
+      epoch2: 0.008
+      epoch3: 0.006
+      epoch4: 0.004
+      epoch5: 0.002
   sigma: 1
   order: [0,1,2,3]
