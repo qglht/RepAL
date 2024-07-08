@@ -50,6 +50,10 @@ wait $APP_PID
     groups = [
         "pretrain_frozen",
         "pretrain_unfrozen",
+        "pretrained_basic_anti_frozen",
+        "pretrained_basic_anti_unfrozen",
+        "pretrained_basic_delay_frozen",
+        "pretrained_basic_delay_unfrozen",
         "master",
         "untrained",
         "basic",
