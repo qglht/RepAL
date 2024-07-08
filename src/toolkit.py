@@ -103,12 +103,15 @@ def corresponding_training_time(n, p):
     ]
 
 
-def get_curves(model, rules, components):
+def get_curves(taskset, model, rules, components):
     h = main.representation(model, rules)
     h_trans, _ = main.compute_pca(h, n_components=components)
-    tensor_on_cpu = h_trans[
-        ("AntiPerceptualDecisionMakingDelayResponseT", "stimulus")
-    ].cpu()
+    if taskset == "PDM":
+        tensor_on_cpu = h_trans[
+            ("AntiPerceptualDecisionMakingDelayResponseT", "stimulus")
+        ].cpu()
+    else:
+        tensor_on_cpu = h_trans[("AntiGoNogoDelayResponseT", "stimulus")].cpu()
     return tensor_on_cpu.detach().numpy()
 
 
@@ -376,8 +379,8 @@ def dissimilarity_over_learning(
         # compute the curves for models and dissimilarities
         curves = [
             (
-                get_curves(tuple_model[0], all_rules, components=15),
-                get_curves(tuple_model[1], all_rules, components=15),
+                get_curves(taskset, tuple_model[0], all_rules, components=15),
+                get_curves(taskset, tuple_model[1], all_rules, components=15),
             )
             for tuple_model in models_to_compare
         ]
@@ -475,7 +478,7 @@ def dissimilarity_within_learning(
 
             curves = []
             for model in models_to_compare:
-                curves.append(get_curves(model, all_rules, components=15))
+                curves.append(get_curves(taskset, model, all_rules, components=15))
             print(f"grouping accuracies for model {model_name} for group {group}")
 
             groups = []
