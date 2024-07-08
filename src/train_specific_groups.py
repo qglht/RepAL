@@ -45,12 +45,7 @@ done
 
 wait $APP_PID
 """
-    groups = [
-        "pretrained_basic_anti_frozen",
-        "pretrained_basic_anti_unfrozen",
-        "pretrained_basic_delay_frozen",
-        "pretrained_basic_delay_unfrozen",
-    ]
+    groups = ["master"]
     for group in groups:
         script_content = script_template.format(taskset=args.taskset, group=group)
         script_filename = f"sbatch/groups/{args.taskset}_{group}_script.sh"
