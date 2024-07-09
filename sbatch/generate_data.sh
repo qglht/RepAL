@@ -28,3 +28,4 @@ poetry install  # Install additional Python packages as needed
 
 # Run the application and monitor GPU status in parallel
 poetry run python -m src.generate_data --taskset GoNogo
+poetry run python -m src.generate_data --taskset PDM
