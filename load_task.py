@@ -13,7 +13,7 @@ from neurogym.envs.gonogo import GoNogo
 from neurogym.envs.reachingdelayresponse import ReachingDelayResponse
 
 if __name__ == "__main__":
-    env = main.AntiReachingDelayResponseT(
+    env = main.AntiPerceptualDecisionMakingDelayResponseT(
         config={"dt": 20, "mode": "test", "rng": np.random.RandomState(0)}
     )
     fig = ngym.utils.plot_env(env, num_trials=4)

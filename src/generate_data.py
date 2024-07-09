@@ -40,7 +40,7 @@ def generate(args: argparse.Namespace) -> None:
 
     print([task for task in tasks])
     processes = [
-        multiprocessing.Process(target=generate_data, args=(task,)) for task in tasks
+        multiprocessing.Process(target=generate_data, args=task) for task in tasks
     ]
     # Start all processes
     for process in processes:
