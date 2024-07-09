@@ -33,7 +33,7 @@ def generate(args: argparse.Namespace) -> None:
 
     i = 0  # Index to cycle through available devices
 
-    for env in config[args.tasket]["all_rules"]:
+    for env in config[args.taskset]["all_rules"]:
         device = devices[i % len(devices)]  # Cycle through available devices
         tasks.append((args.taskset, env))
         i += 1
@@ -57,7 +57,7 @@ if __name__ == "__main__":
         "--taskset",
         type=str,
         default="PDM",
-        help="The tasket to train the model on",
+        help="The taskset to train the model on",
     )
     args = parser.parse_args()
     generate(args)
