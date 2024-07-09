@@ -13,9 +13,9 @@ from src.train_group import train
 
 def generate_and_submit_scripts(args: argparse.Namespace):
     config = load_config("config.yaml")
-    # groups = config[args.taskset][
-    #     "groups"
-    # ]  # Assuming 'groups' is a key in your YAML file
+    groups = config[args.taskset][
+        "groups"
+    ]  # Assuming 'groups' is a key in your YAML file
 
     script_template = """#!/bin/bash
 #SBATCH --nodes=1
@@ -49,15 +49,15 @@ done
 wait $APP_PID
 """
 
-    groups = [
-        "untrained",
-        "pretrain_unfrozen",
-        "pretrain_frozen",
-        "pretrained_basic_anti_frozen",
-        "pretrained_basic_anti_unfrozen",
-        "pretrained_basic_delay_frozen",
-        "pretrained_basic_delay_unfrozen",
-    ]
+    # groups = [
+    #     "untrained",
+    #     "pretrain_unfrozen",
+    #     "pretrain_frozen",
+    #     "pretrained_basic_anti_frozen",
+    #     "pretrained_basic_anti_unfrozen",
+    #     "pretrained_basic_delay_frozen",
+    #     "pretrained_basic_delay_unfrozen",
+    # ]
     for group in groups:
         script_content = script_template.format(taskset=args.taskset, group=group)
         script_filename = f"sbatch/groups/{args.taskset}_{group}_script.sh"
