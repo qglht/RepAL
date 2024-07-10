@@ -75,7 +75,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
     explained_variances = {group: [] for group in [args.group1, args.group2]}
     curves_names = {group: [] for group in [args.group1, args.group2]}
     for group in curves.keys():
-        for model in os.listdir(f"models/{group}"):
+        for model in os.listdir(f"models/{args.taskset}/{group}"):
             if not model.endswith("_train.pth"):
                 continue
             else:
@@ -89,6 +89,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                     lr,
                     model,
                     group,
+                    args.taskset,
                     devices[0],
                     n_components=15,
                 )
@@ -123,7 +124,8 @@ def dissimilarity(args: argparse.Namespace) -> None:
     # Create the DataFrame from the list of rows
     dissimilarities_df = pd.DataFrame(rows)
     dissimilarities_df.to_csv(
-        f"data/dissimilarities/{args.group1}_{args.group2}.csv", index=False
+        f"data/dissimilarities/{args.taskset}/{args.group1}_{args.group2}.csv",
+        index=False,
     )
 
     return
@@ -131,6 +133,12 @@ def dissimilarity(args: argparse.Namespace) -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train the model")
+    parser.add_argument(
+        "--taskset",
+        type=str,
+        default="PDM",
+        help="taskset to compare dissimilarities on",
+    )
     parser.add_argument(
         "--group1",
         type=str,

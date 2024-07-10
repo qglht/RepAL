@@ -5,6 +5,7 @@ from torch import nn, jit
 import numpy as np
 import ipdb
 
+
 class Model(nn.Module):
     def __init__(self, hp, RNNLayer):
         super().__init__()
@@ -49,12 +50,14 @@ class Run_Model(nn.Module):  # (jit.ScriptModule):
         self.device = device
         self.model.to(self.device)
         self.loss_fnc = (
-            nn.MSELoss() if hp["loss_type"] == "lsq" else nn.CrossEntropyLoss(reduction="none")
+            nn.MSELoss()
+            if hp["loss_type"] == "lsq"
+            else nn.CrossEntropyLoss(reduction="none")
         )
 
-    def calculate_loss(self, output, mask, labels,  hidden, hp):
+    def calculate_loss(self, output, mask, labels, hidden, hp):
         # use mask to calculate loss of crossentropyloss
-        loss = self.loss_fnc(output,labels)
+        loss = self.loss_fnc(output, labels)
         loss = (loss * mask).mean()
         loss_reg = (
             hidden.abs().mean() * hp["l1_h"] + hidden.norm() * hp["l2_h"]
@@ -71,7 +74,7 @@ class Run_Model(nn.Module):  # (jit.ScriptModule):
         hp = self.hp
         output, hidden = self.model(inputs)
         output = output.view(-1, hp["n_output"])
-        loss, loss_reg = self.calculate_loss(output, mask, labels, hidden,hp)
+        loss, loss_reg = self.calculate_loss(output, mask, labels, hidden, hp)
         return (
             loss,
             loss_reg,

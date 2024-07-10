@@ -31,8 +31,8 @@ def train(args: argparse.Namespace) -> None:
     print(f"number of devices : {num_gpus}")
 
     # create a folder for each group in config['groups'] under model folder
-    if not os.path.exists(f"models/{args.group}"):
-        os.makedirs(f"models/{args.group}")
+    if not os.path.exists(f"models/{args.taskset}/{args.group}"):
+        os.makedirs(f"models/{args.taskset}/{args.group}")
 
     for rnn_type in config["rnn"]["parameters"]["rnn_type"]:
         for activation in config["rnn"]["parameters"]["activations"]:
@@ -44,6 +44,7 @@ def train(args: argparse.Namespace) -> None:
                         ]  # Cycle through available devices
                         tasks.append(
                             (
+                                args.taskset,
                                 args.group,
                                 rnn_type,
                                 activation,
@@ -74,6 +75,12 @@ if __name__ == "__main__":
         type=str,
         default="master",
         help="The group to train the model on",
+    )
+    parser.add_argument(
+        "--taskset",
+        type=str,
+        default="PDM",
+        help="The tasket to train the model on",
     )
     args = parser.parse_args()
     train(args)

@@ -7,10 +7,10 @@
 #SBATCH --time=1:00:00
 
 # set name of job
-#SBATCH --job-name=job123
+#SBATCH --job-name=Dissimilarities
 
 # set number of GPUs
-#SBATCH --gres=gpu:1
+#SBATCH --gres=gpu:0
 
 # mail alert at start, end and abortion of execution
 #SBATCH --mail-type=ALL
@@ -27,5 +27,4 @@ source activate dsa  # If necessary, depends on cluster setup
 poetry install  # Install additional Python packages as needed
 
 # Run the application and monitor GPU status in parallel
-poetry run python -m src.generate_data --taskset GoNogo
-poetry run python -m src.generate_data --taskset PDM
+poetry run python -m src.dissimilarity --taskset PDM

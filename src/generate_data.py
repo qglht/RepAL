@@ -1,6 +1,6 @@
 import warnings
 import os
-
+import argparse
 from dsa_analysis import load_config
 import torch
 import multiprocessing
@@ -11,10 +11,11 @@ warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
 warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprecated.*")
 
 # Set environment variable to ignore Gym deprecation warnings
-os.environ['GYM_IGNORE_DEPRECATION_WARNINGS'] = '1'
+os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
-if __name__ == "__main__":
-   
+
+def generate(args: argparse.Namespace) -> None:
+
     multiprocessing.set_start_method(
         "spawn", force=True
     )  # Set multiprocessing to use 'spawn'
@@ -28,18 +29,18 @@ if __name__ == "__main__":
         if num_gpus > 0
         else [torch.device("cpu")]
     )
-    print(f'devices used : {devices}')
+    print(f"devices used : {devices}")
 
     i = 0  # Index to cycle through available devices
 
-    for env in config['all_rules']:
+    for env in config[args.taskset]["all_rules"]:
         device = devices[i % len(devices)]  # Cycle through available devices
-        tasks.append((env))
+        tasks.append((args.taskset, env))
         i += 1
 
     print([task for task in tasks])
     processes = [
-        multiprocessing.Process(target=generate_data, args=(task,)) for task in tasks
+        multiprocessing.Process(target=generate_data, args=task) for task in tasks
     ]
     # Start all processes
     for process in processes:
@@ -48,3 +49,15 @@ if __name__ == "__main__":
     # Wait for all processes to finish
     for process in processes:
         process.join()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Train the model")
+    parser.add_argument(
+        "--taskset",
+        type=str,
+        default="PDM",
+        help="The taskset to train the model on",
+    )
+    args = parser.parse_args()
+    generate(args)

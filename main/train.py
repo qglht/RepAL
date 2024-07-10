@@ -1,6 +1,7 @@
 """ Main training loop.
 Copied from https://github.com/gyyang/multitask. Modified to work with pytorch instead of tensorflow framework. 
 """
+
 from __future__ import division
 
 import os
@@ -26,37 +27,45 @@ warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
 warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprecated.*")
 
 # Set environment variable to ignore Gym deprecation warnings
-os.environ['GYM_IGNORE_DEPRECATION_WARNINGS'] = '1'
+os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
 print_flag = False
 ######## mostly untouched ###############
+
 
 def create_directory_if_not_exists(directory):
     if not os.path.exists(directory):
         os.makedirs(directory)
 
+
 def setup_logging(log_dir):
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
     logging.basicConfig(
-        filename=os.path.join(log_dir, 'training.log'),
-        filemode='w',
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        level=logging.INFO
+        filename=os.path.join(log_dir, "training.log"),
+        filemode="w",
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        level=logging.INFO,
     )
     console = logging.StreamHandler()
     console.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
     console.setFormatter(formatter)
-    logging.getLogger('').addHandler(console)
+    logging.getLogger("").addHandler(console)
     return logging
+
 
 def find_checkpoints(name):
     # Find the latest checkpoint file
     checkpoint_dir = name
-    checkpoint_files = [f for f in os.listdir(checkpoint_dir) if f.startswith('epoch_') and f.endswith('_checkpoint.pth')]
-    checkpoint_files.sort(key=lambda x: int(x.split('_')[1]))
+    checkpoint_files = [
+        f
+        for f in os.listdir(checkpoint_dir)
+        if f.startswith("epoch_") and f.endswith("_checkpoint.pth")
+    ]
+    checkpoint_files.sort(key=lambda x: int(x.split("_")[1]))
     return checkpoint_files
+
 
 def get_default_hp(ruleset: List[str]):
     """Get a default hp.
@@ -66,12 +75,12 @@ def get_default_hp(ruleset: List[str]):
     Returns:
         hp : a dictionary containing training hpuration
     """
-    basic_kwargs = {'dt':20, "mode":"train", "rng":np.random.RandomState(0)}
-    env = main.get_class_instance(ruleset[0],config=basic_kwargs)
+    basic_kwargs = {"dt": 20, "mode": "train", "rng": np.random.RandomState(0)}
+    env = main.get_class_instance(ruleset[0], config=basic_kwargs)
     n_rule = len(ruleset)
     n_input, n_output = env.observation_space.shape[0] + n_rule, env.action_space.n
     hp = {
-        "mode":"train",
+        "mode": "train",
         # batch size for training
         "batch_size_train": 128,
         # batch_size for testing
@@ -137,7 +146,6 @@ def get_default_hp(ruleset: List[str]):
     }
 
     return hp
-
 
 
 def set_hyperparameters(
@@ -211,10 +219,11 @@ def set_hyperparameters(
 
     return hp, log, optimizer  # , model
 
+
 def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False):
 
     # set up log
-    logging = setup_logging(os.path.join(name,"logs"))
+    logging = setup_logging(os.path.join(name, "logs"))
 
     start_epoch = 0
 
@@ -224,11 +233,11 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False):
         if checkpoint_files:
             latest_checkpoint = os.path.join(name, checkpoint_files[-1])
             checkpoint = torch.load(latest_checkpoint, map_location=run_model.device)
-            run_model.load_state_dict(checkpoint['model_state_dict'])
-            start_epoch = checkpoint['epoch'] + 1
-            log = checkpoint['log']
+            run_model.load_state_dict(checkpoint["model_state_dict"])
+            start_epoch = checkpoint["epoch"] + 1
+            log = checkpoint["log"]
             print(f"Resuming training from epoch {start_epoch}")
-    
+
     # freeze input weights or not
     if freeze:
         optim = optimizer(
@@ -240,14 +249,17 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False):
     # if model loaded, load optim state dict
     if not retrain:
         if checkpoint_files:
-            optim.load_state_dict(checkpoint['optimizer_state_dict'])
-        
+            optim.load_state_dict(checkpoint["optimizer_state_dict"])
 
-    
     # Create a GradScaler for mixed precision training
     scaler = GradScaler()
 
-    dataloaders = {rule: main.get_dataloader(env=rule, batch_size=hp["batch_size_train"], num_workers=16, shuffle=True) for rule in hp["rule_trains"]}
+    dataloaders = {
+        rule: main.get_dataloader(
+            env=rule, batch_size=hp["batch_size_train"], num_workers=16, shuffle=True
+        )
+        for rule in hp["rule_trains"]
+    }
 
     t_start = time.time()
 
@@ -261,8 +273,18 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False):
         for rule in hp["rule_trains"]:
             for inputs, labels, mask in dataloaders[rule]["train"]:
                 time_input = time.time()
-                times_between_inputs.append(time.time()- current_time)
-                inputs, labels, mask = inputs.permute(1, 0, 2).to(run_model.device, non_blocking=True), labels.permute(1, 0).to(run_model.device, non_blocking=True).flatten().long(), mask.permute(1, 0).to(run_model.device, non_blocking=True).flatten().long()
+                times_between_inputs.append(time.time() - current_time)
+                inputs, labels, mask = (
+                    inputs.permute(1, 0, 2).to(run_model.device, non_blocking=True),
+                    labels.permute(1, 0)
+                    .to(run_model.device, non_blocking=True)
+                    .flatten()
+                    .long(),
+                    mask.permute(1, 0)
+                    .to(run_model.device, non_blocking=True)
+                    .flatten()
+                    .long(),
+                )
                 optim.zero_grad(set_to_none=True)
 
                 # autocast for mixed precision training
@@ -275,7 +297,9 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False):
                 scaler.step(optim)
                 scaler.update()
                 epoch_loss += loss.item()
-                times_per_inputs.append(time.time()-time_input) # time to process one input
+                times_per_inputs.append(
+                    time.time() - time_input
+                )  # time to process one input
                 current_time = time.time()
 
         # doing evaluation
@@ -284,38 +308,44 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False):
         # timing do_eval
         t_start_eval = time.time()
         log, logging = do_eval(run_model, log, logging, hp["rule_trains"], dataloaders)
-        t_end_eval = time.time() - t_start_eval 
+        t_end_eval = time.time() - t_start_eval
         t_end_epoch = time.time() - t_start_epoch
         if log["perf_min"][-1] > hp["target_perf"]:
             break
-        
+
         rule_train = hp["rule_trains"]
         if isinstance(rule_train, str):
             rule_name_print = rule_train
         else:
             rule_name_print = " & ".join(rule_train)
 
-        logging.info(f"Time per input {np.median(times_per_inputs):0.6f} s | Time between inputs {np.median(times_between_inputs):0.6f} s | Time for evaluation {t_end_eval:0.2f} s")
-        logging.info(f"Training {rule_name_print} Epoch {epoch:7d} | Loss {epoch_loss:0.6f} | Perf {log['perf_avg'][-1]:0.2f} | Min {log['perf_min'][-1]:0.2f} | Time {t_end_epoch:0.2f} s")
+        logging.info(
+            f"Time per input {np.median(times_per_inputs):0.6f} s | Time between inputs {np.median(times_between_inputs):0.6f} s | Time for evaluation {t_end_eval:0.2f} s"
+        )
+        logging.info(
+            f"Training {rule_name_print} Epoch {epoch:7d} | Loss {epoch_loss:0.6f} | Perf {log['perf_avg'][-1]:0.2f} | Min {log['perf_min'][-1]:0.2f} | Time {t_end_epoch:0.2f} s"
+        )
 
-        
         start_save_time = time.time()
         # saving model checkpoint
         checkpoint_dir = name
         create_directory_if_not_exists(checkpoint_dir)
-        checkpoint_path = os.path.join(checkpoint_dir, f'epoch_{epoch}_checkpoint.pth')
-        torch.save({
-            'epoch': epoch,
-            'model_state_dict': run_model.state_dict(),
-            'optimizer_state_dict': optim.state_dict(),
-            'loss': epoch_loss,
-            'log': log
-        }, checkpoint_path)
+        checkpoint_path = os.path.join(checkpoint_dir, f"epoch_{epoch}_checkpoint.pth")
+        torch.save(
+            {
+                "epoch": epoch,
+                "model_state_dict": run_model.state_dict(),
+                "optimizer_state_dict": optim.state_dict(),
+                "loss": epoch_loss,
+                "log": log,
+            },
+            checkpoint_path,
+        )
         end_save_time = time.time() - start_save_time
         logging.info(f"Time saving model :  {end_save_time:0.2f}s")
 
-
     logging.info("Optimization finished!")
+
 
 def do_eval(run_model, log, logging, rule_train, dataloaders):
     hp = run_model.hp
@@ -336,7 +366,7 @@ def do_eval(run_model, log, logging, rule_train, dataloaders):
                 inputs, labels, mask = (
                     inputs.permute(1, 0, 2).to(device, non_blocking=True),
                     labels.permute(1, 0).to(device, non_blocking=True).flatten().long(),
-                    mask.permute(1, 0).to(device, non_blocking=True).flatten().long()
+                    mask.permute(1, 0).to(device, non_blocking=True).flatten().long(),
                 )
             # Record data loading time
             data_loading_time = time.time() - data_start_time
@@ -365,7 +395,9 @@ def do_eval(run_model, log, logging, rule_train, dataloaders):
         log["creg_" + rule_test].append(creg_mean.item())
         log["perf_" + rule_test].append(perf_mean.item())
 
-        logging.info(f"{rule_test:15s}| cost {clsq_mean.item():0.6f}| c_reg {creg_mean.item():0.6f} | perf {perf_mean.item():0.2f}")
+        logging.info(
+            f"{rule_test:15s}| cost {clsq_mean.item():0.6f}| c_reg {creg_mean.item():0.6f} | perf {perf_mean.item():0.2f}"
+        )
         sys.stdout.flush()
 
     perf_tests_mean = torch.mean(
@@ -396,9 +428,12 @@ def do_eval(run_model, log, logging, rule_train, dataloaders):
     median_data_loading_time = np.median(data_loading_times)
     median_computation_time = np.median(computation_times)
 
-    logging.info(f"Median data loading time: {median_data_loading_time:.2f}s, Median computation time: {median_computation_time:.2f}s")
+    logging.info(
+        f"Median data loading time: {median_data_loading_time:.2f}s, Median computation time: {median_computation_time:.2f}s"
+    )
 
     return log, logging
+
 
 def accuracy(logits, true_class_indices, mask):
     # Reshape logits to shape [(batch * images), classes]
@@ -424,10 +459,13 @@ def accuracy(logits, true_class_indices, mask):
 
     # Calculate weighted accuracy
     total_weight = mask_flat.sum().item()
-    weighted_accuracy = weighted_correct_predictions.sum().item() / total_weight if total_weight > 0 else 0.0
+    weighted_accuracy = (
+        weighted_correct_predictions.sum().item() / total_weight
+        if total_weight > 0
+        else 0.0
+    )
 
     return weighted_accuracy
-
 
 
 def get_perf(outputs, true_labels, mask):
