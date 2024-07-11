@@ -25,6 +25,8 @@ import copy
 from collections import OrderedDict
 import torch
 from torch import nn, jit
+from mambapy.mamba_lm import MambaLM, MambaLMConfig
+from mambapy.mamba import Mamba, MambaConfig, RMSNorm
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
@@ -210,6 +212,66 @@ def pipeline(taskset, group, rnn_type, activation, hidden_size, lr, batch_size, 
             )
             run_model = main.Run_Model(hp, RNNLayer, device)
             run_model.save(path_train_model)
+    return
+
+
+def pipeline_mamba(
+    taskset,
+    group,
+    d_model,
+    n_layers,
+    vocab_size,
+    pad_vocab_size_multiple,
+    pscan,
+    learning_rate,
+    batch_size,
+    device,
+):
+
+    config = load_config("config.yaml")
+    rules_pretrain = config[taskset]["groups"][group]["pretrain"]["ruleset"]
+    rules_train = config[taskset]["groups"][group]["train"]["ruleset"]
+    freeze = config[taskset]["groups"][group]["train"]["frozen"]
+    all_rules = config[taskset]["all_rules"]
+    hp = {
+        "num_epochs": 50,
+        "batch_size_train": batch_size,
+        "learning_rate": learning_rate,
+    }
+    model_name = f"mamba_{d_model}_{n_layers}_{learning_rate}_{batch_size}"
+    path_pretrain_folder = os.path.join(
+        f"models/{taskset}/{group}", model_name + f"_pretrain"
+    )
+    path_pretrain_model = os.path.join(
+        f"models/{taskset}/{group}", model_name + f"_pretrain.pth"
+    )
+    path_train_folder = os.path.join(
+        f"models/{taskset}/{group}", model_name + f"_train"
+    )
+    path_train_model = os.path.join(
+        f"models/{taskset}/{group}", model_name + f"_train.pth"
+    )
+
+    # Pretraining
+    print(f"Pretraining model {model_name} for group {group} and taskset {taskset}")
+    if not os.path.exists(path_pretrain_model):
+        if rules_pretrain:
+            hp, log, optimizer = main.set_hyperparameters(
+                model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=rules_pretrain
+            )
+            config = MambaLMConfig(
+                d_model=d_model,
+                n_layers=n_layers,
+                vocab_size=hp["n_input"],
+                pad_vocab_size_multiple=pad_vocab_size_multiple,  # https://github.com/alxndrTL/mamba.py/blob/main/mamba_lm.py#L27
+                pscan=pscan,
+            )
+            run_model = main.MambaSupervGym(hp["n_output"], hp["n_input"], config).to(
+                device
+            )
+            main.train(run_model, optimizer, hp, log, path_pretrain_folder)
+            run_model.save(path_pretrain_model)
+
     return
 
 
