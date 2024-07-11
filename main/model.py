@@ -5,6 +5,7 @@ from torch import nn, jit
 import numpy as np
 from mambapy.mamba_lm import MambaLM, MambaLMConfig
 from mambapy.mamba import Mamba, MambaConfig, RMSNorm
+import ipdb
 
 
 class Model(nn.Module):
@@ -90,45 +91,60 @@ class Run_Model(nn.Module):  # (jit.ScriptModule):
 
 
 class MambaSupervGym(MambaLM):
-    def __init__(self, num_actions, num_obs, lm_config):
+    def __init__(self, num_actions, num_obs, lm_config, device):
         super().__init__(lm_config)
         self.lm_config = lm_config
+        self.device = device
         self.config = lm_config.to_mamba_config()
 
-        # self.embedding = nn.Embedding(num_obs, self.config.d_model)
-        self.embedding = nn.Linear(num_obs, self.config.d_model, bias=True)
-        self.mamba = Mamba(self.config)
-        self.norm_f = RMSNorm(self.config.d_model)
+        # Initialize layers
+        self.embedding = nn.Linear(num_obs, self.config.d_model, bias=True).to(
+            self.device
+        )
+        self.mamba = Mamba(self.config).to(self.device)
+        self.norm_f = RMSNorm(self.config.d_model).to(self.device)
+        self.lm_head = nn.Linear(self.config.d_model, num_actions, bias=False).to(
+            self.device
+        )
+        self.loss_fnc = nn.CrossEntropyLoss(reduction="none").to(self.device)
 
-        self.lm_head = nn.Linear(self.config.d_model, num_actions, bias=False)
-        # self.lm_head.weight = self.embedding.weight
+    def calculate_loss(self, output, mask, labels):
+        # Use mask to calculate loss of crossentropyloss
+        loss = self.loss_fnc(output, labels)
+        loss = (loss * mask).mean()
+        loss_reg = loss
+        return loss, loss_reg
 
-    def forward(self, tokens):
+    def forward(self, tokens, labels, mask):
         # tokens : (B, L)
-
         # logits : (B, L, vocab_size)
 
         x = self.embedding(tokens)
-
-        x = self.mamba(x)
+        ipdb.set_trace()
+        x, caches = self.mamba.step(
+            x, [(None, torch.zeros((1, 32, 16)).to(self.device))]
+        )
         x = self.norm_f(x)
-
         logits = self.lm_head(x)
+        loss, loss_reg = self.calculate_loss(logits, mask, labels)
 
-        return logits
+        return (
+            loss,
+            loss_reg,
+            logits,
+            caches,
+            labels,
+        )
 
     def step(self, token, caches):
         # token : (B)
         # caches : [cache(layer) for all layers], cache : (h, inputs)
-
         # logits : (B, vocab_size)
         # caches : [cache(layer) for all layers], cache : (h, inputs)
 
         x = self.embedding(token)
-
         x, caches = self.mamba.step(x, caches)
         x = self.norm_f(x)
-
         logits = self.lm_head(x)
 
         return logits, caches

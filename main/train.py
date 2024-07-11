@@ -220,7 +220,7 @@ def set_hyperparameters(
     return hp, log, optimizer  # , model
 
 
-def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False):
+def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=False):
 
     # set up log
     logging = setup_logging(os.path.join(name, "logs"))
@@ -228,6 +228,7 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False):
     start_epoch = 0
 
     # load checkpoint if there is any
+    # TODO : adapt it to Mamba : How to save the model with the checkpoints?
     if not retrain:
         checkpoint_files = find_checkpoints(name)
         if checkpoint_files:
@@ -239,13 +240,17 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False):
             print(f"Resuming training from epoch {start_epoch}")
 
     # freeze input weights or not
-    if freeze:
-        optim = optimizer(
-            [run_model.model.rnn.rnncell.weight_ih], lr=hp["learning_rate"]
-        )
+    # TODO : adapt it to Mamba
+    if rnn:
+        if freeze:
+            optim = optimizer(
+                [run_model.model.rnn.rnncell.weight_ih], lr=hp["learning_rate"]
+            )
+        else:
+            optim = optimizer(run_model.model.parameters(), lr=hp["learning_rate"])
     else:
-        optim = optimizer(run_model.model.parameters(), lr=hp["learning_rate"])
-
+        optim = optimizer(run_model.parameters(), lr=hp["learning_rate"])
+        
     # if model loaded, load optim state dict
     if not retrain:
         if checkpoint_files:

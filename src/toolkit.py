@@ -220,7 +220,6 @@ def pipeline_mamba(
     group,
     d_model,
     n_layers,
-    vocab_size,
     pad_vocab_size_multiple,
     pscan,
     learning_rate,
@@ -266,8 +265,8 @@ def pipeline_mamba(
                 pad_vocab_size_multiple=pad_vocab_size_multiple,  # https://github.com/alxndrTL/mamba.py/blob/main/mamba_lm.py#L27
                 pscan=pscan,
             )
-            run_model = main.MambaSupervGym(hp["n_output"], hp["n_input"], config).to(
-                device
+            run_model = main.MambaSupervGym(
+                hp["n_output"], hp["n_input"], config, device=device
             )
             main.train(run_model, optimizer, hp, log, path_pretrain_folder)
             run_model.save(path_pretrain_model)
