@@ -59,7 +59,7 @@ wait $APP_PID
     #     "pretrained_basic_delay_unfrozen",
     # ]
     for group in groups:
-        if group != "master":
+        if group not in ["master", "pretrained_basic_anti_unfrozen", "pretrain_frozen"]:
             script_content = script_template.format(taskset=args.taskset, group=group)
             script_filename = f"sbatch/groups/{args.taskset}_{group}_script.sh"
 
