@@ -116,6 +116,16 @@ class MambaSupervGym(MambaLM):
         return loss, loss_reg
 
     def forward(self, tokens, labels, mask):
+        """Function for all time steps directly
+
+        Args:
+            tokens (_type_): _description_
+            labels (_type_): _description_
+            mask (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
         # tokens : (B, L)
         # logits : (B, L, vocab_size)
 
@@ -137,6 +147,15 @@ class MambaSupervGym(MambaLM):
         )
 
     def step(self, token, caches):
+        """Function for one time step at a time
+
+        Args:
+            token (_type_): _description_
+            caches (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
         # token : (B)
         # caches : [cache(layer) for all layers], cache : (h, inputs)
         # logits : (B, vocab_size)
