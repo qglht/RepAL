@@ -51,10 +51,13 @@ wait $APP_PID
             "master",
             "delay",
             "anti",
+            "basic",
             "pretrain_frozen",
             "pretrain_unfrozen",
             "pretrained_basic_anti_unfrozen",
             "pretrained_basic_anti_frozen",
+            "petrain_frozen_same_init",
+            "untrained",
         ]:
             script_content = script_template.format(taskset=args.taskset, group=group)
             script_filename = f"sbatch/groups/{args.taskset}_{group}_script.sh"
