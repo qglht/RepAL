@@ -91,27 +91,32 @@ class Run_Model(nn.Module):  # (jit.ScriptModule):
 
 
 class MambaSupervGym(MambaLM):
-    def __init__(self, num_actions, num_obs, lm_config, device):
+    def __init__(self, hp, lm_config, device):
         super().__init__(lm_config)
         self.lm_config = lm_config
         self.device = device
         self.config = lm_config.to_mamba_config()
+        self.hp = hp
 
         # Initialize layers
-        self.embedding = nn.Linear(num_obs, self.config.d_model, bias=True).to(
-            self.device
-        )
+        self.embedding = nn.Linear(
+            self.hp["n_input"], self.config.d_model, bias=True
+        ).to(self.device)
         self.mamba = Mamba(self.config).to(self.device)
         self.norm_f = RMSNorm(self.config.d_model).to(self.device)
-        self.lm_head = nn.Linear(self.config.d_model, num_actions, bias=False).to(
-            self.device
-        )
+        self.lm_head = nn.Linear(
+            self.config.d_model, self.hp["n_output"], bias=False
+        ).to(self.device)
         self.loss_fnc = nn.CrossEntropyLoss(reduction="none").to(self.device)
 
     def calculate_loss(self, output, mask, labels):
         # Use mask to calculate loss of crossentropyloss
+        # ipdb.set_trace()
+        # predicted_classes = torch.argmax(output, dim=1)
         loss = self.loss_fnc(output, labels)
-        loss = (loss * mask).mean()
+        mask = (mask > 1).float()
+        loss = loss * mask
+        loss = (loss * mask).sum() / mask.sum()
         loss_reg = loss
         return loss, loss_reg
 
@@ -128,26 +133,25 @@ class MambaSupervGym(MambaLM):
         """
         # tokens : (B, L)
         # logits : (B, L, vocab_size)
-
         x = self.embedding(tokens)
-        ipdb.set_trace()
-        x, caches = self.mamba.step(
-            x, [(None, torch.zeros((1, 32, 16)).to(self.device))]
-        )
+
+        x = self.mamba(x)
         x = self.norm_f(x)
+
         logits = self.lm_head(x)
+        logits = logits.view(-1, self.hp["n_output"])
         loss, loss_reg = self.calculate_loss(logits, mask, labels)
 
         return (
             loss,
             loss_reg,
             logits,
-            caches,
+            None,
             labels,
         )
 
     def step(self, token, caches):
-        """Function for one time step at a time
+        """Function for one time step at a time: to do it for all time steps, loop for first dimension
 
         Args:
             token (_type_): _description_
@@ -167,6 +171,10 @@ class MambaSupervGym(MambaLM):
         logits = self.lm_head(x)
 
         return logits, caches
+
+    def save(self, path):
+        # Check if model is wrapped by DataParallel and save accordingly
+        torch.save(self.state_dict(), path)
 
 
 def load_model(path, hp, RNNLayer, device):

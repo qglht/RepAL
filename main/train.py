@@ -21,6 +21,7 @@ import time
 import numpy as np
 import main
 import logging
+import ipdb
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
@@ -249,8 +250,12 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=
         else:
             optim = optimizer(run_model.model.parameters(), lr=hp["learning_rate"])
     else:
-        optim = optimizer(run_model.parameters(), lr=hp["learning_rate"])
-        
+        if freeze:
+            optim = optimizer(run_model.parameters(), lr=hp["learning_rate"])
+        else:
+            # only unfreeze embedding layer
+            optim = optimizer(run_model.embedding.parameters(), lr=hp["learning_rate"])
+
     # if model loaded, load optim state dict
     if not retrain:
         if checkpoint_files:
@@ -261,13 +266,12 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=
 
     dataloaders = {
         rule: main.get_dataloader(
-            env=rule, batch_size=hp["batch_size_train"], num_workers=16, shuffle=True
+            env=rule, batch_size=hp["batch_size_train"], num_workers=0, shuffle=True
         )
         for rule in hp["rule_trains"]
     }
 
     t_start = time.time()
-
     for epoch in range(start_epoch, hp["num_epochs"]):
         print(f"Epoch {epoch} started")
         epoch_loss = 0.0
@@ -295,7 +299,7 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=
                 # autocast for mixed precision training
                 with autocast():
                     c_lsq, c_reg, _, _, _ = run_model(inputs, labels, mask)
-                    loss = c_lsq + c_reg
+                    loss = c_lsq + c_reg if rnn else c_lsq
 
                 # scale the loss and call backward() to create scaled gradients
                 scaler.scale(loss).backward()
