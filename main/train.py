@@ -299,7 +299,7 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=
                 # autocast for mixed precision training
                 with autocast():
                     c_lsq, c_reg, _, _, _ = run_model(inputs, labels, mask)
-                    loss = c_lsq + c_reg if rnn else c_lsq
+                    loss = c_lsq + c_reg
 
                 # scale the loss and call backward() to create scaled gradients
                 scaler.scale(loss).backward()

@@ -114,10 +114,14 @@ class MambaSupervGym(MambaLM):
         # ipdb.set_trace()
         # predicted_classes = torch.argmax(output, dim=1)
         loss = self.loss_fnc(output, labels)
-        mask = (mask > 1).float()
-        loss = loss * mask
+        # mask = (mask > 1).float()
         loss = (loss * mask).sum() / mask.sum()
-        loss_reg = loss
+        loss_reg = 0
+        for param in self.parameters():
+            loss_reg += (
+                param.abs().mean() * self.hp["l1_weight"]
+                + param.norm() * self.hp["l2_weight"]
+            )  #    Regularization cost  (L1 and L2 cost) on weights
         return loss, loss_reg
 
     def forward(self, tokens, labels, mask):
