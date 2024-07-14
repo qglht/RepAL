@@ -42,8 +42,6 @@ wait $APP_PID
         "master",
         "pretrained_basic_anti_frozen",
         "pretrained_basic_anti_unfrozen",
-        "pretrained_basic_delay_frozen",
-        "pretrained_basic_delay_unfrozen",
         "untrained",
     ]
 

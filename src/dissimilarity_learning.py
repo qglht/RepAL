@@ -42,11 +42,8 @@ wait $APP_PID
         ("pretrain_frozen", "master"),
         ("pretrain_unfrozen", "master"),
         ("pretrained_basic_anti_frozen", "master"),
-        ("pretrained_basic_delay_frozen", "master"),
         ("pretrained_basic_anti_unfrozen", "pretrained_basic_anti_frozen"),
         ("pretrained_basic_anti_unfrozen", "master"),
-        ("pretrained_basic_delay_unfrozen", "master"),
-        ("pretrained_basic_delay_unfrozen", "pretrained_basic_delay_frozen"),
     ]
 
     for group in groups_to_compare_over_learning:
