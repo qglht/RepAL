@@ -4,7 +4,7 @@ from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 import ipdb
 import torch
-from torch import linalg as LA
+from torch import Value, linalg as LA
 from torch.cuda.amp import autocast
 from main import get_dataloader, get_class_instance
 

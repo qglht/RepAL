@@ -82,6 +82,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                 model_type, activation, hidden_size, lr, batch_size = parse_model_info(
                     model
                 )
+                print(f"Computing dynamics for {model} and group {group}")
                 curve, explained_variance = get_dynamics_model(
                     model_type,
                     activation,
