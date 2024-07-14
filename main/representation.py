@@ -96,6 +96,7 @@ def representation(model, rules):
 
 def compute_pca(h, n_components=3):
     h = {k: v for k, v in h.items() if k[1] == "stimulus"}
+    print(f"values h : {h.values()}")
     data = torch.cat(list(h.values()), dim=0)
     data_2d = data.reshape(-1, data.shape[-1])
 
