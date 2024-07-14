@@ -96,6 +96,8 @@ def dissimilarity(args: argparse.Namespace) -> None:
                 curves[group].append(curve)
                 explained_variances[group].append(explained_variance)
                 curves_names[group].append(model.replace(".pth", ""))
+
+    print(f"Dynamics computed")
     dissimilarities = measure_dissimilarities(
         curves[args.group1],
         curves[args.group2],
@@ -103,6 +105,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
         curves_names[args.group2],
         devices[0],
     )
+    print(f"Dissimilarities computed")
     rows = []
 
     for i, model1 in enumerate(curves_names[args.group1]):
