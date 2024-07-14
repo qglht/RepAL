@@ -99,16 +99,19 @@ def compute_pca(h, n_components=3):
     data = torch.cat(list(h.values()), dim=0)
     data_2d = data.reshape(-1, data.shape[-1])
 
+    # Remove rows with NaN values
+    data_2d_clean = data_2d[~torch.isnan(data_2d).any(dim=1)]
+
     # Using PCA directly for dimensionality reduction:
     pca = PCA(n_components=n_components)
-    data_trans_2d = torch.tensor(pca.fit_transform(data_2d.cpu().numpy())).to(
+    data_trans_2d = torch.tensor(pca.fit_transform(data_2d_clean.cpu().numpy())).to(
         data_2d.device
     )  # Convert back to PyTorch tensor
 
     # Compute explained variance ratio using PCA
     explained_variance_ratio = pca.explained_variance_ratio_.sum()
 
-    data_trans = data_trans_2d.reshape(data.shape[0], data.shape[1], n_components)
+    data_trans = data_trans_2d.reshape(data_2d_clean.shape[0], -1, n_components)
 
     # Package back to dictionary
     h_trans = OrderedDict()
