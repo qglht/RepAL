@@ -115,7 +115,8 @@ class MambaSupervGym(MambaLM):
         # predicted_classes = torch.argmax(output, dim=1)
         loss = self.loss_fnc(output, labels)
         # mask = (mask > 1).float()
-        loss = (loss * mask).sum() / mask.sum()
+        # loss = (loss * mask).sum() / mask.sum()
+        loss = (loss * mask).mean()
         loss_reg = 0
         for param in self.parameters():
             loss_reg += (
