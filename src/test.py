@@ -17,13 +17,13 @@ os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
 if __name__ == "__main__":
     pipeline(
-        "PDM",
-        "pretrained_basic_anti_unfrozen",
-        "leaky_rnn",
-        "leaky_relu",
+        "GoNogo",
+        "pretrain_unfrozen",
+        "leaky_gru",
+        "softplus",
         128,
-        0.0001,
-        128,
+        0.001,
+        256,
         "cpu",
     )
     # dissimilarity_within_learning(
