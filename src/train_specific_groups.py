@@ -46,6 +46,7 @@ done
 
 wait $APP_PID
 """
+    groups = ["pretrain_unfrozen"]
     for group in groups:
         script_content = script_template.format(taskset=args.taskset, group=group)
         script_filename = f"sbatch/groups/{args.taskset}_{group}_script.sh"

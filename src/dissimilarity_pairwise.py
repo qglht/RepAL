@@ -111,6 +111,8 @@ def dissimilarity(args: argparse.Namespace) -> None:
 
     for i, model1 in enumerate(curves_names[args.group1]):
         # Collect the row data in a dictionary
+        print(model1)
+        print(i)
         row = {
             "model1": model1,
             "model2": model1,
