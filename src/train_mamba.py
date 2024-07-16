@@ -11,11 +11,9 @@ def generate_and_submit_scripts(args: argparse.Namespace):
 
     script_template = """#!/bin/bash
 #SBATCH --nodes=1
-#SBATCH --time=24:00:00
+#SBATCH --time=1:00:00
 #SBATCH --job-name={taskset}_{group}_job
 #SBATCH --gres=gpu:1
-#SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=64
 #SBATCH --partition=small
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=oxfd2547@ox.ac.uk
