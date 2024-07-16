@@ -1,10 +1,11 @@
 import warnings
 import os
 import argparse
-from dsa_analysis import load_config
 import torch
+from dsa_analysis import load_config
+from src.toolkit import dissimilarity_within_learning
+import numpy as np
 import multiprocessing
-from src.toolkit import pipeline
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
@@ -14,7 +15,37 @@ warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprec
 os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
 
-def train(args: argparse.Namespace) -> None:
+def dissimilarity_task(
+    taskset, group, rnn_type, activation, hidden_size, lr, batch_size, device
+):
+
+    # Reinitialize the model and modules to avoid conflicts
+    dissimilarities_model = dissimilarity_within_learning(
+        taskset,
+        group,
+        rnn_type,
+        activation,
+        hidden_size,
+        lr,
+        batch_size,
+        device,
+    )
+
+    base_dir = f"data/dissimilarities_within_learning/{taskset}"
+    measures = ["cka", "procrustes", "dsa", "accuracy"]
+
+    for measure in measures:
+        dir_path = os.path.join(base_dir, f"{group}", measure)
+        os.makedirs(dir_path, exist_ok=True)  # Create directory if it does not exist
+
+        npz_filename = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}.npz"  # Construct filename
+        npz_filepath = os.path.join(dir_path, npz_filename)
+
+        np.savez_compressed(npz_filepath, dissimilarities_model[measure])
+    return dissimilarities_model
+
+
+def dissimilarity(args: argparse.Namespace) -> None:
     multiprocessing.set_start_method("spawn", force=True)
     config = load_config("config.yaml")
 
@@ -30,9 +61,13 @@ def train(args: argparse.Namespace) -> None:
     print(f"devices used : {devices}")
     print(f"number of devices : {num_gpus}")
 
-    # create a folder for each group in config['groups'] under model folder
-    if not os.path.exists(f"models/{args.taskset}/{args.group}"):
-        os.makedirs(f"models/{args.taskset}/{args.group}")
+    if not os.path.exists(
+        f"data/dissimilarities_within_learning/{args.taskset}/{args.group}"
+    ):
+        os.makedirs(
+            f"data/dissimilarities_within_learning/{args.taskset}/{args.group}",
+            exist_ok=True,
+        )
 
     for rnn_type in config["rnn"]["parameters"]["rnn_type"]:
         for activation in config["rnn"]["parameters"]["activations"]:
@@ -57,7 +92,9 @@ def train(args: argparse.Namespace) -> None:
                         i += 1
 
     # Create a process for each task
-    processes = [multiprocessing.Process(target=pipeline, args=task) for task in tasks]
+    processes = [
+        multiprocessing.Process(target=dissimilarity_task, args=task) for task in tasks
+    ]
 
     # Start all processes
     for process in processes:
@@ -71,16 +108,17 @@ def train(args: argparse.Namespace) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train the model")
     parser.add_argument(
-        "--group",
-        type=str,
-        default="master",
-        help="The group to train the model on",
-    )
-    parser.add_argument(
         "--taskset",
         type=str,
         default="PDM",
-        help="The tasket to train the model on",
+        help="taskset to compare on",
+    )
+    parser.add_argument(
+        "--group",
+        type=str,
+        default="pretrain_frozen",
+        help="group to compare 1",
     )
     args = parser.parse_args()
-    train(args)
+
+    dissimilarity(args)
