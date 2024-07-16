@@ -246,7 +246,7 @@ def pipeline_mamba(
     batch_size,
     device,
 ):
-
+    ipdb.set_trace()
     with load_config("config.yaml") as config:
         rules_pretrain = config[taskset]["groups"][group]["pretrain"]["ruleset"]
         rules_train = config[taskset]["groups"][group]["train"]["ruleset"]

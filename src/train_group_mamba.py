@@ -47,12 +47,12 @@ def train(args: argparse.Namespace) -> None:
                         (
                             args.taskset,
                             args.group,
-                            d_model,
-                            n_layers,
+                            int(d_model),
+                            int(n_layers),
                             1,
                             True,
-                            learning_rate,
-                            batch_size,
+                            float(learning_rate),
+                            int(batch_size),
                             device,
                         )
                     )
