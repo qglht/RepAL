@@ -4,6 +4,7 @@ import argparse
 from dsa_analysis import load_config
 import torch
 import multiprocessing
+from multiprocessing import Semaphore
 from src.toolkit import pipeline_mamba
 
 # Suppress specific Gym warnings
@@ -14,13 +15,17 @@ warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprec
 os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
 
+def worker(semaphore, task):
+    with semaphore:
+        pipeline_mamba(*task)
+
+
 def train(args: argparse.Namespace) -> None:
     multiprocessing.set_start_method("spawn", force=True)
     config = load_config("config.yaml")
 
-    # Create a list of all tasks to run
     tasks = []
-    num_gpus = torch.cuda.device_count()  # Get the number of GPUs available
+    num_gpus = torch.cuda.device_count()
     devices = (
         [torch.device(f"cuda:{i}") for i in range(num_gpus)]
         if num_gpus > 0
@@ -30,7 +35,6 @@ def train(args: argparse.Namespace) -> None:
     print(f"devices used : {devices}")
     print(f"number of devices : {num_gpus}")
 
-    # create a folder for each group in config['groups'] under model folder
     if not os.path.exists(f"models/mamba/{args.taskset}/{args.group}"):
         os.makedirs(f"models/mamba/{args.taskset}/{args.group}")
 
@@ -38,17 +42,15 @@ def train(args: argparse.Namespace) -> None:
         for n_layers in config["mamba"]["parameters"]["n_layers"]:
             for learning_rate in config["mamba"]["parameters"]["learning_rate"]:
                 for batch_size in config["mamba"]["parameters"]["batch_size_train"]:
-                    device = devices[
-                        i % len(devices)
-                    ]  # Cycle through available devices
+                    device = devices[i % len(devices)]
                     tasks.append(
                         (
                             args.taskset,
                             args.group,
                             d_model,
                             n_layers,
-                            1,  # pad_vocab_size_multiple
-                            True,  # pscan
+                            1,
+                            True,
                             learning_rate,
                             batch_size,
                             device,
@@ -56,16 +58,15 @@ def train(args: argparse.Namespace) -> None:
                     )
                     i += 1
 
-    # Create a process for each task
+    semaphore = Semaphore(num_gpus)  # Adjust this number as necessary
+
     processes = [
-        multiprocessing.Process(target=pipeline_mamba, args=task) for task in tasks
+        multiprocessing.Process(target=worker, args=(semaphore, task)) for task in tasks
     ]
 
-    # Start all processes
     for process in processes:
         process.start()
 
-    # Wait for all processes to finish
     for process in processes:
         process.join()
 
