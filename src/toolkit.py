@@ -5,7 +5,6 @@ from matplotlib.pylab import f
 
 import main
 from main import RNNLayer
-from dsa_analysis import load_config
 import torch
 import os
 import pandas as pd
@@ -37,6 +36,16 @@ warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprec
 os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
 
+@contextmanager
+def load_config(filepath):
+    with open(filepath, "r") as f:
+        config = yaml.safe_load(f)
+    try:
+        yield config
+    finally:
+        f.close()
+
+
 def same_order(comp_motif_1, comp_motif_2) -> bool:
     return len(
         [i for i in range(len(comp_motif_1)) if comp_motif_1[i] == comp_motif_2[i]]
@@ -58,25 +67,25 @@ def find_checkpoints(name):
 def initialize_model(
     taskset, rnn_type, activation, hidden_size, lr, batch_size, device
 ):
-    config = load_config("config.yaml")
-    all_rules = config[taskset]["rules_analysis"]
-    hp = {
-        "rnn_type": rnn_type,
-        "activation": activation,
-        "n_rnn": hidden_size,
-        "learning_rate": lr,
-        "l2_h": 0.00001,
-        "l2_weight": 0.0001,
-        "num_epochs": 50,
-        "batch_size_train": batch_size,
-        "mode": "test",
-    }
-    hp, log, optimizer = main.set_hyperparameters(
-        model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=all_rules
-    )
-    run_model = main.Run_Model(hp, RNNLayer, device)
+    with load_config("config.yaml") as config:
+        all_rules = config[taskset]["rules_analysis"]
+        hp = {
+            "rnn_type": rnn_type,
+            "activation": activation,
+            "n_rnn": hidden_size,
+            "learning_rate": lr,
+            "l2_h": 0.00001,
+            "l2_weight": 0.0001,
+            "num_epochs": 50,
+            "batch_size_train": batch_size,
+            "mode": "test",
+        }
+        hp, log, optimizer = main.set_hyperparameters(
+            model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=all_rules
+        )
+        run_model = main.Run_Model(hp, RNNLayer, device)
 
-    return run_model, hp
+        return run_model, hp
 
 
 def load_model_jit(run_model_copy, checkpoint):
@@ -138,82 +147,91 @@ def normalize_within_unit_volume(tensor):
 
 
 def pipeline(taskset, group, rnn_type, activation, hidden_size, lr, batch_size, device):
-    config = load_config("config.yaml")
-    rules_pretrain = config[taskset]["groups"][group]["pretrain"]["ruleset"]
-    rules_train = config[taskset]["groups"][group]["train"]["ruleset"]
-    freeze = config[taskset]["groups"][group]["train"]["frozen"]
-    all_rules = config[taskset]["all_rules"]
-    hp = {
-        "rnn_type": rnn_type,
-        "activation": activation,
-        "n_rnn": hidden_size,
-        "learning_rate": lr,
-        "l2_h": 0.00001,
-        "l2_weight": 0.0001,
-        "num_epochs": 50,
-        "batch_size_train": batch_size,
-    }
-    model_name = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}"
-    path_pretrain_folder = os.path.join(
-        f"models/{taskset}/{group}", model_name + f"_pretrain"
-    )
-    path_pretrain_model = os.path.join(
-        f"models/{taskset}/{group}", model_name + f"_pretrain.pth"
-    )
-    path_train_folder = os.path.join(
-        f"models/{taskset}/{group}", model_name + f"_train"
-    )
-    path_train_model = os.path.join(
-        f"models/{taskset}/{group}", model_name + f"_train.pth"
-    )
+    with load_config("config.yaml") as config:
+        rules_pretrain = config[taskset]["groups"][group]["pretrain"]["ruleset"]
+        rules_train = config[taskset]["groups"][group]["train"]["ruleset"]
+        freeze = config[taskset]["groups"][group]["train"]["frozen"]
+        all_rules = config[taskset]["all_rules"]
+        hp = {
+            "rnn_type": rnn_type,
+            "activation": activation,
+            "n_rnn": hidden_size,
+            "learning_rate": lr,
+            "l2_h": 0.00001,
+            "l2_weight": 0.0001,
+            "num_epochs": 50,
+            "batch_size_train": batch_size,
+        }
+        model_name = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}"
+        path_pretrain_folder = os.path.join(
+            f"models/{taskset}/{group}", model_name + f"_pretrain"
+        )
+        path_pretrain_model = os.path.join(
+            f"models/{taskset}/{group}", model_name + f"_pretrain.pth"
+        )
+        path_train_folder = os.path.join(
+            f"models/{taskset}/{group}", model_name + f"_train"
+        )
+        path_train_model = os.path.join(
+            f"models/{taskset}/{group}", model_name + f"_train.pth"
+        )
 
-    # Pretraining
-    print(f"Pretraining model {model_name} for group {group} and taskset {taskset}")
-    if not os.path.exists(path_pretrain_model):
-        if rules_pretrain:
-            hp, log, optimizer = main.set_hyperparameters(
-                model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=rules_pretrain
-            )
-            run_model = main.Run_Model(hp, RNNLayer, device)
-            main.train(run_model, optimizer, hp, log, path_pretrain_folder)
-            run_model.save(path_pretrain_model)
-
-    # Training
-    print(f"Training model {model_name} for group {group}")
-    if not os.path.exists(path_train_model):
-        if rules_train:
+        # Pretraining
+        print(f"Pretraining model {model_name} for group {group} and taskset {taskset}")
+        if not os.path.exists(path_pretrain_model):
             if rules_pretrain:
-                # load the model first
                 hp, log, optimizer = main.set_hyperparameters(
-                    model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=rules_train
+                    model_dir="debug",
+                    hp=hp,
+                    ruleset=all_rules,
+                    rule_trains=rules_pretrain,
                 )
-                run_model = main.load_model(
-                    path_pretrain_model,
-                    hp,
-                    RNNLayer,
-                    device=device,
-                )
-                main.train(
-                    run_model, optimizer, hp, log, path_train_folder, freeze=freeze
-                )
-                run_model.save(path_train_model)
+                run_model = main.Run_Model(hp, RNNLayer, device)
+                main.train(run_model, optimizer, hp, log, path_pretrain_folder)
+                run_model.save(path_pretrain_model)
+
+        # Training
+        print(f"Training model {model_name} for group {group}")
+        if not os.path.exists(path_train_model):
+            if rules_train:
+                if rules_pretrain:
+                    # load the model first
+                    hp, log, optimizer = main.set_hyperparameters(
+                        model_dir="debug",
+                        hp=hp,
+                        ruleset=all_rules,
+                        rule_trains=rules_train,
+                    )
+                    run_model = main.load_model(
+                        path_pretrain_model,
+                        hp,
+                        RNNLayer,
+                        device=device,
+                    )
+                    main.train(
+                        run_model, optimizer, hp, log, path_train_folder, freeze=freeze
+                    )
+                    run_model.save(path_train_model)
+                else:
+                    hp, log, optimizer = main.set_hyperparameters(
+                        model_dir="debug",
+                        hp=hp,
+                        ruleset=all_rules,
+                        rule_trains=rules_train,
+                    )
+                    run_model = main.Run_Model(hp, RNNLayer, device)
+                    main.train(
+                        run_model, optimizer, hp, log, path_train_folder, freeze=freeze
+                    )
+                    run_model.save(path_train_model)
             else:
+                # if rules_train is empty, then we don't train the model
                 hp, log, optimizer = main.set_hyperparameters(
                     model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=rules_train
                 )
                 run_model = main.Run_Model(hp, RNNLayer, device)
-                main.train(
-                    run_model, optimizer, hp, log, path_train_folder, freeze=freeze
-                )
                 run_model.save(path_train_model)
-        else:
-            # if rules_train is empty, then we don't train the model
-            hp, log, optimizer = main.set_hyperparameters(
-                model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=rules_train
-            )
-            run_model = main.Run_Model(hp, RNNLayer, device)
-            run_model.save(path_train_model)
-    return
+        return
 
 
 def pipeline_mamba(
@@ -228,438 +246,458 @@ def pipeline_mamba(
     device,
 ):
 
-    config = load_config("config.yaml")
-    rules_pretrain = config[taskset]["groups"][group]["pretrain"]["ruleset"]
-    rules_train = config[taskset]["groups"][group]["train"]["ruleset"]
-    freeze = config[taskset]["groups"][group]["train"]["frozen"]
-    all_rules = config[taskset]["all_rules"]
-    hp = {
-        "num_epochs": 50,
-        "batch_size_train": batch_size,
-        "learning_rate": learning_rate,
-    }
-    model_name = f"mamba_{d_model}_{n_layers}_{learning_rate}_{batch_size}"
-    path_pretrain_folder = os.path.join(
-        f"models/mamba/{taskset}/{group}", model_name + f"_pretrain"
-    )
-    path_pretrain_model = os.path.join(
-        f"models/mamba/{taskset}/{group}", model_name + f"_pretrain.pth"
-    )
-    path_train_folder = os.path.join(
-        f"models/mamba/{taskset}/{group}", model_name + f"_train"
-    )
-    path_train_model = os.path.join(
-        f"models/mamba/{taskset}/{group}", model_name + f"_train.pth"
-    )
+    with load_config("config.yaml") as config:
+        rules_pretrain = config[taskset]["groups"][group]["pretrain"]["ruleset"]
+        rules_train = config[taskset]["groups"][group]["train"]["ruleset"]
+        freeze = config[taskset]["groups"][group]["train"]["frozen"]
+        all_rules = config[taskset]["all_rules"]
+        hp = {
+            "num_epochs": 50,
+            "batch_size_train": batch_size,
+            "learning_rate": learning_rate,
+        }
+        model_name = f"mamba_{d_model}_{n_layers}_{learning_rate}_{batch_size}"
+        path_pretrain_folder = os.path.join(
+            f"models/mamba/{taskset}/{group}", model_name + f"_pretrain"
+        )
+        path_pretrain_model = os.path.join(
+            f"models/mamba/{taskset}/{group}", model_name + f"_pretrain.pth"
+        )
+        path_train_folder = os.path.join(
+            f"models/mamba/{taskset}/{group}", model_name + f"_train"
+        )
+        path_train_model = os.path.join(
+            f"models/mamba/{taskset}/{group}", model_name + f"_train.pth"
+        )
 
-    # Pretraining
-    print(f"Pretraining model {model_name} for group {group} and taskset {taskset}")
+        # Pretraining
+        print(f"Pretraining model {model_name} for group {group} and taskset {taskset}")
 
-    config = MambaLMConfig(
-        d_model=d_model,
-        n_layers=n_layers,
-        vocab_size=hp["n_input"],
-        pad_vocab_size_multiple=pad_vocab_size_multiple,  # https://github.com/alxndrTL/mamba.py/blob/main/mamba_lm.py#L27
-        pscan=pscan,
-    )
-    if not os.path.exists(path_pretrain_model):
-        if rules_pretrain:
-            hp, log, optimizer = main.set_hyperparameters(
-                model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=rules_pretrain
-            )
-            run_model = main.MambaSupervGym(
-                hp["n_output"], hp["n_input"], config, device=device
-            )
-            main.train(run_model, optimizer, hp, log, path_pretrain_folder, rnn=False)
-            run_model.save(path_pretrain_model)
-
-    # Training
-    print(f"Training model {model_name} for group {group}")
-    if not os.path.exists(path_train_model):
-        if rules_train:
+        config = MambaLMConfig(
+            d_model=d_model,
+            n_layers=n_layers,
+            vocab_size=hp["n_input"],
+            pad_vocab_size_multiple=pad_vocab_size_multiple,  # https://github.com/alxndrTL/mamba.py/blob/main/mamba_lm.py#L27
+            pscan=pscan,
+        )
+        if not os.path.exists(path_pretrain_model):
             if rules_pretrain:
-                # load the model first
                 hp, log, optimizer = main.set_hyperparameters(
-                    model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=rules_train
+                    model_dir="debug",
+                    hp=hp,
+                    ruleset=all_rules,
+                    rule_trains=rules_pretrain,
                 )
-                run_model = main.load_model_mamba(
-                    path_pretrain_model,
-                    hp,
-                    config,
-                    device=device,
+                run_model = main.MambaSupervGym(
+                    hp["n_output"], hp["n_input"], config, device=device
                 )
                 main.train(
-                    run_model,
-                    optimizer,
-                    hp,
-                    log,
-                    path_train_folder,
-                    freeze=freeze,
-                    rnn=False,
+                    run_model, optimizer, hp, log, path_pretrain_folder, rnn=False
                 )
-                run_model.save(path_train_model)
+                run_model.save(path_pretrain_model)
+
+        # Training
+        print(f"Training model {model_name} for group {group}")
+        if not os.path.exists(path_train_model):
+            if rules_train:
+                if rules_pretrain:
+                    # load the model first
+                    hp, log, optimizer = main.set_hyperparameters(
+                        model_dir="debug",
+                        hp=hp,
+                        ruleset=all_rules,
+                        rule_trains=rules_train,
+                    )
+                    run_model = main.load_model_mamba(
+                        path_pretrain_model,
+                        hp,
+                        config,
+                        device=device,
+                    )
+                    main.train(
+                        run_model,
+                        optimizer,
+                        hp,
+                        log,
+                        path_train_folder,
+                        freeze=freeze,
+                        rnn=False,
+                    )
+                    run_model.save(path_train_model)
+                else:
+                    hp, log, optimizer = main.set_hyperparameters(
+                        model_dir="debug",
+                        hp=hp,
+                        ruleset=all_rules,
+                        rule_trains=rules_train,
+                    )
+                    run_model = main.MambaSupervGym(
+                        hp["n_output"], hp["n_input"], config, device=device
+                    )
+                    main.train(
+                        run_model,
+                        optimizer,
+                        hp,
+                        log,
+                        path_train_folder,
+                        freeze=freeze,
+                        rnn=False,
+                    )
+                    run_model.save(path_train_model)
             else:
+                # if rules_train is empty, then we don't train the model
                 hp, log, optimizer = main.set_hyperparameters(
                     model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=rules_train
                 )
                 run_model = main.MambaSupervGym(
                     hp["n_output"], hp["n_input"], config, device=device
                 )
-                main.train(
-                    run_model,
-                    optimizer,
-                    hp,
-                    log,
-                    path_train_folder,
-                    freeze=freeze,
-                    rnn=False,
-                )
                 run_model.save(path_train_model)
-        else:
-            # if rules_train is empty, then we don't train the model
-            hp, log, optimizer = main.set_hyperparameters(
-                model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=rules_train
-            )
-            run_model = main.MambaSupervGym(
-                hp["n_output"], hp["n_input"], config, device=device
-            )
-            run_model.save(path_train_model)
 
-    return
+        return
 
 
 def generate_data(taskset, env):
-    config = load_config("config.yaml")
-    all_rules = config[taskset]["all_rules"]
-    hp, _, _ = main.set_hyperparameters(model_dir="debug", hp={}, ruleset=all_rules)
-    main.generate_data(env, hp, mode="train", num_pregenerated=10000)
+    with load_config("config.yaml") as config:
+        all_rules = config[taskset]["all_rules"]
+        hp, _, _ = main.set_hyperparameters(model_dir="debug", hp={}, ruleset=all_rules)
+        main.generate_data(env, hp, mode="train", num_pregenerated=10000)
 
-    hp, _, _ = main.set_hyperparameters(
-        model_dir="debug", hp={"mode": "test"}, ruleset=all_rules
-    )
-    main.generate_data(env, hp, mode="test", num_pregenerated=1000)
+        hp, _, _ = main.set_hyperparameters(
+            model_dir="debug", hp={"mode": "test"}, ruleset=all_rules
+        )
+        main.generate_data(env, hp, mode="test", num_pregenerated=1000)
 
 
 def get_dynamics_model(
     rnn_type, activation, hidden_size, lr, model, group, taskset, device, n_components=3
 ):
     # Load configuration and set hyperparameters
-    config = load_config("config.yaml")
-    ruleset = config[taskset]["rules_analysis"][-1]
-    all_rules = config[taskset]["rules_analysis"]
+    with load_config("config.yaml") as config:
+        ruleset = config[taskset]["rules_analysis"][-1]
+        all_rules = config[taskset]["rules_analysis"]
 
-    hp = {
-        "rnn_type": rnn_type,
-        "activation": activation,
-        "n_rnn": hidden_size,
-        "learning_rate": lr,
-        "l2_h": 0.00001,
-        "l2_weight": 0.0001,
-        "mode": "test",
-    }
-    hp, _, _ = main.set_hyperparameters(
-        model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=ruleset
-    )
-    run_model = main.load_model(
-        f"models/{taskset}/{group}/{model}",
-        hp,
-        RNNLayer,
-        device=device,
-    )
-    h = main.representation(run_model, all_rules)
-    h_trans, explained_variance = main.compute_pca(h, n_components=n_components)
-    if taskset == "PDM":
-        tensor_on_cpu = h_trans[
-            ("AntiPerceptualDecisionMakingDelayResponseT", "stimulus")
-        ].cpu()
-    else:
-        tensor_on_cpu = h_trans[("AntiGoNogoDelayResponseT", "stimulus")].cpu()
-    return tensor_on_cpu.detach().numpy(), explained_variance
+        hp = {
+            "rnn_type": rnn_type,
+            "activation": activation,
+            "n_rnn": hidden_size,
+            "learning_rate": lr,
+            "l2_h": 0.00001,
+            "l2_weight": 0.0001,
+            "mode": "test",
+        }
+        hp, _, _ = main.set_hyperparameters(
+            model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=ruleset
+        )
+        run_model = main.load_model(
+            f"models/{taskset}/{group}/{model}",
+            hp,
+            RNNLayer,
+            device=device,
+        )
+        h = main.representation(run_model, all_rules)
+        h_trans, explained_variance = main.compute_pca(h, n_components=n_components)
+        if taskset == "PDM":
+            tensor_on_cpu = h_trans[
+                ("AntiPerceptualDecisionMakingDelayResponseT", "stimulus")
+            ].cpu()
+        else:
+            tensor_on_cpu = h_trans[("AntiGoNogoDelayResponseT", "stimulus")].cpu()
+        return tensor_on_cpu.detach().numpy(), explained_variance
 
 
 def dissimilarity_over_learning(
     taskset, group1, group2, rnn_type, activation, hidden_size, lr, batch_size, device
 ):
-    config = load_config("config.yaml")
-    all_rules = config[taskset]["rules_analysis"]
+    with load_config("config.yaml") as config:
+        all_rules = config[taskset]["rules_analysis"]
 
-    # paths for checkpoints
-    model_name = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}"
-    path_train_folder1 = os.path.join(
-        f"models_analysis/{taskset}/{group1}", model_name + f"_train"
-    )
-    path_train_folder2 = os.path.join(
-        f"models_analysis/{taskset}/{group2}", model_name + f"_train"
-    )
-
-    # initialize model architectures
-    run_model1, hp1 = initialize_model(
-        taskset, rnn_type, activation, hidden_size, lr, batch_size, device
-    )
-    run_model2, hp2 = initialize_model(
-        taskset, rnn_type, activation, hidden_size, lr, batch_size, device
-    )
-
-    # get checkpoints in train path
-    checkpoint_files_1 = find_checkpoints(path_train_folder1)
-    checkpoint_files_2 = find_checkpoints(path_train_folder2)
-
-    # group models and establish correspondancy between epochs
-    models_to_compare = []
-
-    # if pretrain in group1 and group2, load checkpoints at os.path.join(f"models_analysis/{group}", model_name + f"_pretrain.pth")
-    if "pretrain" in group1 and "pretrain" in group2:
-        path_pretrain_1 = os.path.join(
-            f"models_analysis/{taskset}/{group1}", model_name + f"_pretrain.pth"
+        # paths for checkpoints
+        model_name = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}"
+        path_train_folder1 = os.path.join(
+            f"models_analysis/{taskset}/{group1}", model_name + f"_train"
         )
-        path_pretrain_2 = os.path.join(
-            f"models_analysis/{taskset}/{group2}", model_name + f"_pretrain.pth"
+        path_train_folder2 = os.path.join(
+            f"models_analysis/{taskset}/{group2}", model_name + f"_train"
         )
-        run_model1_pretrain = main.load_model(
-            path_pretrain_1,
-            hp1,
-            RNNLayer,
-            device=device,
-        )
-        run_model2_pretrain = main.load_model(
-            path_pretrain_2,
-            hp2,
-            RNNLayer,
-            device=device,
-        )
-        models_to_compare.extend([(run_model1_pretrain, run_model2_pretrain)])
 
-    dissimilarities_over_learning = {
-        "cka": [],
-        "dsa": [],
-        "procrustes": [],
-        "accuracy_1": [],
-        "accuracy_2": [],
-    }
-    cka_measure = similarity.make("measure.sim_metric.cka-angular-score")
-    procrustes_measure = similarity.make("measure.netrep.procrustes-angular-score")
-    if checkpoint_files_1 and checkpoint_files_2:
-        # get the models to compare
-        if len(checkpoint_files_1) < len(checkpoint_files_2):
-            index_epochs = corresponding_training_time(
-                len(checkpoint_files_1), len(checkpoint_files_2)
-            )
-            for epoch in index_epochs:
-                run_model1_copy = copy.deepcopy(run_model1)
-                run_model2_copy = copy.deepcopy(run_model2)
-                checkpoint1 = torch.load(
-                    os.path.join(
-                        path_train_folder1,
-                        checkpoint_files_1[index_epochs.index(epoch)],
-                    ),
-                    map_location=device,
-                )
-                run_model1_copy = load_model_jit(run_model1_copy, checkpoint1)
-                accuracy_1 = float(checkpoint1["log"]["perf_min"][-1])
-                checkpoint2 = torch.load(
-                    os.path.join(path_train_folder2, checkpoint_files_2[epoch]),
-                    map_location=device,
-                )
-                run_model2_copy = load_model_jit(run_model2_copy, checkpoint2)
-                accuracy_2 = float(checkpoint2["log"]["perf_min"][-1])
-                models_to_compare.extend([(run_model1_copy, run_model2_copy)])
-                dissimilarities_over_learning["accuracy_1"].append(accuracy_1)
-                dissimilarities_over_learning["accuracy_2"].append(accuracy_2)
-        else:
-            index_epochs = corresponding_training_time(
-                len(checkpoint_files_2), len(checkpoint_files_1)
-            )
-            for epoch in index_epochs:
-                run_model1_copy = copy.deepcopy(run_model1)
-                run_model2_copy = copy.deepcopy(run_model2)
-                checkpoint1 = torch.load(
-                    os.path.join(path_train_folder1, checkpoint_files_1[epoch]),
-                    map_location=device,
-                )
-                run_model1_copy = load_model_jit(run_model1_copy, checkpoint1)
-                accuracy_1 = float(checkpoint1["log"]["perf_min"][-1])
-                checkpoint2 = torch.load(
-                    os.path.join(
-                        path_train_folder2,
-                        checkpoint_files_2[index_epochs.index(epoch)],
-                    ),
-                    map_location=device,
-                )
-                run_model2_copy = load_model_jit(run_model2_copy, checkpoint2)
-                accuracy_2 = float(checkpoint2["log"]["perf_min"][-1])
-                models_to_compare.extend([(run_model1_copy, run_model2_copy)])
-                dissimilarities_over_learning["accuracy_1"].append(accuracy_1)
-                dissimilarities_over_learning["accuracy_2"].append(accuracy_2)
+        # initialize model architectures
+        run_model1, hp1 = initialize_model(
+            taskset, rnn_type, activation, hidden_size, lr, batch_size, device
+        )
+        run_model2, hp2 = initialize_model(
+            taskset, rnn_type, activation, hidden_size, lr, batch_size, device
+        )
 
-        # compute the curves for models and dissimilarities
-        curves = [
-            (
-                get_curves(taskset, tuple_model[0], all_rules, components=15),
-                get_curves(taskset, tuple_model[1], all_rules, components=15),
+        # get checkpoints in train path
+        checkpoint_files_1 = find_checkpoints(path_train_folder1)
+        checkpoint_files_2 = find_checkpoints(path_train_folder2)
+
+        # group models and establish correspondancy between epochs
+        models_to_compare = []
+
+        # if pretrain in group1 and group2, load checkpoints at os.path.join(f"models_analysis/{group}", model_name + f"_pretrain.pth")
+        if "pretrain" in group1 and "pretrain" in group2:
+            path_pretrain_1 = os.path.join(
+                f"models_analysis/{taskset}/{group1}", model_name + f"_pretrain.pth"
             )
-            for tuple_model in models_to_compare
-        ]
-        for epoch_index in range(len(index_epochs)):
-            dissimilarities_over_learning["cka"].append(
-                1 - cka_measure(curves[epoch_index][0], curves[epoch_index][1])
+            path_pretrain_2 = os.path.join(
+                f"models_analysis/{taskset}/{group2}", model_name + f"_pretrain.pth"
             )
-            dissimilarities_over_learning["procrustes"].append(
-                1 - procrustes_measure(curves[epoch_index][0], curves[epoch_index][1])
-            )
-            dsa_comp = DSA.DSA(
-                curves[epoch_index][0],
-                curves[epoch_index][1],
-                n_delays=config["dsa"]["n_delays"],
-                rank=config["dsa"]["rank"],
-                delay_interval=config["dsa"]["delay_interval"],
-                verbose=True,
-                iters=1000,
-                lr=1e-2,
+            run_model1_pretrain = main.load_model(
+                path_pretrain_1,
+                hp1,
+                RNNLayer,
                 device=device,
             )
-            dissimilarities_over_learning["dsa"].append(dsa_comp.fit_score())
+            run_model2_pretrain = main.load_model(
+                path_pretrain_2,
+                hp2,
+                RNNLayer,
+                device=device,
+            )
+            models_to_compare.extend([(run_model1_pretrain, run_model2_pretrain)])
 
-    for key, value in dissimilarities_over_learning.items():
-        dissimilarities_over_learning[key] = np.array(value)
+        dissimilarities_over_learning = {
+            "cka": [],
+            "dsa": [],
+            "procrustes": [],
+            "accuracy_1": [],
+            "accuracy_2": [],
+        }
+        cka_measure = similarity.make("measure.sim_metric.cka-angular-score")
+        procrustes_measure = similarity.make("measure.netrep.procrustes-angular-score")
+        if checkpoint_files_1 and checkpoint_files_2:
+            # get the models to compare
+            if len(checkpoint_files_1) < len(checkpoint_files_2):
+                index_epochs = corresponding_training_time(
+                    len(checkpoint_files_1), len(checkpoint_files_2)
+                )
+                for epoch in index_epochs:
+                    run_model1_copy = copy.deepcopy(run_model1)
+                    run_model2_copy = copy.deepcopy(run_model2)
+                    checkpoint1 = torch.load(
+                        os.path.join(
+                            path_train_folder1,
+                            checkpoint_files_1[index_epochs.index(epoch)],
+                        ),
+                        map_location=device,
+                    )
+                    run_model1_copy = load_model_jit(run_model1_copy, checkpoint1)
+                    accuracy_1 = float(checkpoint1["log"]["perf_min"][-1])
+                    checkpoint2 = torch.load(
+                        os.path.join(path_train_folder2, checkpoint_files_2[epoch]),
+                        map_location=device,
+                    )
+                    run_model2_copy = load_model_jit(run_model2_copy, checkpoint2)
+                    accuracy_2 = float(checkpoint2["log"]["perf_min"][-1])
+                    models_to_compare.extend([(run_model1_copy, run_model2_copy)])
+                    dissimilarities_over_learning["accuracy_1"].append(accuracy_1)
+                    dissimilarities_over_learning["accuracy_2"].append(accuracy_2)
+            else:
+                index_epochs = corresponding_training_time(
+                    len(checkpoint_files_2), len(checkpoint_files_1)
+                )
+                for epoch in index_epochs:
+                    run_model1_copy = copy.deepcopy(run_model1)
+                    run_model2_copy = copy.deepcopy(run_model2)
+                    checkpoint1 = torch.load(
+                        os.path.join(path_train_folder1, checkpoint_files_1[epoch]),
+                        map_location=device,
+                    )
+                    run_model1_copy = load_model_jit(run_model1_copy, checkpoint1)
+                    accuracy_1 = float(checkpoint1["log"]["perf_min"][-1])
+                    checkpoint2 = torch.load(
+                        os.path.join(
+                            path_train_folder2,
+                            checkpoint_files_2[index_epochs.index(epoch)],
+                        ),
+                        map_location=device,
+                    )
+                    run_model2_copy = load_model_jit(run_model2_copy, checkpoint2)
+                    accuracy_2 = float(checkpoint2["log"]["perf_min"][-1])
+                    models_to_compare.extend([(run_model1_copy, run_model2_copy)])
+                    dissimilarities_over_learning["accuracy_1"].append(accuracy_1)
+                    dissimilarities_over_learning["accuracy_2"].append(accuracy_2)
 
-    return dissimilarities_over_learning
+            # compute the curves for models and dissimilarities
+            curves = [
+                (
+                    get_curves(taskset, tuple_model[0], all_rules, components=15),
+                    get_curves(taskset, tuple_model[1], all_rules, components=15),
+                )
+                for tuple_model in models_to_compare
+            ]
+            for epoch_index in range(len(index_epochs)):
+                dissimilarities_over_learning["cka"].append(
+                    1 - cka_measure(curves[epoch_index][0], curves[epoch_index][1])
+                )
+                dissimilarities_over_learning["procrustes"].append(
+                    1
+                    - procrustes_measure(curves[epoch_index][0], curves[epoch_index][1])
+                )
+                dsa_comp = DSA.DSA(
+                    curves[epoch_index][0],
+                    curves[epoch_index][1],
+                    n_delays=config["dsa"]["n_delays"],
+                    rank=config["dsa"]["rank"],
+                    delay_interval=config["dsa"]["delay_interval"],
+                    verbose=True,
+                    iters=1000,
+                    lr=1e-2,
+                    device=device,
+                )
+                dissimilarities_over_learning["dsa"].append(dsa_comp.fit_score())
+
+        for key, value in dissimilarities_over_learning.items():
+            dissimilarities_over_learning[key] = np.array(value)
+
+        return dissimilarities_over_learning
 
 
 def dissimilarity_within_learning(
     taskset, group, rnn_type, activation, hidden_size, lr, batch_size, device
 ):
-    config = load_config("config.yaml")
-    all_rules = config[taskset]["rules_analysis"]
-    sampling = [0, 25, 50, 75, 100]
+    with load_config("config.yaml") as config:
+        all_rules = config[taskset]["rules_analysis"]
+        sampling = [0, 25, 50, 75, 100]
 
-    # paths for checkpoints
-    model_name = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}"
-    path_train_folder = os.path.join(
-        f"models_analysis/{taskset}/{group}", model_name + f"_train"
-    )
-
-    # initialize model architectures
-    run_model, hp = initialize_model(
-        taskset, rnn_type, activation, hidden_size, lr, batch_size, device
-    )
-
-    # get checkpoints in train path
-    checkpoint_files = find_checkpoints(path_train_folder)
-
-    # group models and establish correspondancy between epochs
-    models_to_compare = []
-
-    # if pretrain in group1 and group2, load checkpoints at os.path.join(f"models_analysis/{group}", model_name + f"_pretrain.pth")
-    if "pretrain" in group:
-        path_pretrain = os.path.join(
-            f"models_analysis/{taskset}/{group}", model_name + f"_pretrain.pth"
+        # paths for checkpoints
+        model_name = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}"
+        path_train_folder = os.path.join(
+            f"models_analysis/{taskset}/{group}", model_name + f"_train"
         )
-        run_model_pretrain = main.load_model(
-            path_pretrain,
-            hp,
-            RNNLayer,
-            device=device,
+
+        # initialize model architectures
+        run_model, hp = initialize_model(
+            taskset, rnn_type, activation, hidden_size, lr, batch_size, device
         )
-        models_to_compare.extend([run_model_pretrain])
 
-    cka_similarities = np.empty((len(sampling) - 1, len(sampling) - 1))
-    procrustes_similarities = np.empty((len(sampling) - 1, len(sampling) - 1))
-    dsa_similarities = np.empty((len(sampling) - 1, len(sampling) - 1))
-    accuracies = []
-    accuracies_grouped = []
+        # get checkpoints in train path
+        checkpoint_files = find_checkpoints(path_train_folder)
 
-    cka_measure = similarity.make("measure.sim_metric.cka-angular-score")
-    procrustes_measure = similarity.make("measure.netrep.procrustes-angular-score")
+        # group models and establish correspondancy between epochs
+        models_to_compare = []
 
-    if checkpoint_files:
-        if len(checkpoint_files) > 3:
-            # load all the checkpoints
-            for epoch in range(len(checkpoint_files)):
-                checkpoint = torch.load(
-                    os.path.join(path_train_folder, checkpoint_files[epoch]),
-                    map_location=device,
+        # if pretrain in group1 and group2, load checkpoints at os.path.join(f"models_analysis/{group}", model_name + f"_pretrain.pth")
+        if "pretrain" in group:
+            path_pretrain = os.path.join(
+                f"models_analysis/{taskset}/{group}", model_name + f"_pretrain.pth"
+            )
+            run_model_pretrain = main.load_model(
+                path_pretrain,
+                hp,
+                RNNLayer,
+                device=device,
+            )
+            models_to_compare.extend([run_model_pretrain])
+
+        cka_similarities = np.empty((len(sampling) - 1, len(sampling) - 1))
+        procrustes_similarities = np.empty((len(sampling) - 1, len(sampling) - 1))
+        dsa_similarities = np.empty((len(sampling) - 1, len(sampling) - 1))
+        accuracies = []
+        accuracies_grouped = []
+
+        cka_measure = similarity.make("measure.sim_metric.cka-angular-score")
+        procrustes_measure = similarity.make("measure.netrep.procrustes-angular-score")
+
+        if checkpoint_files:
+            if len(checkpoint_files) > 3:
+                # load all the checkpoints
+                for epoch in range(len(checkpoint_files)):
+                    checkpoint = torch.load(
+                        os.path.join(path_train_folder, checkpoint_files[epoch]),
+                        map_location=device,
+                    )
+                    run_model_copy = copy.deepcopy(run_model)
+                    run_model_copy = load_model_jit(run_model_copy, checkpoint)
+
+                    accuracy = float(checkpoint["log"]["perf_min"][-1])
+                    # convert accuracy to float if it was a string
+                    models_to_compare.extend([run_model_copy])
+                    accuracies.append(accuracy)
+
+                print(
+                    f"computing representations for model {model_name} for group {group}"
                 )
-                run_model_copy = copy.deepcopy(run_model)
-                run_model_copy = load_model_jit(run_model_copy, checkpoint)
+                print(f"len checkpoints : {len(checkpoint_files)}")
+                # compute the curves for models and dissimilarities
 
-                accuracy = float(checkpoint["log"]["perf_min"][-1])
-                # convert accuracy to float if it was a string
-                models_to_compare.extend([run_model_copy])
-                accuracies.append(accuracy)
+                curves = []
+                for model in models_to_compare:
+                    curves.append(get_curves(taskset, model, all_rules, components=15))
+                print(f"grouping accuracies for model {model_name} for group {group}")
 
-            print(f"computing representations for model {model_name} for group {group}")
-            print(f"len checkpoints : {len(checkpoint_files)}")
-            # compute the curves for models and dissimilarities
+                groups = []
+                for i in range(len(sampling) - 1):
+                    index_start = int(sampling[i] * len(curves) / 100)
+                    index_end = int((sampling[i + 1]) * len(curves) / 100)
+                    groups.append(curves[index_start:index_end])
+                    accuracies_grouped.append(
+                        np.mean(accuracies[index_start:index_end])
+                    )
 
-            curves = []
-            for model in models_to_compare:
-                curves.append(get_curves(taskset, model, all_rules, components=15))
-            print(f"grouping accuracies for model {model_name} for group {group}")
+                # compute similarities across groups gathered by sampling
+                print(
+                    f"computing similarities for model {model_name} for group {group}"
+                )
+                print(f"Len groups : {len(groups)}")
 
-            groups = []
-            for i in range(len(sampling) - 1):
-                index_start = int(sampling[i] * len(curves) / 100)
-                index_end = int((sampling[i + 1]) * len(curves) / 100)
-                groups.append(curves[index_start:index_end])
-                accuracies_grouped.append(np.mean(accuracies[index_start:index_end]))
+                group_done = 0
+                for i in range(len(groups)):
+                    for j in range(i, len(groups)):
+                        print(f"perc group done : {100*group_done/(len(groups)**2)}")
+                        group_done += 1
+                        dissimilarities_cka = []
+                        dissimilarities_procrustes = []
+                        dissimilarities_dsa = []
+                        p = min(len(groups[i]), len(groups[j]))
+                        if p > 0:
+                            for index_model1 in range(p):
+                                for index_model2 in range(index_model1, p):
+                                    print(f"index model 1 : {100*index_model1/p}")
+                                    model1 = groups[i][index_model1]
+                                    model2 = groups[j][index_model2]
 
-            # compute similarities across groups gathered by sampling
-            print(f"computing similarities for model {model_name} for group {group}")
-            print(f"Len groups : {len(groups)}")
+                                    dissimilarities_cka.append(
+                                        1 - cka_measure(model1, model2)
+                                    )
+                                    dissimilarities_procrustes.append(
+                                        1 - procrustes_measure(model1, model2)
+                                    )
+                                    dsa_comp = DSA.DSA(
+                                        model1,
+                                        model2,
+                                        n_delays=config["dsa"]["n_delays"],
+                                        rank=config["dsa"]["rank"],
+                                        delay_interval=config["dsa"]["delay_interval"],
+                                        verbose=True,
+                                        iters=1000,
+                                        lr=1e-2,
+                                        device=device,
+                                    )
+                                    dissimilarities_dsa.append(dsa_comp.fit_score())
 
-            group_done = 0
-            for i in range(len(groups)):
-                for j in range(i, len(groups)):
-                    print(f"perc group done : {100*group_done/(len(groups)**2)}")
-                    group_done += 1
-                    dissimilarities_cka = []
-                    dissimilarities_procrustes = []
-                    dissimilarities_dsa = []
-                    p = min(len(groups[i]), len(groups[j]))
-                    if p > 0:
-                        for index_model1 in range(p):
-                            for index_model2 in range(index_model1, p):
-                                print(f"index model 1 : {100*index_model1/p}")
-                                model1 = groups[i][index_model1]
-                                model2 = groups[j][index_model2]
+                            cka_similarities[i, j] = np.mean(dissimilarities_cka)
+                            cka_similarities[j, i] = cka_similarities[i, j]
+                            procrustes_similarities[i, j] = np.mean(
+                                dissimilarities_procrustes
+                            )
+                            procrustes_similarities[j, i] = procrustes_similarities[
+                                i, j
+                            ]
+                            dsa_similarities[i, j] = np.mean(dissimilarities_dsa)
+                            dsa_similarities[j, i] = dsa_similarities[i, j]
 
-                                dissimilarities_cka.append(
-                                    1 - cka_measure(model1, model2)
-                                )
-                                dissimilarities_procrustes.append(
-                                    1 - procrustes_measure(model1, model2)
-                                )
-                                dsa_comp = DSA.DSA(
-                                    model1,
-                                    model2,
-                                    n_delays=config["dsa"]["n_delays"],
-                                    rank=config["dsa"]["rank"],
-                                    delay_interval=config["dsa"]["delay_interval"],
-                                    verbose=True,
-                                    iters=1000,
-                                    lr=1e-2,
-                                    device=device,
-                                )
-                                dissimilarities_dsa.append(dsa_comp.fit_score())
+                print(f"similarities finished for model {model_name} for group {group}")
 
-                        cka_similarities[i, j] = np.mean(dissimilarities_cka)
-                        cka_similarities[j, i] = cka_similarities[i, j]
-                        procrustes_similarities[i, j] = np.mean(
-                            dissimilarities_procrustes
-                        )
-                        procrustes_similarities[j, i] = procrustes_similarities[i, j]
-                        dsa_similarities[i, j] = np.mean(dissimilarities_dsa)
-                        dsa_similarities[j, i] = dsa_similarities[i, j]
-
-            print(f"similarities finished for model {model_name} for group {group}")
-
-    accuracies_grouped = np.array(accuracies_grouped)
-    return {
-        "cka": cka_similarities,
-        "procrustes": procrustes_similarities,
-        "dsa": dsa_similarities,
-        "accuracy": accuracies_grouped,
-    }
+        accuracies_grouped = np.array(accuracies_grouped)
+        return {
+            "cka": cka_similarities,
+            "procrustes": procrustes_similarities,
+            "dsa": dsa_similarities,
+            "accuracy": accuracies_grouped,
+        }
 
 
 def dsa_optimisation_compositionality(rank, n_delays, delay_interval, device, ordered):
@@ -669,140 +707,139 @@ def dsa_optimisation_compositionality(rank, n_delays, delay_interval, device, or
         else f"data/dsa_results/{rank}_{n_delays}_{delay_interval}_ordered.csv"
     )
     print(f"Saving to: {path_file}")
-    config = load_config("config.yaml")
-    # Define parameters
-    dt = config["simulations"]["dt"]
-    num_steps = config["simulations"]["num_steps"]
-    num_samples = config["simulations"]["num_samples"]
-    lorenz_parameters = config["simulations"]["lorenz_parameters"]
+    with load_config("config.yaml") as config:
+        dt = config["simulations"]["dt"]
+        num_steps = config["simulations"]["num_steps"]
+        num_samples = config["simulations"]["num_samples"]
+        lorenz_parameters = config["simulations"]["lorenz_parameters"]
 
-    # Run simulations line
-    simulations_line = simulation_line(num_steps, num_samples)
+        # Run simulations line
+        simulations_line = simulation_line(num_steps, num_samples)
 
-    # Run simulations curve
-    simulations_curve = simulation_lorenz(
-        dt, lorenz_parameters["one_attractor"][1], num_samples, num_steps
-    )
+        # Run simulations curve
+        simulations_curve = simulation_lorenz(
+            dt, lorenz_parameters["one_attractor"][1], num_samples, num_steps
+        )
 
-    # Run simulations Pattern1
-    simulations_pattern1 = simulation_lorenz(
-        dt, lorenz_parameters["two_stable_attractors"][0], num_samples, num_steps
-    )
+        # Run simulations Pattern1
+        simulations_pattern1 = simulation_lorenz(
+            dt, lorenz_parameters["two_stable_attractors"][0], num_samples, num_steps
+        )
 
-    # Run simulations Pattern2
-    simulations_pattern2 = simulation_lorenz(
-        dt, lorenz_parameters["two_stable_attractors"][2], num_samples, num_steps
-    )
+        # Run simulations Pattern2
+        simulations_pattern2 = simulation_lorenz(
+            dt, lorenz_parameters["two_stable_attractors"][2], num_samples, num_steps
+        )
 
-    # Run simulations line-curve-line-curve
-    combined_simulations_line_curve_line = combine_simulations(
-        [
-            simulations_line,
-            simulations_curve,
-            np.flip(simulations_line, axis=0),
-            np.flip(simulations_curve, axis=0),
-        ],
-        method="attach",
-    )
-
-    motif_basis = [
-        simulations_line,
-        simulations_curve,
-        simulations_pattern1,
-        simulations_pattern2,
-        combined_simulations_line_curve_line,
-    ]
-    motif_names = ["Line", "Curve", "Pattern1", "Pattern2", "Line-Curve-Line-Curve"]
-    motif_dict = {motif_names[i]: motif_basis[i] for i in range(len(motif_basis))}
-    all_simulations_length_3 = list(permutations(motif_names, 3))
-    all_simulations_combined = {
-        permutation: combine_simulations(
+        # Run simulations line-curve-line-curve
+        combined_simulations_line_curve_line = combine_simulations(
             [
-                motif_dict[permutation[0]],
-                motif_dict[permutation[1]],
-                motif_dict[permutation[2]],
+                simulations_line,
+                simulations_curve,
+                np.flip(simulations_line, axis=0),
+                np.flip(simulations_curve, axis=0),
             ],
             method="attach",
         )
-        for permutation in all_simulations_length_3
-    }
 
-    model = list(all_simulations_combined.values())
-    model_names = list(all_simulations_combined.keys())
+        motif_basis = [
+            simulations_line,
+            simulations_curve,
+            simulations_pattern1,
+            simulations_pattern2,
+            combined_simulations_line_curve_line,
+        ]
+        motif_names = ["Line", "Curve", "Pattern1", "Pattern2", "Line-Curve-Line-Curve"]
+        motif_dict = {motif_names[i]: motif_basis[i] for i in range(len(motif_basis))}
+        all_simulations_length_3 = list(permutations(motif_names, 3))
+        all_simulations_combined = {
+            permutation: combine_simulations(
+                [
+                    motif_dict[permutation[0]],
+                    motif_dict[permutation[1]],
+                    motif_dict[permutation[2]],
+                ],
+                method="attach",
+            )
+            for permutation in all_simulations_length_3
+        }
 
-    dsa = DSA.DSA(
-        model,
-        n_delays=n_delays,
-        rank=rank,
-        delay_interval=delay_interval,
-        verbose=True,
-        iters=1000,
-        lr=1e-2,
-        device=device,
-    )
-    similarities = dsa.fit_score()
+        model = list(all_simulations_combined.values())
+        model_names = list(all_simulations_combined.keys())
 
-    grouped_by_shared_elements = {i: [] for i in range(4)}
-    for comp_motif_1 in model_names:
-        for comp_motif_2 in model_names:
-            if ordered:
-                grouped_by_shared_elements[
-                    same_order(comp_motif_1, comp_motif_2)
-                ].extend([(comp_motif_1, comp_motif_2)])
-            else:
-                set_1 = set(comp_motif_1)
-                set_2 = set(comp_motif_2)
-                grouped_by_shared_elements[len(set_1.intersection(set_2))].extend(
-                    [(comp_motif_1, comp_motif_2)]
+        dsa = DSA.DSA(
+            model,
+            n_delays=n_delays,
+            rank=rank,
+            delay_interval=delay_interval,
+            verbose=True,
+            iters=1000,
+            lr=1e-2,
+            device=device,
+        )
+        similarities = dsa.fit_score()
+
+        grouped_by_shared_elements = {i: [] for i in range(4)}
+        for comp_motif_1 in model_names:
+            for comp_motif_2 in model_names:
+                if ordered:
+                    grouped_by_shared_elements[
+                        same_order(comp_motif_1, comp_motif_2)
+                    ].extend([(comp_motif_1, comp_motif_2)])
+                else:
+                    set_1 = set(comp_motif_1)
+                    set_2 = set(comp_motif_2)
+                    grouped_by_shared_elements[len(set_1.intersection(set_2))].extend(
+                        [(comp_motif_1, comp_motif_2)]
+                    )
+
+        similarities_grouped_by_shared_elements = {i: [] for i in range(4)}
+        for key in grouped_by_shared_elements:
+            for tuple1, tuple2 in grouped_by_shared_elements[key]:
+                similarities_grouped_by_shared_elements[key].append(
+                    similarities[model_names.index(tuple1), model_names.index(tuple2)]
                 )
 
-    similarities_grouped_by_shared_elements = {i: [] for i in range(4)}
-    for key in grouped_by_shared_elements:
-        for tuple1, tuple2 in grouped_by_shared_elements[key]:
-            similarities_grouped_by_shared_elements[key].append(
-                similarities[model_names.index(tuple1), model_names.index(tuple2)]
-            )
+        # # compute median of similarities for each group and plot similarity vs number of shared elements
+        # median_similarities = {key: np.median(value) for key, value in similarities_grouped_by_shared_elements.items()}
+        # std_devs = {key: np.std(value) for key, value in similarities_grouped_by_shared_elements.items()}
 
-    # # compute median of similarities for each group and plot similarity vs number of shared elements
-    # median_similarities = {key: np.median(value) for key, value in similarities_grouped_by_shared_elements.items()}
-    # std_devs = {key: np.std(value) for key, value in similarities_grouped_by_shared_elements.items()}
+        # # Prepare data for plotting
+        # keys = list(median_similarities.keys())
+        # median_values = list(median_similarities.values())
+        # std_dev_values = list(std_devs.values())
 
-    # # Prepare data for plotting
-    # keys = list(median_similarities.keys())
-    # median_values = list(median_similarities.values())
-    # std_dev_values = list(std_devs.values())
+        # df = pd.DataFrame({'Number of shared elements': keys, 'Median similarity': median_values, 'Standard deviation': std_dev_values})
+        # Prepare lists to store DataFrame rows
+        data = []
 
-    # df = pd.DataFrame({'Number of shared elements': keys, 'Median similarity': median_values, 'Standard deviation': std_dev_values})
-    # Prepare lists to store DataFrame rows
-    data = []
+        # Iterate over the shared elements
+        for (
+            num_shared_elements,
+            similarities,
+        ) in similarities_grouped_by_shared_elements.items():
+            tuples = grouped_by_shared_elements[num_shared_elements]
 
-    # Iterate over the shared elements
-    for (
-        num_shared_elements,
-        similarities,
-    ) in similarities_grouped_by_shared_elements.items():
-        tuples = grouped_by_shared_elements[num_shared_elements]
+            # Zip the similarities with the corresponding element pairs
+            for (element1, element2), similarity in zip(tuples, similarities):
+                # Sort the elements to ensure uniqueness
+                sorted_pair = sorted([element1, element2])
+                data.append(
+                    [num_shared_elements, sorted_pair[0], sorted_pair[1], similarity]
+                )
 
-        # Zip the similarities with the corresponding element pairs
-        for (element1, element2), similarity in zip(tuples, similarities):
-            # Sort the elements to ensure uniqueness
-            sorted_pair = sorted([element1, element2])
-            data.append(
-                [num_shared_elements, sorted_pair[0], sorted_pair[1], similarity]
-            )
+        # Create DataFrame
+        df = pd.DataFrame(
+            data,
+            columns=["number of shared elements", "element1", "element2", "similarity"],
+        )
 
-    # Create DataFrame
-    df = pd.DataFrame(
-        data,
-        columns=["number of shared elements", "element1", "element2", "similarity"],
-    )
+        # Drop duplicates
+        df = df.drop_duplicates(subset=["element1", "element2"])
 
-    # Drop duplicates
-    df = df.drop_duplicates(subset=["element1", "element2"])
-
-    # check if the directory exists
-    if not os.path.exists("data/dsa_results"):
-        os.makedirs("data/dsa_results")
-    print(f"saving file to {path_file}")
-    df.to_csv(path_file)
-    return
+        # check if the directory exists
+        if not os.path.exists("data/dsa_results"):
+            os.makedirs("data/dsa_results")
+        print(f"saving file to {path_file}")
+        df.to_csv(path_file)
+        return
