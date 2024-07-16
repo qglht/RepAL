@@ -270,7 +270,7 @@ def pipeline_mamba(
             run_model = main.MambaSupervGym(
                 hp["n_output"], hp["n_input"], config, device=device
             )
-            main.train(run_model, optimizer, hp, log, path_pretrain_folder)
+            main.train(run_model, optimizer, hp, log, path_pretrain_folder, rnn=False)
             run_model.save(path_pretrain_model)
 
     # Training
@@ -289,7 +289,13 @@ def pipeline_mamba(
                     device=device,
                 )
                 main.train(
-                    run_model, optimizer, hp, log, path_train_folder, freeze=freeze
+                    run_model,
+                    optimizer,
+                    hp,
+                    log,
+                    path_train_folder,
+                    freeze=freeze,
+                    rnn=False,
                 )
                 run_model.save(path_train_model)
             else:
@@ -300,7 +306,13 @@ def pipeline_mamba(
                     hp["n_output"], hp["n_input"], config, device=device
                 )
                 main.train(
-                    run_model, optimizer, hp, log, path_train_folder, freeze=freeze
+                    run_model,
+                    optimizer,
+                    hp,
+                    log,
+                    path_train_folder,
+                    freeze=freeze,
+                    rnn=False,
                 )
                 run_model.save(path_train_model)
         else:

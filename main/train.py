@@ -222,7 +222,7 @@ def set_hyperparameters(
     return hp, log, optimizer  # , model
 
 
-def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=False):
+def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=True):
 
     # set up log
     logging = setup_logging(os.path.join(name, "logs"))
