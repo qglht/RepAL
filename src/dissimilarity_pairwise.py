@@ -75,13 +75,14 @@ def dissimilarity(args: argparse.Namespace) -> None:
     explained_variances = {group: [] for group in [args.group1, args.group2]}
     curves_names = {group: [] for group in [args.group1, args.group2]}
     for group in curves.keys():
-        for model in os.listdir(f"models/{args.taskset}/{group}"):
+        for model in os.listdir(f"models_analysis/{args.taskset}/{group}"):
             if not model.endswith("_train.pth"):
                 continue
             else:
                 model_type, activation, hidden_size, lr, batch_size = parse_model_info(
                     model
                 )
+                print(f"Computing dynamics for {model} and group {group}")
                 curve, explained_variance = get_dynamics_model(
                     model_type,
                     activation,
@@ -96,6 +97,8 @@ def dissimilarity(args: argparse.Namespace) -> None:
                 curves[group].append(curve)
                 explained_variances[group].append(explained_variance)
                 curves_names[group].append(model.replace(".pth", ""))
+
+    print(f"Dynamics computed")
     dissimilarities = measure_dissimilarities(
         curves[args.group1],
         curves[args.group2],
@@ -103,10 +106,13 @@ def dissimilarity(args: argparse.Namespace) -> None:
         curves_names[args.group2],
         devices[0],
     )
+    print(f"Dissimilarities computed")
     rows = []
 
     for i, model1 in enumerate(curves_names[args.group1]):
         # Collect the row data in a dictionary
+        print(model1)
+        print(i)
         row = {
             "model1": model1,
             "model2": model1,

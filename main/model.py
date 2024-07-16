@@ -60,7 +60,7 @@ class Run_Model(nn.Module):  # (jit.ScriptModule):
     def calculate_loss(self, output, mask, labels, hidden, hp):
         # use mask to calculate loss of crossentropyloss
         loss = self.loss_fnc(output, labels)
-        loss = (loss * mask).mean()
+        loss = (loss * mask).sum() / mask.sum()
         loss_reg = (
             hidden.abs().mean() * hp["l1_h"] + hidden.norm() * hp["l2_h"]
         )  #    Regularization cost  (L1 and L2 cost) on hidden activity

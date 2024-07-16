@@ -9,7 +9,7 @@ import warnings
 import sys
 import time
 from collections import defaultdict
-
+import math
 import torch
 import math
 import numpy as np
@@ -20,6 +20,7 @@ import torch
 import time
 import numpy as np
 import main
+import ipdb
 import logging
 import ipdb
 
@@ -404,6 +405,10 @@ def do_eval(run_model, log, logging, rule_train, dataloaders):
         log["creg_" + rule_test].append(creg_mean.item())
         log["perf_" + rule_test].append(perf_mean.item())
 
+        # test if nan
+        is_nan = math.isnan(clsq_mean.item())
+        if is_nan:
+            raise ValueError("Loss is NaN")
         logging.info(
             f"{rule_test:15s}| cost {clsq_mean.item():0.6f}| c_reg {creg_mean.item():0.6f} | perf {perf_mean.item():0.2f}"
         )

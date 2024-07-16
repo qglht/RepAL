@@ -47,21 +47,14 @@ done
 wait $APP_PID
 """
     for group in groups:
-        if group not in [
-            "master",
-            "pretrain_frozen",
-            "pretrain_unfrozen",
-            "pretrained_basic_anti_frozen",
-            "pretrained_basic_anti_unfrozen",
-        ]:
-            script_content = script_template.format(taskset=args.taskset, group=group)
-            script_filename = f"sbatch/groups/{args.taskset}_{group}_script.sh"
+        script_content = script_template.format(taskset=args.taskset, group=group)
+        script_filename = f"sbatch/groups/{args.taskset}_{group}_script.sh"
 
-            with open(script_filename, "w") as script_file:
-                script_file.write(script_content)
+        with open(script_filename, "w") as script_file:
+            script_file.write(script_content)
 
-            # Submit the job to the cluster
-            call(f"sbatch {script_filename}", shell=True)
+        # Submit the job to the cluster
+        call(f"sbatch {script_filename}", shell=True)
 
 
 if __name__ == "__main__":

@@ -58,12 +58,6 @@ PDM:
       train:
         ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
         frozen: True
-    pretrain_frozen_same_init:
-      pretrain: 
-        ruleset: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT]
-      train:
-        ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
-        frozen: True
     pretrain_unfrozen:
       pretrain: 
         ruleset: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT]
@@ -79,18 +73,6 @@ PDM:
     pretrained_basic_anti_unfrozen:
       pretrain:
         ruleset: [PerceptualDecisionMakingT, AntiPerceptualDecisionMakingT]
-      train:
-        ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
-        frozen: False
-    pretrained_basic_delay_frozen:
-      pretrain:
-        ruleset: [PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT]
-      train:
-        ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
-        frozen: True
-    pretrained_basic_delay_unfrozen:
-      pretrain:
-        ruleset: [PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT]
       train:
         ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
         frozen: False
@@ -152,18 +134,6 @@ GoNogo:
       train:
         ruleset: [AntiGoNogoDelayResponseT]
         frozen: False
-    pretrained_basic_delay_frozen:
-      pretrain:
-        ruleset: [GoNogoT, GoNogoDelayResponseT]
-      train:
-        ruleset: [AntiGoNogoDelayResponseT]
-        frozen: True
-    pretrained_basic_delay_unfrozen:
-      pretrain:
-        ruleset: [GoNogoT, GoNogoDelayResponseT]
-      train:
-        ruleset: [AntiGoNogoDelayResponseT]
-        frozen: False
     delay:
       pretrain:
         ruleset: []
@@ -189,8 +159,8 @@ GoNogo:
         ruleset: [AntiGoNogoDelayResponseT]
         frozen: True
 dsa:
-  n_delays: 17
-  delay_interval: 11
+  n_delays: 50
+  delay_interval: 4
   rank: 50
   device: cuda
 simulations:

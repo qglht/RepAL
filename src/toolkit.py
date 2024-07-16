@@ -24,6 +24,7 @@ import similarity
 import copy
 from collections import OrderedDict
 import torch
+import ipdb
 from torch import nn, jit
 from mambapy.mamba_lm import MambaLM, MambaLMConfig
 from mambapy.mamba import Mamba, MambaConfig, RMSNorm
@@ -64,7 +65,7 @@ def initialize_model(
         "activation": activation,
         "n_rnn": hidden_size,
         "learning_rate": lr,
-        "l2_h": 0.0001,
+        "l2_h": 0.00001,
         "l2_weight": 0.0001,
         "num_epochs": 50,
         "batch_size_train": batch_size,
@@ -147,7 +148,7 @@ def pipeline(taskset, group, rnn_type, activation, hidden_size, lr, batch_size, 
         "activation": activation,
         "n_rnn": hidden_size,
         "learning_rate": lr,
-        "l2_h": 0.0001,
+        "l2_h": 0.00001,
         "l2_weight": 0.0001,
         "num_epochs": 50,
         "batch_size_train": batch_size,
@@ -341,7 +342,7 @@ def get_dynamics_model(
         "n_rnn": hidden_size,
         "learning_rate": lr,
         "l2_h": 0.00001,
-        "l2_weight": 0.00001,
+        "l2_weight": 0.0001,
         "mode": "test",
     }
     hp, _, _ = main.set_hyperparameters(
@@ -373,10 +374,10 @@ def dissimilarity_over_learning(
     # paths for checkpoints
     model_name = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}"
     path_train_folder1 = os.path.join(
-        f"models/{taskset}/{group1}", model_name + f"_train"
+        f"models_analysis/{taskset}/{group1}", model_name + f"_train"
     )
     path_train_folder2 = os.path.join(
-        f"models/{taskset}/{group2}", model_name + f"_train"
+        f"models_analysis/{taskset}/{group2}", model_name + f"_train"
     )
 
     # initialize model architectures
@@ -394,13 +395,13 @@ def dissimilarity_over_learning(
     # group models and establish correspondancy between epochs
     models_to_compare = []
 
-    # if pretrain in group1 and group2, load checkpoints at os.path.join(f"models/{group}", model_name + f"_pretrain.pth")
+    # if pretrain in group1 and group2, load checkpoints at os.path.join(f"models_analysis/{group}", model_name + f"_pretrain.pth")
     if "pretrain" in group1 and "pretrain" in group2:
         path_pretrain_1 = os.path.join(
-            f"models/{taskset}/{group1}", model_name + f"_pretrain.pth"
+            f"models_analysis/{taskset}/{group1}", model_name + f"_pretrain.pth"
         )
         path_pretrain_2 = os.path.join(
-            f"models/{taskset}/{group2}", model_name + f"_pretrain.pth"
+            f"models_analysis/{taskset}/{group2}", model_name + f"_pretrain.pth"
         )
         run_model1_pretrain = main.load_model(
             path_pretrain_1,
@@ -522,7 +523,7 @@ def dissimilarity_within_learning(
     # paths for checkpoints
     model_name = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}"
     path_train_folder = os.path.join(
-        f"models/{taskset}/{group}", model_name + f"_train"
+        f"models_analysis/{taskset}/{group}", model_name + f"_train"
     )
 
     # initialize model architectures
@@ -536,10 +537,10 @@ def dissimilarity_within_learning(
     # group models and establish correspondancy between epochs
     models_to_compare = []
 
-    # if pretrain in group1 and group2, load checkpoints at os.path.join(f"models/{group}", model_name + f"_pretrain.pth")
+    # if pretrain in group1 and group2, load checkpoints at os.path.join(f"models_analysis/{group}", model_name + f"_pretrain.pth")
     if "pretrain" in group:
         path_pretrain = os.path.join(
-            f"models/{taskset}/{group}", model_name + f"_pretrain.pth"
+            f"models_analysis/{taskset}/{group}", model_name + f"_pretrain.pth"
         )
         run_model_pretrain = main.load_model(
             path_pretrain,

@@ -4,7 +4,7 @@ from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 import ipdb
 import torch
-from torch import linalg as LA
+from torch import Value, linalg as LA
 from torch.cuda.amp import autocast
 from main import get_dataloader, get_class_instance
 
@@ -78,7 +78,6 @@ def representation(model, rules):
 
                 with autocast():
                     _, _, _, h, _ = model(inputs, labels, mask)
-
                 h_byepoch = get_indexes(hp["dt"], timing, seq_length, h, rule)
                 for key, value in h_byepoch.items():
                     activations.setdefault(key, []).append(
@@ -90,7 +89,6 @@ def representation(model, rules):
         activations[key] = torch.cat(
             values, dim=1
         )  # Concatenate the tensors along the batch dimension
-
     return activations
 
 
