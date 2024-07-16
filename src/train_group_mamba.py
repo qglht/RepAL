@@ -21,7 +21,7 @@ def worker(semaphore, task):
 
 
 def train(args: argparse.Namespace) -> None:
-    multiprocessing.set_start_method("spawn", force=True)
+    multiprocessing.set_start_method("fork", force=True)
     config = load_config("config.yaml")
 
     tasks = []
