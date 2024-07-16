@@ -75,7 +75,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
     explained_variances = {group: [] for group in [args.group1, args.group2]}
     curves_names = {group: [] for group in [args.group1, args.group2]}
     for group in curves.keys():
-        for model in os.listdir(f"models/{args.taskset}/{group}"):
+        for model in os.listdir(f"models_analysis/{args.taskset}/{group}"):
             if not model.endswith("_train.pth"):
                 continue
             else:
