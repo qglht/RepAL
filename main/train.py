@@ -22,6 +22,7 @@ import numpy as np
 import main
 import ipdb
 import logging
+import ipdb
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
@@ -221,7 +222,7 @@ def set_hyperparameters(
     return hp, log, optimizer  # , model
 
 
-def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False):
+def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=True):
 
     # set up log
     logging = setup_logging(os.path.join(name, "logs"))
@@ -229,6 +230,7 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False):
     start_epoch = 0
 
     # load checkpoint if there is any
+    # TODO : adapt it to Mamba : How to save the model with the checkpoints?
     if not retrain:
         checkpoint_files = find_checkpoints(name)
         if checkpoint_files:
@@ -240,12 +242,20 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False):
             print(f"Resuming training from epoch {start_epoch}")
 
     # freeze input weights or not
-    if freeze:
-        optim = optimizer(
-            [run_model.model.rnn.rnncell.weight_ih], lr=hp["learning_rate"]
-        )
+    # TODO : adapt it to Mamba
+    if rnn:
+        if freeze:
+            optim = optimizer(
+                [run_model.model.rnn.rnncell.weight_ih], lr=hp["learning_rate"]
+            )
+        else:
+            optim = optimizer(run_model.model.parameters(), lr=hp["learning_rate"])
     else:
-        optim = optimizer(run_model.model.parameters(), lr=hp["learning_rate"])
+        if freeze:
+            optim = optimizer(run_model.embedding.parameters(), lr=hp["learning_rate"])
+        else:
+            # only unfreeze embedding layer
+            optim = optimizer(run_model.parameters(), lr=hp["learning_rate"])
 
     # if model loaded, load optim state dict
     if not retrain:
@@ -263,7 +273,6 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False):
     }
 
     t_start = time.time()
-
     for epoch in range(start_epoch, hp["num_epochs"]):
         print(f"Epoch {epoch} started")
         epoch_loss = 0.0

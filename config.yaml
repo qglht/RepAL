@@ -23,6 +23,25 @@ rnn:
     nopretrain:
       - True
       - False
+mamba:
+  parameters:
+    d_model:
+      -8
+      -16
+      -32
+      -64
+    n_layers:
+      -1
+      -2
+      -3
+      -4
+    learning_rate:
+      - 0.0001
+      - 0.001
+    batch_size_train:
+      - 128
+      - 256
+    
 PDM:
   all_rules: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT, AntiPerceptualDecisionMakingDelayResponseT]
   rules_analysis: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT, AntiPerceptualDecisionMakingDelayResponseT]
