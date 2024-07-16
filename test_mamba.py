@@ -14,8 +14,8 @@ hp = {
     "num_epochs": 50,
     "batch_size_train": 16,
     "learning_rate": 0.01,
-    "l2_h": 0.0001,
-    "l2_weight": 0.001,
+    "l2_h": 0.00001,
+    "l2_weight": 0.0001,
 }
 all_rules = config["PDM"]["all_rules"]
 rules_pretrain = config["PDM"]["groups"]["master"]["train"]["ruleset"]
@@ -26,9 +26,9 @@ path_pretrain_folder = "debug"
 path_pretrain_model = "debug/model.pt"
 config = MambaLMConfig(
     d_model=16,
-    n_layers=2,
+    n_layers=1,
     vocab_size=hp["n_input"],
-    pad_vocab_size_multiple=8,  # https://github.com/alxndrTL/mamba.py/blob/main/mamba_lm.py#L27
+    pad_vocab_size_multiple=1,  # https://github.com/alxndrTL/mamba.py/blob/main/mamba_lm.py#L27
     pscan=True,
 )
 run_model = main.MambaSupervGym(hp, config, device="cpu")

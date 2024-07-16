@@ -251,10 +251,10 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=
             optim = optimizer(run_model.model.parameters(), lr=hp["learning_rate"])
     else:
         if freeze:
-            optim = optimizer(run_model.parameters(), lr=hp["learning_rate"])
+            optim = optimizer(run_model.embedding.parameters(), lr=hp["learning_rate"])
         else:
             # only unfreeze embedding layer
-            optim = optimizer(run_model.embedding.parameters(), lr=hp["learning_rate"])
+            optim = optimizer(run_model.parameters(), lr=hp["learning_rate"])
 
     # if model loaded, load optim state dict
     if not retrain:

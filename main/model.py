@@ -115,8 +115,8 @@ class MambaSupervGym(MambaLM):
         # predicted_classes = torch.argmax(output, dim=1)
         loss = self.loss_fnc(output, labels)
         # mask = (mask > 1).float()
-        # loss = (loss * mask).sum() / mask.sum()
-        loss = (loss * mask).mean()
+        loss = (loss * mask).sum() / mask.sum()
+        # loss = (loss * mask).mean()
         loss_reg = 0
         for param in self.parameters():
             loss_reg += (
@@ -186,4 +186,11 @@ def load_model(path, hp, RNNLayer, device):
     model = Run_Model(hp, RNNLayer, device)
     state_dict = torch.load(path, map_location=device)
     model.model.load_state_dict(state_dict)
+    return model
+
+
+def load_model_mamba(path, hp, lm_config, device):
+    model = MambaSupervGym(hp, lm_config, device)
+    state_dict = torch.load(path, map_location=device)
+    model.load_state_dict(state_dict)
     return model
