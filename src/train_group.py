@@ -5,6 +5,7 @@ from dsa_analysis import load_config
 import torch
 import multiprocessing
 from src.toolkit import pipeline
+from multiprocessing import Semaphore
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
@@ -14,8 +15,13 @@ warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprec
 os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
 
+def worker(semaphore, task):
+    with semaphore:
+        pipeline(*task)
+
+
 def train(args: argparse.Namespace) -> None:
-    multiprocessing.set_start_method("spawn", force=True)
+    multiprocessing.set_start_method("fork", force=True)
     config = load_config("config.yaml")
 
     # Create a list of all tasks to run
@@ -56,8 +62,11 @@ def train(args: argparse.Namespace) -> None:
                         )
                         i += 1
 
-    # Create a process for each task
-    processes = [multiprocessing.Process(target=pipeline, args=task) for task in tasks]
+    semaphore = Semaphore(num_gpus)  # Adjust this number as necessary
+
+    processes = [
+        multiprocessing.Process(target=worker, args=(semaphore, task)) for task in tasks
+    ]
 
     # Start all processes
     for process in processes:

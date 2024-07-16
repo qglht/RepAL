@@ -26,15 +26,15 @@ rnn:
 mamba:
   parameters:
     d_model:
-      -8
-      -16
-      -32
-      -64
+      - 8
+      - 16
+      - 32
+      - 64
     n_layers:
-      -1
-      -2
-      -3
-      -4
+      - 1
+      - 2
+      - 3
+      - 4
     learning_rate:
       - 0.0001
       - 0.001
