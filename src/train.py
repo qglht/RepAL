@@ -49,15 +49,15 @@ done
 wait $APP_PID
 """
 
-    # groups = [
-    #     "untrained",
-    #     "pretrain_unfrozen",
-    #     "pretrain_frozen",
-    #     "pretrained_basic_anti_frozen",
-    #     "pretrained_basic_anti_unfrozen",
-    #     "pretrained_basic_delay_frozen",
-    #     "pretrained_basic_delay_unfrozen",
-    # ]
+    groups = [
+        # "untrained",
+        "pretrain_unfrozen",
+        "pretrain_frozen",
+        # "pretrained_basic_anti_frozen",
+        # "pretrained_basic_anti_unfrozen",
+        # "pretrained_basic_delay_frozen",
+        # "pretrained_basic_delay_unfrozen",
+    ]
     for group in groups:
         script_content = script_template.format(taskset=args.taskset, group=group)
         script_filename = f"sbatch/groups/{args.taskset}_{group}_script.sh"
