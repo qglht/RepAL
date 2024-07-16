@@ -27,6 +27,7 @@ import ipdb
 from torch import nn, jit
 from mambapy.mamba_lm import MambaLM, MambaLMConfig
 from mambapy.mamba import Mamba, MambaConfig, RMSNorm
+import yaml
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
@@ -273,13 +274,6 @@ def pipeline_mamba(
         # Pretraining
         print(f"Pretraining model {model_name} for group {group} and taskset {taskset}")
 
-        config = MambaLMConfig(
-            d_model=d_model,
-            n_layers=n_layers,
-            vocab_size=hp["n_input"],
-            pad_vocab_size_multiple=pad_vocab_size_multiple,  # https://github.com/alxndrTL/mamba.py/blob/main/mamba_lm.py#L27
-            pscan=pscan,
-        )
         if not os.path.exists(path_pretrain_model):
             if rules_pretrain:
                 hp, log, optimizer = main.set_hyperparameters(
@@ -288,9 +282,14 @@ def pipeline_mamba(
                     ruleset=all_rules,
                     rule_trains=rules_pretrain,
                 )
-                run_model = main.MambaSupervGym(
-                    hp["n_output"], hp["n_input"], config, device=device
+                config = MambaLMConfig(
+                    d_model=d_model,
+                    n_layers=n_layers,
+                    vocab_size=hp["n_input"],
+                    pad_vocab_size_multiple=pad_vocab_size_multiple,  # https://github.com/alxndrTL/mamba.py/blob/main/mamba_lm.py#L27
+                    pscan=pscan,
                 )
+                run_model = main.MambaSupervGym(hp, config, device=device)
                 main.train(
                     run_model, optimizer, hp, log, path_pretrain_folder, rnn=False
                 )
@@ -307,6 +306,13 @@ def pipeline_mamba(
                         hp=hp,
                         ruleset=all_rules,
                         rule_trains=rules_train,
+                    )
+                    config = MambaLMConfig(
+                        d_model=d_model,
+                        n_layers=n_layers,
+                        vocab_size=hp["n_input"],
+                        pad_vocab_size_multiple=pad_vocab_size_multiple,  # https://github.com/alxndrTL/mamba.py/blob/main/mamba_lm.py#L27
+                        pscan=pscan,
                     )
                     run_model = main.load_model_mamba(
                         path_pretrain_model,
@@ -331,9 +337,14 @@ def pipeline_mamba(
                         ruleset=all_rules,
                         rule_trains=rules_train,
                     )
-                    run_model = main.MambaSupervGym(
-                        hp["n_output"], hp["n_input"], config, device=device
+                    config = MambaLMConfig(
+                        d_model=d_model,
+                        n_layers=n_layers,
+                        vocab_size=hp["n_input"],
+                        pad_vocab_size_multiple=pad_vocab_size_multiple,  # https://github.com/alxndrTL/mamba.py/blob/main/mamba_lm.py#L27
+                        pscan=pscan,
                     )
+                    run_model = main.MambaSupervGym(hp, config, device=device)
                     main.train(
                         run_model,
                         optimizer,
@@ -349,9 +360,14 @@ def pipeline_mamba(
                 hp, log, optimizer = main.set_hyperparameters(
                     model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=rules_train
                 )
-                run_model = main.MambaSupervGym(
-                    hp["n_output"], hp["n_input"], config, device=device
+                config = MambaLMConfig(
+                    d_model=d_model,
+                    n_layers=n_layers,
+                    vocab_size=hp["n_input"],
+                    pad_vocab_size_multiple=pad_vocab_size_multiple,  # https://github.com/alxndrTL/mamba.py/blob/main/mamba_lm.py#L27
+                    pscan=pscan,
                 )
+                run_model = main.MambaSupervGym(hp, config, device=device)
                 run_model.save(path_train_model)
 
         return

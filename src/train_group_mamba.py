@@ -3,7 +3,7 @@ import os
 import argparse
 from dsa_analysis import load_config
 import torch
-import concurrent.futures
+import multiprocessing
 from src.toolkit import pipeline_mamba
 
 # Suppress specific Gym warnings
@@ -15,6 +15,7 @@ os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
 
 def train(args: argparse.Namespace) -> None:
+    multiprocessing.set_start_method("spawn", force=True)
     config = load_config("config.yaml")
 
     # Create a list of all tasks to run
@@ -55,16 +56,18 @@ def train(args: argparse.Namespace) -> None:
                     )
                     i += 1
 
-    # Limit the number of concurrent processes
-    max_workers = min(8, len(tasks))  # Adjust the number of workers based on your needs
+    # Create a process for each task
+    processes = [
+        multiprocessing.Process(target=pipeline_mamba, args=task) for task in tasks
+    ]
 
-    with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
-        futures = [executor.submit(pipeline_mamba, *task) for task in tasks]
-        for future in concurrent.futures.as_completed(futures):
-            try:
-                future.result()
-            except Exception as e:
-                print(f"Task generated an exception: {e}")
+    # Start all processes
+    for process in processes:
+        process.start()
+
+    # Wait for all processes to finish
+    for process in processes:
+        process.join()
 
 
 if __name__ == "__main__":
@@ -79,7 +82,7 @@ if __name__ == "__main__":
         "--taskset",
         type=str,
         default="PDM",
-        help="The taskset to train the model on",
+        help="The tasket to train the model on",
     )
     args = parser.parse_args()
     train(args)
