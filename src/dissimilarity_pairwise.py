@@ -1,6 +1,8 @@
 import warnings
 import os
 import argparse
+
+from matplotlib.pylab import f
 from dsa_analysis import load_config
 import torch
 import multiprocessing
@@ -109,6 +111,13 @@ def dissimilarity(args: argparse.Namespace) -> None:
     print(f"Dissimilarities computed")
     rows = []
 
+    print(f"len of curves_names[args.group1] : {len(curves_names[args.group1])}")
+    print(f"len of curves_names[args.group2] : {len(curves_names[args.group2])}")
+    print(f"len of dissimilarities['cka'] : {len(dissimilarities['cka'])}")
+    print(
+        f"len of dissimilarities['procrustes'] : {len(dissimilarities['procrustes'])}"
+    )
+    print(f"len of dissimilarities['dsa'] : {len(dissimilarities['dsa'])}")
     for i, model1 in enumerate(curves_names[args.group1]):
         if i < len(curves_names[args.group2]):
             # Collect the row data in a dictionary
