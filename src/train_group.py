@@ -50,7 +50,7 @@ def train(args: argparse.Namespace) -> None:
                             and activation == "relu"
                             and hidden_size == 256
                             and lr == 0.001
-                            and batch_size == 256
+                            and batch_size == 128
                         ):
                             device = devices[
                                 i % len(devices)
