@@ -437,10 +437,10 @@ def dissimilarity_over_learning(
         # paths for checkpoints
         model_name = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}"
         path_train_folder1 = os.path.join(
-            f"models_analysis/{taskset}/{group1}", model_name + f"_train"
+            f"models/{taskset}/{group1}", model_name + f"_train"
         )
         path_train_folder2 = os.path.join(
-            f"models_analysis/{taskset}/{group2}", model_name + f"_train"
+            f"models/{taskset}/{group2}", model_name + f"_train"
         )
 
         # check if both folders path_train_folder1 and path_train_folder2 exist
@@ -461,13 +461,13 @@ def dissimilarity_over_learning(
             # group models and establish correspondancy between epochs
             models_to_compare = []
 
-            # if pretrain in group1 and group2, load checkpoints at os.path.join(f"models_analysis/{group}", model_name + f"_pretrain.pth")
+            # if pretrain in group1 and group2, load checkpoints at os.path.join(f"models/{group}", model_name + f"_pretrain.pth")
             if "pretrain" in group1 and "pretrain" in group2:
                 path_pretrain_1 = os.path.join(
-                    f"models_analysis/{taskset}/{group1}", model_name + f"_pretrain.pth"
+                    f"models/{taskset}/{group1}", model_name + f"_pretrain.pth"
                 )
                 path_pretrain_2 = os.path.join(
-                    f"models_analysis/{taskset}/{group2}", model_name + f"_pretrain.pth"
+                    f"models/{taskset}/{group2}", model_name + f"_pretrain.pth"
                 )
                 run_model1_pretrain = main.load_model(
                     path_pretrain_1,
@@ -591,7 +591,7 @@ def dissimilarity_within_learning(
         # paths for checkpoints
         model_name = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}"
         path_train_folder = os.path.join(
-            f"models_analysis/{taskset}/{group}", model_name + f"_train"
+            f"models/{taskset}/{group}", model_name + f"_train"
         )
         # check if folder path_train_folder exists
         if os.path.exists(path_train_folder):
@@ -606,10 +606,10 @@ def dissimilarity_within_learning(
             # group models and establish correspondancy between epochs
             models_to_compare = []
 
-            # if pretrain in group1 and group2, load checkpoints at os.path.join(f"models_analysis/{group}", model_name + f"_pretrain.pth")
+            # if pretrain in group1 and group2, load checkpoints at os.path.join(f"models/{group}", model_name + f"_pretrain.pth")
             if "pretrain" in group:
                 path_pretrain = os.path.join(
-                    f"models_analysis/{taskset}/{group}", model_name + f"_pretrain.pth"
+                    f"models/{taskset}/{group}", model_name + f"_pretrain.pth"
                 )
                 run_model_pretrain = main.load_model(
                     path_pretrain,
