@@ -12,7 +12,7 @@ def generate_and_submit_scripts(args: argparse.Namespace):
     script_template = """#!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=1:00:00
-#SBATCH --job-name={taskset}_{group}_job
+#SBATCH --job-name=MAMBA_{taskset}_{group}_job
 #SBATCH --gres=gpu:8
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=80  

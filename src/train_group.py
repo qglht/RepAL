@@ -45,22 +45,29 @@ def train(args: argparse.Namespace) -> None:
             for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
                 for lr in config["rnn"]["parameters"]["learning_rate"]:
                     for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
-                        device = devices[
-                            i % len(devices)
-                        ]  # Cycle through available devices
-                        tasks.append(
-                            (
-                                args.taskset,
-                                args.group,
-                                rnn_type,
-                                activation,
-                                hidden_size,
-                                lr,
-                                batch_size,
-                                device,
+                        if (
+                            rnn_type == "leaky_rnn"
+                            and activation == "relu"
+                            and hidden_size == 256
+                            and lr == 0.001
+                            and batch_size == 256
+                        ):
+                            device = devices[
+                                i % len(devices)
+                            ]  # Cycle through available devices
+                            tasks.append(
+                                (
+                                    args.taskset,
+                                    args.group,
+                                    rnn_type,
+                                    activation,
+                                    hidden_size,
+                                    lr,
+                                    batch_size,
+                                    device,
+                                )
                             )
-                        )
-                        i += 1
+                            i += 1
 
     semaphore = Semaphore(num_gpus)  # Adjust this number as necessary
 
