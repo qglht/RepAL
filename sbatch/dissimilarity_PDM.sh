@@ -7,7 +7,7 @@
 #SBATCH --time=1:00:00
 
 # set name of job
-#SBATCH --job-name=Dissimilarities
+#SBATCH --job-name=PDM_Dissimilarities
 
 # set number of GPUs
 #SBATCH --gres=gpu:0

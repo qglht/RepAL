@@ -44,10 +44,10 @@ LOG_FILE=gpu_usage/{taskset}_{group}_gpu_usage.log
 
 # Monitor GPU status every 600 seconds (5 minutes) until the application finishes
 while kill -0 $APP_PID 2>/dev/null; do
-    {
+    {{
         echo "$(date '+%Y-%m-%d %H:%M:%S') - Checking GPU status during the application run:"
         nvidia-smi
-    } >> "$LOG_FILE"  # Append output to log file
+    }} >> "$LOG_FILE"  # Append output to log file
     sleep 600 
 done
 
