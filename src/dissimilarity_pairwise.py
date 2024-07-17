@@ -27,9 +27,11 @@ def measure_dissimilarities(group1, group2, model_names_1, model_names_2, device
     dis_cka = []
     dis_procrustes = []
     dis_dsa = []
+    models_selected = []
     for i, model1 in enumerate(group1):
         for j, model2 in enumerate(group2):
             if model_names_1[i] == model_names_2[j]:
+                models_selected.append(model_names_1[i])
                 dis_cka.append(1 - cka_measure(model1, model2))
                 dis_procrustes.append(1 - procrustes_measure(model1, model2))
                 dsa_comp = DSA.DSA(
@@ -44,7 +46,14 @@ def measure_dissimilarities(group1, group2, model_names_1, model_names_2, device
                     device=device,
                 )
                 dis_dsa.append(dsa_comp.fit_score())
-    return {"cka": dis_cka, "procrustes": dis_procrustes, "dsa": dis_dsa}
+    return models_selected, {
+        "cka": dis_cka,
+        "procrustes": dis_procrustes,
+        "dsa": dis_dsa,
+    }
+
+
+# TODO : return only the models selected
 
 
 def parse_model_info(model_name):
@@ -101,7 +110,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                 curves_names[group].append(model.replace(".pth", ""))
 
     print(f"Dynamics computed")
-    dissimilarities = measure_dissimilarities(
+    models_selected, dissimilarities = measure_dissimilarities(
         curves[args.group1],
         curves[args.group2],
         curves_names[args.group1],
@@ -118,24 +127,20 @@ def dissimilarity(args: argparse.Namespace) -> None:
         f"len of dissimilarities['procrustes'] : {len(dissimilarities['procrustes'])}"
     )
     print(f"len of dissimilarities['dsa'] : {len(dissimilarities['dsa'])}")
-    for i, model1 in enumerate(curves_names[args.group1]):
-        if i < len(curves_names[args.group2]):
-            # Collect the row data in a dictionary
-            print(model1)
-            print(i)
-            row = {
-                "model1": model1,
-                "model2": model1,
-                "group1": args.group1,
-                "group2": args.group2,
-                "cka": dissimilarities["cka"][i],
-                "procrustes": dissimilarities["procrustes"][i],
-                "dsa": dissimilarities["dsa"][i],
-                "explained_variance_group1": explained_variances[args.group1][i],
-                "explained_variance_group2": explained_variances[args.group2][i],
-            }
-            # Append the row dictionary to the list
-            rows.append(row)
+    for i in range(len(models_selected)):
+        row = {
+            "model1": models_selected[i],
+            "model2": models_selected[i],
+            "group1": args.group1,
+            "group2": args.group2,
+            "cka": dissimilarities["cka"][i],
+            "procrustes": dissimilarities["procrustes"][i],
+            "dsa": dissimilarities["dsa"][i],
+            "explained_variance_group1": explained_variances[args.group1][i],
+            "explained_variance_group2": explained_variances[args.group2][i],
+        }
+        # Append the row dictionary to the list
+        rows.append(row)
 
     # Create the DataFrame from the list of rows
     dissimilarities_df = pd.DataFrame(rows)
