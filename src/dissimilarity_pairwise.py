@@ -110,22 +110,23 @@ def dissimilarity(args: argparse.Namespace) -> None:
     rows = []
 
     for i, model1 in enumerate(curves_names[args.group1]):
-        # Collect the row data in a dictionary
-        print(model1)
-        print(i)
-        row = {
-            "model1": model1,
-            "model2": model1,
-            "group1": args.group1,
-            "group2": args.group2,
-            "cka": dissimilarities["cka"][i],
-            "procrustes": dissimilarities["procrustes"][i],
-            "dsa": dissimilarities["dsa"][i],
-            "explained_variance_group1": explained_variances[args.group1][i],
-            "explained_variance_group2": explained_variances[args.group2][i],
-        }
-        # Append the row dictionary to the list
-        rows.append(row)
+        if i <= len(curves_names[args.group2]):
+            # Collect the row data in a dictionary
+            print(model1)
+            print(i)
+            row = {
+                "model1": model1,
+                "model2": model1,
+                "group1": args.group1,
+                "group2": args.group2,
+                "cka": dissimilarities["cka"][i],
+                "procrustes": dissimilarities["procrustes"][i],
+                "dsa": dissimilarities["dsa"][i],
+                "explained_variance_group1": explained_variances[args.group1][i],
+                "explained_variance_group2": explained_variances[args.group2][i],
+            }
+            # Append the row dictionary to the list
+            rows.append(row)
 
     # Create the DataFrame from the list of rows
     dissimilarities_df = pd.DataFrame(rows)

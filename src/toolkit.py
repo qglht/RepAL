@@ -246,7 +246,6 @@ def pipeline_mamba(
     batch_size,
     device,
 ):
-    ipdb.set_trace()
     with load_config("config.yaml") as config:
         rules_pretrain = config[taskset]["groups"][group]["pretrain"]["ruleset"]
         rules_train = config[taskset]["groups"][group]["train"]["ruleset"]
@@ -426,6 +425,13 @@ def dissimilarity_over_learning(
     taskset, group1, group2, rnn_type, activation, hidden_size, lr, batch_size, device
 ):
     with load_config("config.yaml") as config:
+        dissimilarities_over_learning = {
+            "cka": [],
+            "dsa": [],
+            "procrustes": [],
+            "accuracy_1": [],
+            "accuracy_2": [],
+        }
         all_rules = config[taskset]["rules_analysis"]
 
         # paths for checkpoints
@@ -437,136 +443,136 @@ def dissimilarity_over_learning(
             f"models_analysis/{taskset}/{group2}", model_name + f"_train"
         )
 
-        # initialize model architectures
-        run_model1, hp1 = initialize_model(
-            taskset, rnn_type, activation, hidden_size, lr, batch_size, device
-        )
-        run_model2, hp2 = initialize_model(
-            taskset, rnn_type, activation, hidden_size, lr, batch_size, device
-        )
+        # check if both folders path_train_folder1 and path_train_folder2 exist
+        if os.path.exists(path_train_folder1) and os.path.exists(path_train_folder2):
 
-        # get checkpoints in train path
-        checkpoint_files_1 = find_checkpoints(path_train_folder1)
-        checkpoint_files_2 = find_checkpoints(path_train_folder2)
-
-        # group models and establish correspondancy between epochs
-        models_to_compare = []
-
-        # if pretrain in group1 and group2, load checkpoints at os.path.join(f"models_analysis/{group}", model_name + f"_pretrain.pth")
-        if "pretrain" in group1 and "pretrain" in group2:
-            path_pretrain_1 = os.path.join(
-                f"models_analysis/{taskset}/{group1}", model_name + f"_pretrain.pth"
+            # initialize model architectures
+            run_model1, hp1 = initialize_model(
+                taskset, rnn_type, activation, hidden_size, lr, batch_size, device
             )
-            path_pretrain_2 = os.path.join(
-                f"models_analysis/{taskset}/{group2}", model_name + f"_pretrain.pth"
+            run_model2, hp2 = initialize_model(
+                taskset, rnn_type, activation, hidden_size, lr, batch_size, device
             )
-            run_model1_pretrain = main.load_model(
-                path_pretrain_1,
-                hp1,
-                RNNLayer,
-                device=device,
-            )
-            run_model2_pretrain = main.load_model(
-                path_pretrain_2,
-                hp2,
-                RNNLayer,
-                device=device,
-            )
-            models_to_compare.extend([(run_model1_pretrain, run_model2_pretrain)])
 
-        dissimilarities_over_learning = {
-            "cka": [],
-            "dsa": [],
-            "procrustes": [],
-            "accuracy_1": [],
-            "accuracy_2": [],
-        }
-        cka_measure = similarity.make("measure.sim_metric.cka-angular-score")
-        procrustes_measure = similarity.make("measure.netrep.procrustes-angular-score")
-        if checkpoint_files_1 and checkpoint_files_2:
-            # get the models to compare
-            if len(checkpoint_files_1) < len(checkpoint_files_2):
-                index_epochs = corresponding_training_time(
-                    len(checkpoint_files_1), len(checkpoint_files_2)
-                )
-                for epoch in index_epochs:
-                    run_model1_copy = copy.deepcopy(run_model1)
-                    run_model2_copy = copy.deepcopy(run_model2)
-                    checkpoint1 = torch.load(
-                        os.path.join(
-                            path_train_folder1,
-                            checkpoint_files_1[index_epochs.index(epoch)],
-                        ),
-                        map_location=device,
-                    )
-                    run_model1_copy = load_model_jit(run_model1_copy, checkpoint1)
-                    accuracy_1 = float(checkpoint1["log"]["perf_min"][-1])
-                    checkpoint2 = torch.load(
-                        os.path.join(path_train_folder2, checkpoint_files_2[epoch]),
-                        map_location=device,
-                    )
-                    run_model2_copy = load_model_jit(run_model2_copy, checkpoint2)
-                    accuracy_2 = float(checkpoint2["log"]["perf_min"][-1])
-                    models_to_compare.extend([(run_model1_copy, run_model2_copy)])
-                    dissimilarities_over_learning["accuracy_1"].append(accuracy_1)
-                    dissimilarities_over_learning["accuracy_2"].append(accuracy_2)
-            else:
-                index_epochs = corresponding_training_time(
-                    len(checkpoint_files_2), len(checkpoint_files_1)
-                )
-                for epoch in index_epochs:
-                    run_model1_copy = copy.deepcopy(run_model1)
-                    run_model2_copy = copy.deepcopy(run_model2)
-                    checkpoint1 = torch.load(
-                        os.path.join(path_train_folder1, checkpoint_files_1[epoch]),
-                        map_location=device,
-                    )
-                    run_model1_copy = load_model_jit(run_model1_copy, checkpoint1)
-                    accuracy_1 = float(checkpoint1["log"]["perf_min"][-1])
-                    checkpoint2 = torch.load(
-                        os.path.join(
-                            path_train_folder2,
-                            checkpoint_files_2[index_epochs.index(epoch)],
-                        ),
-                        map_location=device,
-                    )
-                    run_model2_copy = load_model_jit(run_model2_copy, checkpoint2)
-                    accuracy_2 = float(checkpoint2["log"]["perf_min"][-1])
-                    models_to_compare.extend([(run_model1_copy, run_model2_copy)])
-                    dissimilarities_over_learning["accuracy_1"].append(accuracy_1)
-                    dissimilarities_over_learning["accuracy_2"].append(accuracy_2)
+            # get checkpoints in train path
+            checkpoint_files_1 = find_checkpoints(path_train_folder1)
+            checkpoint_files_2 = find_checkpoints(path_train_folder2)
 
-            # compute the curves for models and dissimilarities
-            curves = [
-                (
-                    get_curves(taskset, tuple_model[0], all_rules, components=15),
-                    get_curves(taskset, tuple_model[1], all_rules, components=15),
+            # group models and establish correspondancy between epochs
+            models_to_compare = []
+
+            # if pretrain in group1 and group2, load checkpoints at os.path.join(f"models_analysis/{group}", model_name + f"_pretrain.pth")
+            if "pretrain" in group1 and "pretrain" in group2:
+                path_pretrain_1 = os.path.join(
+                    f"models_analysis/{taskset}/{group1}", model_name + f"_pretrain.pth"
                 )
-                for tuple_model in models_to_compare
-            ]
-            for epoch_index in range(len(index_epochs)):
-                dissimilarities_over_learning["cka"].append(
-                    1 - cka_measure(curves[epoch_index][0], curves[epoch_index][1])
+                path_pretrain_2 = os.path.join(
+                    f"models_analysis/{taskset}/{group2}", model_name + f"_pretrain.pth"
                 )
-                dissimilarities_over_learning["procrustes"].append(
-                    1
-                    - procrustes_measure(curves[epoch_index][0], curves[epoch_index][1])
-                )
-                dsa_comp = DSA.DSA(
-                    curves[epoch_index][0],
-                    curves[epoch_index][1],
-                    n_delays=config["dsa"]["n_delays"],
-                    rank=config["dsa"]["rank"],
-                    delay_interval=config["dsa"]["delay_interval"],
-                    verbose=True,
-                    iters=1000,
-                    lr=1e-2,
+                run_model1_pretrain = main.load_model(
+                    path_pretrain_1,
+                    hp1,
+                    RNNLayer,
                     device=device,
                 )
-                dissimilarities_over_learning["dsa"].append(dsa_comp.fit_score())
+                run_model2_pretrain = main.load_model(
+                    path_pretrain_2,
+                    hp2,
+                    RNNLayer,
+                    device=device,
+                )
+                models_to_compare.extend([(run_model1_pretrain, run_model2_pretrain)])
 
-        for key, value in dissimilarities_over_learning.items():
-            dissimilarities_over_learning[key] = np.array(value)
+            cka_measure = similarity.make("measure.sim_metric.cka-angular-score")
+            procrustes_measure = similarity.make(
+                "measure.netrep.procrustes-angular-score"
+            )
+            if checkpoint_files_1 and checkpoint_files_2:
+                # get the models to compare
+                if len(checkpoint_files_1) < len(checkpoint_files_2):
+                    index_epochs = corresponding_training_time(
+                        len(checkpoint_files_1), len(checkpoint_files_2)
+                    )
+                    for epoch in index_epochs:
+                        run_model1_copy = copy.deepcopy(run_model1)
+                        run_model2_copy = copy.deepcopy(run_model2)
+                        checkpoint1 = torch.load(
+                            os.path.join(
+                                path_train_folder1,
+                                checkpoint_files_1[index_epochs.index(epoch)],
+                            ),
+                            map_location=device,
+                        )
+                        run_model1_copy = load_model_jit(run_model1_copy, checkpoint1)
+                        accuracy_1 = float(checkpoint1["log"]["perf_min"][-1])
+                        checkpoint2 = torch.load(
+                            os.path.join(path_train_folder2, checkpoint_files_2[epoch]),
+                            map_location=device,
+                        )
+                        run_model2_copy = load_model_jit(run_model2_copy, checkpoint2)
+                        accuracy_2 = float(checkpoint2["log"]["perf_min"][-1])
+                        models_to_compare.extend([(run_model1_copy, run_model2_copy)])
+                        dissimilarities_over_learning["accuracy_1"].append(accuracy_1)
+                        dissimilarities_over_learning["accuracy_2"].append(accuracy_2)
+                else:
+                    index_epochs = corresponding_training_time(
+                        len(checkpoint_files_2), len(checkpoint_files_1)
+                    )
+                    for epoch in index_epochs:
+                        run_model1_copy = copy.deepcopy(run_model1)
+                        run_model2_copy = copy.deepcopy(run_model2)
+                        checkpoint1 = torch.load(
+                            os.path.join(path_train_folder1, checkpoint_files_1[epoch]),
+                            map_location=device,
+                        )
+                        run_model1_copy = load_model_jit(run_model1_copy, checkpoint1)
+                        accuracy_1 = float(checkpoint1["log"]["perf_min"][-1])
+                        checkpoint2 = torch.load(
+                            os.path.join(
+                                path_train_folder2,
+                                checkpoint_files_2[index_epochs.index(epoch)],
+                            ),
+                            map_location=device,
+                        )
+                        run_model2_copy = load_model_jit(run_model2_copy, checkpoint2)
+                        accuracy_2 = float(checkpoint2["log"]["perf_min"][-1])
+                        models_to_compare.extend([(run_model1_copy, run_model2_copy)])
+                        dissimilarities_over_learning["accuracy_1"].append(accuracy_1)
+                        dissimilarities_over_learning["accuracy_2"].append(accuracy_2)
+
+                # compute the curves for models and dissimilarities
+                curves = [
+                    (
+                        get_curves(taskset, tuple_model[0], all_rules, components=15),
+                        get_curves(taskset, tuple_model[1], all_rules, components=15),
+                    )
+                    for tuple_model in models_to_compare
+                ]
+                for epoch_index in range(len(index_epochs)):
+                    dissimilarities_over_learning["cka"].append(
+                        1 - cka_measure(curves[epoch_index][0], curves[epoch_index][1])
+                    )
+                    dissimilarities_over_learning["procrustes"].append(
+                        1
+                        - procrustes_measure(
+                            curves[epoch_index][0], curves[epoch_index][1]
+                        )
+                    )
+                    dsa_comp = DSA.DSA(
+                        curves[epoch_index][0],
+                        curves[epoch_index][1],
+                        n_delays=config["dsa"]["n_delays"],
+                        rank=config["dsa"]["rank"],
+                        delay_interval=config["dsa"]["delay_interval"],
+                        verbose=True,
+                        iters=1000,
+                        lr=1e-2,
+                        device=device,
+                    )
+                    dissimilarities_over_learning["dsa"].append(dsa_comp.fit_score())
+
+            for key, value in dissimilarities_over_learning.items():
+                dissimilarities_over_learning[key] = np.array(value)
 
         return dissimilarities_over_learning
 
@@ -577,135 +583,146 @@ def dissimilarity_within_learning(
     with load_config("config.yaml") as config:
         all_rules = config[taskset]["rules_analysis"]
         sampling = [0, 25, 50, 75, 100]
-
-        # paths for checkpoints
-        model_name = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}"
-        path_train_folder = os.path.join(
-            f"models_analysis/{taskset}/{group}", model_name + f"_train"
-        )
-
-        # initialize model architectures
-        run_model, hp = initialize_model(
-            taskset, rnn_type, activation, hidden_size, lr, batch_size, device
-        )
-
-        # get checkpoints in train path
-        checkpoint_files = find_checkpoints(path_train_folder)
-
-        # group models and establish correspondancy between epochs
-        models_to_compare = []
-
-        # if pretrain in group1 and group2, load checkpoints at os.path.join(f"models_analysis/{group}", model_name + f"_pretrain.pth")
-        if "pretrain" in group:
-            path_pretrain = os.path.join(
-                f"models_analysis/{taskset}/{group}", model_name + f"_pretrain.pth"
-            )
-            run_model_pretrain = main.load_model(
-                path_pretrain,
-                hp,
-                RNNLayer,
-                device=device,
-            )
-            models_to_compare.extend([run_model_pretrain])
-
         cka_similarities = np.empty((len(sampling) - 1, len(sampling) - 1))
         procrustes_similarities = np.empty((len(sampling) - 1, len(sampling) - 1))
         dsa_similarities = np.empty((len(sampling) - 1, len(sampling) - 1))
         accuracies = []
         accuracies_grouped = []
+        # paths for checkpoints
+        model_name = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}"
+        path_train_folder = os.path.join(
+            f"models_analysis/{taskset}/{group}", model_name + f"_train"
+        )
+        # check if folder path_train_folder exists
+        if os.path.exists(path_train_folder):
+            # initialize model architectures
+            run_model, hp = initialize_model(
+                taskset, rnn_type, activation, hidden_size, lr, batch_size, device
+            )
 
-        cka_measure = similarity.make("measure.sim_metric.cka-angular-score")
-        procrustes_measure = similarity.make("measure.netrep.procrustes-angular-score")
+            # get checkpoints in train path
+            checkpoint_files = find_checkpoints(path_train_folder)
 
-        if checkpoint_files:
-            if len(checkpoint_files) > 3:
-                # load all the checkpoints
-                for epoch in range(len(checkpoint_files)):
-                    checkpoint = torch.load(
-                        os.path.join(path_train_folder, checkpoint_files[epoch]),
-                        map_location=device,
-                    )
-                    run_model_copy = copy.deepcopy(run_model)
-                    run_model_copy = load_model_jit(run_model_copy, checkpoint)
+            # group models and establish correspondancy between epochs
+            models_to_compare = []
 
-                    accuracy = float(checkpoint["log"]["perf_min"][-1])
-                    # convert accuracy to float if it was a string
-                    models_to_compare.extend([run_model_copy])
-                    accuracies.append(accuracy)
-
-                print(
-                    f"computing representations for model {model_name} for group {group}"
+            # if pretrain in group1 and group2, load checkpoints at os.path.join(f"models_analysis/{group}", model_name + f"_pretrain.pth")
+            if "pretrain" in group:
+                path_pretrain = os.path.join(
+                    f"models_analysis/{taskset}/{group}", model_name + f"_pretrain.pth"
                 )
-                print(f"len checkpoints : {len(checkpoint_files)}")
-                # compute the curves for models and dissimilarities
+                run_model_pretrain = main.load_model(
+                    path_pretrain,
+                    hp,
+                    RNNLayer,
+                    device=device,
+                )
+                models_to_compare.extend([run_model_pretrain])
 
-                curves = []
-                for model in models_to_compare:
-                    curves.append(get_curves(taskset, model, all_rules, components=15))
-                print(f"grouping accuracies for model {model_name} for group {group}")
+            cka_measure = similarity.make("measure.sim_metric.cka-angular-score")
+            procrustes_measure = similarity.make(
+                "measure.netrep.procrustes-angular-score"
+            )
 
-                groups = []
-                for i in range(len(sampling) - 1):
-                    index_start = int(sampling[i] * len(curves) / 100)
-                    index_end = int((sampling[i + 1]) * len(curves) / 100)
-                    groups.append(curves[index_start:index_end])
-                    accuracies_grouped.append(
-                        np.mean(accuracies[index_start:index_end])
+            if checkpoint_files:
+                if len(checkpoint_files) > 3:
+                    # load all the checkpoints
+                    for epoch in range(len(checkpoint_files)):
+                        checkpoint = torch.load(
+                            os.path.join(path_train_folder, checkpoint_files[epoch]),
+                            map_location=device,
+                        )
+                        run_model_copy = copy.deepcopy(run_model)
+                        run_model_copy = load_model_jit(run_model_copy, checkpoint)
+
+                        accuracy = float(checkpoint["log"]["perf_min"][-1])
+                        # convert accuracy to float if it was a string
+                        models_to_compare.extend([run_model_copy])
+                        accuracies.append(accuracy)
+
+                    print(
+                        f"computing representations for model {model_name} for group {group}"
+                    )
+                    print(f"len checkpoints : {len(checkpoint_files)}")
+                    # compute the curves for models and dissimilarities
+
+                    curves = []
+                    for model in models_to_compare:
+                        curves.append(
+                            get_curves(taskset, model, all_rules, components=15)
+                        )
+                    print(
+                        f"grouping accuracies for model {model_name} for group {group}"
                     )
 
-                # compute similarities across groups gathered by sampling
-                print(
-                    f"computing similarities for model {model_name} for group {group}"
-                )
-                print(f"Len groups : {len(groups)}")
+                    groups = []
+                    for i in range(len(sampling) - 1):
+                        index_start = int(sampling[i] * len(curves) / 100)
+                        index_end = int((sampling[i + 1]) * len(curves) / 100)
+                        groups.append(curves[index_start:index_end])
+                        accuracies_grouped.append(
+                            np.mean(accuracies[index_start:index_end])
+                        )
 
-                group_done = 0
-                for i in range(len(groups)):
-                    for j in range(i, len(groups)):
-                        print(f"perc group done : {100*group_done/(len(groups)**2)}")
-                        group_done += 1
-                        dissimilarities_cka = []
-                        dissimilarities_procrustes = []
-                        dissimilarities_dsa = []
-                        p = min(len(groups[i]), len(groups[j]))
-                        if p > 0:
-                            for index_model1 in range(p):
-                                for index_model2 in range(index_model1, p):
-                                    print(f"index model 1 : {100*index_model1/p}")
-                                    model1 = groups[i][index_model1]
-                                    model2 = groups[j][index_model2]
+                    # compute similarities across groups gathered by sampling
+                    print(
+                        f"computing similarities for model {model_name} for group {group}"
+                    )
+                    print(f"Len groups : {len(groups)}")
 
-                                    dissimilarities_cka.append(
-                                        1 - cka_measure(model1, model2)
-                                    )
-                                    dissimilarities_procrustes.append(
-                                        1 - procrustes_measure(model1, model2)
-                                    )
-                                    dsa_comp = DSA.DSA(
-                                        model1,
-                                        model2,
-                                        n_delays=config["dsa"]["n_delays"],
-                                        rank=config["dsa"]["rank"],
-                                        delay_interval=config["dsa"]["delay_interval"],
-                                        verbose=True,
-                                        iters=1000,
-                                        lr=1e-2,
-                                        device=device,
-                                    )
-                                    dissimilarities_dsa.append(dsa_comp.fit_score())
-
-                            cka_similarities[i, j] = np.mean(dissimilarities_cka)
-                            cka_similarities[j, i] = cka_similarities[i, j]
-                            procrustes_similarities[i, j] = np.mean(
-                                dissimilarities_procrustes
+                    group_done = 0
+                    for i in range(len(groups)):
+                        for j in range(i, len(groups)):
+                            print(
+                                f"perc group done : {100*group_done/(len(groups)**2)}"
                             )
-                            procrustes_similarities[j, i] = procrustes_similarities[
-                                i, j
-                            ]
-                            dsa_similarities[i, j] = np.mean(dissimilarities_dsa)
-                            dsa_similarities[j, i] = dsa_similarities[i, j]
+                            group_done += 1
+                            dissimilarities_cka = []
+                            dissimilarities_procrustes = []
+                            dissimilarities_dsa = []
+                            p = min(len(groups[i]), len(groups[j]))
+                            if p > 0:
+                                for index_model1 in range(p):
+                                    for index_model2 in range(index_model1, p):
+                                        print(f"index model 1 : {100*index_model1/p}")
+                                        model1 = groups[i][index_model1]
+                                        model2 = groups[j][index_model2]
 
-                print(f"similarities finished for model {model_name} for group {group}")
+                                        dissimilarities_cka.append(
+                                            1 - cka_measure(model1, model2)
+                                        )
+                                        dissimilarities_procrustes.append(
+                                            1 - procrustes_measure(model1, model2)
+                                        )
+                                        dsa_comp = DSA.DSA(
+                                            model1,
+                                            model2,
+                                            n_delays=config["dsa"]["n_delays"],
+                                            rank=config["dsa"]["rank"],
+                                            delay_interval=config["dsa"][
+                                                "delay_interval"
+                                            ],
+                                            verbose=True,
+                                            iters=1000,
+                                            lr=1e-2,
+                                            device=device,
+                                        )
+                                        dissimilarities_dsa.append(dsa_comp.fit_score())
+
+                                cka_similarities[i, j] = np.mean(dissimilarities_cka)
+                                cka_similarities[j, i] = cka_similarities[i, j]
+                                procrustes_similarities[i, j] = np.mean(
+                                    dissimilarities_procrustes
+                                )
+                                procrustes_similarities[j, i] = procrustes_similarities[
+                                    i, j
+                                ]
+                                dsa_similarities[i, j] = np.mean(dissimilarities_dsa)
+                                dsa_similarities[j, i] = dsa_similarities[i, j]
+
+                    print(
+                        f"similarities finished for model {model_name} for group {group}"
+                    )
 
         accuracies_grouped = np.array(accuracies_grouped)
         return {

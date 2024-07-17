@@ -36,7 +36,7 @@ APP_PID=$!
 while kill -0 $APP_PID 2>/dev/null; do
     echo "$(date '+%Y-%m-%d %H:%M:%S') - Checking GPU status during the application run:" >> gpu_usage/{n_delay}_{delay_interval}_ordered_gpu_usage.log
     nvidia-smi >> gpu_usage/{n_delay}_{delay_interval}_ordered_gpu_usage.log  # Append output to log file
-    sleep 300 
+    sleep 600 
 done
 
 wait $APP_PID
