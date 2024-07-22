@@ -39,8 +39,8 @@ mamba:
       - 0.0001
       - 0.001
     batch_size_train:
+      - 64
       - 128
-      - 256
     
 PDM:
   all_rules: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT, AntiPerceptualDecisionMakingDelayResponseT]

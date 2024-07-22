@@ -255,6 +255,7 @@ def pipeline_mamba(
             "num_epochs": 50,
             "batch_size_train": batch_size,
             "learning_rate": learning_rate,
+            "l2_weight": 0.0001,
         }
         model_name = f"mamba_{d_model}_{n_layers}_{learning_rate}_{batch_size}"
         path_pretrain_folder = os.path.join(

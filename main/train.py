@@ -307,7 +307,6 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=
                 scaler.step(optim)
                 scaler.update()
                 epoch_loss += loss.item()
-                print(get_perf(logits, labels, mask))
                 times_per_inputs.append(
                     time.time() - time_input
                 )  # time to process one input
@@ -318,7 +317,9 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=
         log["times"].append(time.time() - t_start)
         # timing do_eval
         t_start_eval = time.time()
-        log, logging = do_eval(run_model, log, logging, hp["rule_trains"], dataloaders)
+        log, logging = do_eval(
+            run_model, log, logging, hp["rule_trains"], dataloaders, rnn
+        )
         t_end_eval = time.time() - t_start_eval
         t_end_epoch = time.time() - t_start_epoch
         if log["perf_min"][-1] > hp["target_perf"]:
@@ -358,7 +359,7 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=
     logging.info("Optimization finished!")
 
 
-def do_eval(run_model, log, logging, rule_train, dataloaders):
+def do_eval(run_model, log, logging, rule_train, dataloaders, rnn):
     hp = run_model.hp
     device = run_model.device
 
@@ -374,10 +375,16 @@ def do_eval(run_model, log, logging, rule_train, dataloaders):
             # Record start time for data loading
             data_start_time = time.time()
             with torch.no_grad():
+                if rnn:
+                    inputs, labels, mask = (
+                        inputs.permute(1, 0, 2),
+                        labels.permute(1, 0),
+                        mask.permute(1, 0),
+                    )
                 inputs, labels, mask = (
-                    inputs.permute(1, 0, 2).to(device, non_blocking=True),
-                    labels.permute(1, 0).to(device, non_blocking=True).flatten().long(),
-                    mask.permute(1, 0).to(device, non_blocking=True).flatten().long(),
+                    inputs.to(device, non_blocking=True),
+                    labels.to(device, non_blocking=True).flatten().long(),
+                    mask.to(device, non_blocking=True).flatten().long(),
                 )
             # Record data loading time
             data_loading_time = time.time() - data_start_time
