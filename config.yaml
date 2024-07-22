@@ -159,8 +159,8 @@ GoNogo:
         ruleset: [AntiGoNogoDelayResponseT]
         frozen: True
 dsa:
-  n_delays: 25
-  delay_interval: 8
+  n_delays: 50
+  delay_interval: 4
   rank: 100
   device: cuda
 simulations:
