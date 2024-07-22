@@ -103,7 +103,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                     group,
                     args.taskset,
                     devices[0],
-                    n_components=15,
+                    n_components=20,
                 )
                 curves[group].append(curve)
                 explained_variances[group].append(explained_variance)
