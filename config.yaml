@@ -36,11 +36,11 @@ mamba:
       - 3
       - 4
     learning_rate:
-      - 0.0001
+      - 0.01
       - 0.001
     batch_size_train:
-      - 64
-      - 128
+      - 16
+      - 32
     
 PDM:
   all_rules: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT, AntiPerceptualDecisionMakingDelayResponseT]
