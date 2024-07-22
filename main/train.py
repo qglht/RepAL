@@ -262,8 +262,8 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=
         if checkpoint_files:
             optim.load_state_dict(checkpoint["optimizer_state_dict"])
 
-    # Create a GradScaler for mixed precision training
-    scaler = GradScaler()
+    # # Create a GradScaler for mixed precision training
+    # scaler = GradScaler()
 
     dataloaders = {
         rule: main.get_dataloader(
@@ -295,17 +295,20 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=
                     labels.to(run_model.device, non_blocking=True).flatten().long(),
                     mask.to(run_model.device, non_blocking=True).flatten().long(),
                 )
-                optim.zero_grad(set_to_none=True)
 
                 # autocast for mixed precision training
-                with autocast():
-                    c_lsq, c_reg, logits, _, _ = run_model(inputs, labels, mask)
-                    loss = c_lsq + c_reg
+                # with autocast():
+                c_lsq, c_reg, logits, _, _ = run_model(inputs, labels, mask)
+                loss = c_lsq + c_reg
 
                 # scale the loss and call backward() to create scaled gradients
-                scaler.scale(loss).backward()
-                scaler.step(optim)
-                scaler.update()
+                optim.zero_grad(set_to_none=True)
+                loss.backward()
+                optim.step()
+
+                # scaler.scale(loss).backward()
+                # scaler.step(optim)
+                # scaler.update()
                 epoch_loss += loss.item()
                 times_per_inputs.append(
                     time.time() - time_input
@@ -392,7 +395,7 @@ def do_eval(run_model, log, logging, rule_train, dataloaders, rnn):
 
             # Record start time for computation
             computation_start_time = time.time()
-            with torch.no_grad(), autocast():
+            with torch.no_grad():  # , autocast():
                 c_lsq, c_reg, y_hat_test, _, labels = run_model(inputs, labels, mask)
 
                 clsq_tmp.append(c_lsq)  # Ensure this stays in float32 for stability
