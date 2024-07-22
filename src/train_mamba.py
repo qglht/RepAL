@@ -11,7 +11,7 @@ def generate_and_submit_scripts(args: argparse.Namespace):
 
     script_template = """#!/bin/bash
 #SBATCH --nodes=1
-#SBATCH --time=1:00:00
+#SBATCH --time=24:00:00
 #SBATCH --job-name=MAMBA_{taskset}_{group}_job
 #SBATCH --gres=gpu:8
 #SBATCH --mail-type=ALL
@@ -45,15 +45,14 @@ wait $APP_PID
 """
 
     for group in groups:
-        if group == "master":
-            script_content = script_template.format(taskset=args.taskset, group=group)
-            script_filename = f"sbatch/groups/mamba_{args.taskset}_{group}_script.sh"
+        script_content = script_template.format(taskset=args.taskset, group=group)
+        script_filename = f"sbatch/groups/mamba_{args.taskset}_{group}_script.sh"
 
-            with open(script_filename, "w") as script_file:
-                script_file.write(script_content)
+        with open(script_filename, "w") as script_file:
+            script_file.write(script_content)
 
-            # Submit the job to the cluster
-            call(f"sbatch {script_filename}", shell=True)
+        # Submit the job to the cluster
+        call(f"sbatch {script_filename}", shell=True)
 
 
 if __name__ == "__main__":
