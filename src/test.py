@@ -17,4 +17,4 @@ os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
 if __name__ == "__main__":
     # pipeline("PDM", "pretrain_frozen", "leaky_rnn", "relu", 256, 0.001, 256, "cpu")
-    pipeline_mamba("PDM", "master", 128, 1, 1, True, 0.001, 128, "cpu")
+    pipeline_mamba("PDM", "master", 16, 1, 1, True, 0.01, 16, "cpu")

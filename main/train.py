@@ -284,16 +284,16 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=
             for inputs, labels, mask in dataloaders[rule]["train"]:
                 time_input = time.time()
                 times_between_inputs.append(time.time() - current_time)
+                if rnn:
+                    inputs, labels, mask = (
+                        inputs.permute(1, 0, 2),
+                        labels.permute(1, 0),
+                        mask.permute(1, 0),
+                    )
                 inputs, labels, mask = (
-                    inputs.permute(1, 0, 2).to(run_model.device, non_blocking=True),
-                    labels.permute(1, 0)
-                    .to(run_model.device, non_blocking=True)
-                    .flatten()
-                    .long(),
-                    mask.permute(1, 0)
-                    .to(run_model.device, non_blocking=True)
-                    .flatten()
-                    .long(),
+                    inputs.to(run_model.device, non_blocking=True),
+                    labels.to(run_model.device, non_blocking=True).flatten().long(),
+                    mask.to(run_model.device, non_blocking=True).flatten().long(),
                 )
                 optim.zero_grad(set_to_none=True)
 
