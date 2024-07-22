@@ -299,7 +299,7 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=
 
                 # autocast for mixed precision training
                 with autocast():
-                    c_lsq, c_reg, _, _, _ = run_model(inputs, labels, mask)
+                    c_lsq, c_reg, logits, _, _ = run_model(inputs, labels, mask)
                     loss = c_lsq + c_reg
 
                 # scale the loss and call backward() to create scaled gradients
@@ -307,6 +307,7 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=
                 scaler.step(optim)
                 scaler.update()
                 epoch_loss += loss.item()
+                print(get_perf(logits, labels, mask))
                 times_per_inputs.append(
                     time.time() - time_input
                 )  # time to process one input
