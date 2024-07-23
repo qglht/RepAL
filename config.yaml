@@ -12,11 +12,11 @@ rnn:
       - 128
       - 256
     learning_rate:
-      - 0.0001
+      - 0.01
       - 0.001
     batch_size_train:
-      - 128
-      - 256
+      - 16
+      - 32
     freeze:
       - True
       - False
