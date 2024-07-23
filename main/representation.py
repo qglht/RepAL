@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import ipdb
 import torch
 from torch import Value, linalg as LA
-from torch.cuda.amp import autocast
 from main import get_dataloader, get_class_instance
 
 # import PCA
@@ -39,7 +38,7 @@ def get_indexes(dt, timing, seq_length, h, rule):
     return h_byepoch
 
 
-def representation(model, rules):
+def representation(model, rules, rnn=True):
     hp = model.hp
     rules = [rules] if isinstance(rules, str) else (rules or hp["rules"])
     activations = OrderedDict()
@@ -62,22 +61,17 @@ def representation(model, rules):
             ]  # Directly access the test dataloader
 
             for inputs, labels, mask in dataloader:
-                inputs = inputs.permute(1, 0, 2).to(model.device, non_blocking=True)
-                labels = (
-                    labels.permute(1, 0)
-                    .to(model.device, non_blocking=True)
-                    .flatten()
-                    .long()
-                )
-                mask = (
-                    mask.permute(1, 0)
-                    .to(model.device, non_blocking=True)
-                    .flatten()
-                    .long()
-                )
+                if rnn:
+                    inputs, labels, mask = (
+                        inputs.permute(1, 0, 2),
+                        labels.permute(1, 0),
+                        mask.permute(1, 0),
+                    )
+                inputs = inputs.to(model.device, non_blocking=True)
+                labels = labels.to(model.device, non_blocking=True).flatten().long()
+                mask = mask.to(model.device, non_blocking=True).flatten().long()
 
-                with autocast():
-                    _, _, _, h, _ = model(inputs, labels, mask)
+                _, _, _, h, _ = model(inputs, labels, mask)
                 h_byepoch = get_indexes(hp["dt"], timing, seq_length, h, rule)
                 for key, value in h_byepoch.items():
                     activations.setdefault(key, []).append(
