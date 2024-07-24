@@ -42,7 +42,7 @@ def find_accuracy_model(name, device):
 
         return float(checkpoint["log"]["perf_min"][-1])
     else:  # return torch nan
-        return torch.tensor(float("nan"))
+        return float(-1)
 
 
 def measure_dissimilarities(
