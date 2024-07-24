@@ -123,12 +123,12 @@ def dissimilarity(args: argparse.Namespace) -> None:
     curves_names = {group: [] for group in [args.group1, args.group2]}
     accuracies = {group: [] for group in [args.group1, args.group2]}
     for group in curves.keys():
-        for model in os.listdir(f"../models/{args.taskset}/{group}"):
+        for model in os.listdir(f"models/{args.taskset}/{group}"):
             if not model.endswith("_train.pth"):
                 continue
             else:
                 model_path = os.path.join(
-                    f"../models/{args.taskset}/{group}", model.replace(".pth", "")
+                    f"models/{args.taskset}/{group}", model.replace(".pth", "")
                 )
                 model_type, activation, hidden_size, lr, batch_size = parse_model_info(
                     model
@@ -139,13 +139,14 @@ def dissimilarity(args: argparse.Namespace) -> None:
                     activation,
                     hidden_size,
                     lr,
+                    batch_size,
                     model,
                     group,
                     args.taskset,
                     devices[0],
                     n_components=20,
                 )
-                final_accuracy = find_accuracy_last_checkpoint(model_path, devices[0])
+                final_accuracy = find_accuracy_model(model_path, devices[0])
                 curves[group].append(curve)
                 explained_variances[group].append(explained_variance)
                 curves_names[group].append(model.replace(".pth", ""))

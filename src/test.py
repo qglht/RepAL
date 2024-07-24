@@ -7,7 +7,7 @@ from dsa_analysis import load_config
 import torch
 import multiprocessing
 from src.toolkit import pipeline_mamba, pipeline
-from src.toolkit import get_dynamics_mamba
+from src.toolkit import get_dynamics_mamba, get_dynamics_rnn
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
@@ -30,3 +30,15 @@ if __name__ == "__main__":
         "cpu",
         n_components=20,
     )
+    # get_dynamics_rnn(
+    #     "leaky_gru",
+    #     "relu",
+    #     256,
+    #     0.001,
+    #     128,
+    #     "leaky_gru_relu_256_0.001_128_train.pth",
+    #     "master",
+    #     "PDM",
+    #     "cpu",
+    #     n_components=20,
+    # )

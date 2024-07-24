@@ -185,17 +185,23 @@ class MambaSupervGym(MambaLM):
             )
             for _ in range(self.lm_config.n_layers)
         ]
-        caches_list = [cache_init]
-        x = self.embedding(token[:, 0, :])
-        x, caches = self.mamba.step(x, cache_init)
-        for i in range(1, token.shape[1]):
+        caches_list = []
+        caches = cache_init
+        for i in range(token.shape[1]):
             x = self.embedding(token[:, i, :])
             x, caches = self.mamba.step(x, caches)
             caches_list.append(caches)
         # concatenate all the caches
-        ipdb.set_trace()
 
-        return caches
+        caches_hidden = torch.stack(
+            [caches_list[i][0][0] for i in range(len(caches_list))], dim=0
+        )
+        hidden = caches_hidden.reshape(
+            caches_hidden.shape[0],
+            caches_hidden.shape[1],
+            caches_hidden.shape[2] * caches_hidden.shape[3],
+        )
+        return hidden
 
     def save(self, path):
         # Check if model is wrapped by DataParallel and save accordingly
