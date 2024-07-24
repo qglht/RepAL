@@ -2,16 +2,21 @@
 
 # set the number of nodes
 #SBATCH --nodes=1
+
 # set max wallclock time
 #SBATCH --time=1:00:00
+
 # set name of job
-#SBATCH --job-name=MASTERJOB
+#SBATCH --job-name=PDM_Dissimilarities_Mamba
+
 # set number of GPUs
 #SBATCH --gres=gpu:0
+
 # mail alert at start, end and abortion of execution
 #SBATCH --mail-type=ALL
+
 # send mail to this address
-#SBATCH --mail-user=qguilhot@gmail.com
+#SBATCH --mail-user=oxfd2547@ox.ac.uk
 
 # load necessary modules or activate your environment
 module load cuda/11.2
@@ -22,4 +27,4 @@ source activate dsa  # If necessary, depends on cluster setup
 poetry install  # Install additional Python packages as needed
 
 # Run the application and monitor GPU status in parallel
-poetry run python -m src.train_mamba --taskset GoNogo
+poetry run python -m src.dissimilarity_mamba --taskset PDM
