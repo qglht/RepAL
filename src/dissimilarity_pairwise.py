@@ -121,7 +121,9 @@ def dissimilarity(args: argparse.Namespace) -> None:
             if not model.endswith("_train.pth"):
                 continue
             else:
-                model_path = os.path.join(f"../models/{args.taskset}/{group}", model)
+                model_path = os.path.join(
+                    f"../models/{args.taskset}/{group}", model.replace(".pth", "")
+                )
                 model_type, activation, hidden_size, lr, batch_size = parse_model_info(
                     model
                 )
