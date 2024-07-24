@@ -71,7 +71,11 @@ def representation(model, rules, rnn=True):
                 labels = labels.to(model.device, non_blocking=True).flatten().long()
                 mask = mask.to(model.device, non_blocking=True).flatten().long()
 
-                _, _, _, h, _ = model(inputs, labels, mask)
+                if rnn:
+                    _, _, _, h, _ = model(inputs, labels, mask)
+                else:
+
+                    h = model.get_activations(inputs)
                 h_byepoch = get_indexes(hp["dt"], timing, seq_length, h, rule)
                 for key, value in h_byepoch.items():
                     activations.setdefault(key, []).append(

@@ -385,7 +385,7 @@ def generate_data(taskset, env):
         main.generate_data(env, hp, mode="test", num_pregenerated=1000)
 
 
-def get_dynamics_model(
+def get_dynamics_rnn(
     rnn_type, activation, hidden_size, lr, model, group, taskset, device, n_components=3
 ):
     # Load configuration and set hyperparameters
@@ -412,6 +412,56 @@ def get_dynamics_model(
             device=device,
         )
         h = main.representation(run_model, all_rules)
+        h_trans, explained_variance = main.compute_pca(h, n_components=n_components)
+        if taskset == "PDM":
+            tensor_on_cpu = h_trans[
+                ("AntiPerceptualDecisionMakingDelayResponseT", "stimulus")
+            ].cpu()
+        else:
+            tensor_on_cpu = h_trans[("AntiGoNogoDelayResponseT", "stimulus")].cpu()
+        return tensor_on_cpu.detach().numpy(), explained_variance
+
+
+def get_dynamics_mamba(
+    d_model,
+    n_layers,
+    learning_rate,
+    batch_size,
+    model,
+    group,
+    taskset,
+    device,
+    n_components=3,
+):
+    # Load configuration and set hyperparameters
+    with load_config("config.yaml") as config:
+        ruleset = config[taskset]["rules_analysis"][-1]
+        all_rules = config[taskset]["rules_analysis"]
+
+        hp = {
+            "num_epochs": 50,
+            "batch_size_train": batch_size,
+            "learning_rate": learning_rate,
+            "l2_weight": 0.0001,
+            "mode": "test",
+        }
+        hp, _, _ = main.set_hyperparameters(
+            model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=ruleset
+        )
+        config = MambaLMConfig(
+            d_model=d_model,
+            n_layers=n_layers,
+            vocab_size=hp["n_input"],
+            pad_vocab_size_multiple=1,  # https://github.com/alxndrTL/mamba.py/blob/main/mamba_lm.py#L27
+            pscan=True,
+        )
+        run_model = main.load_model_mamba(
+            f"models/mamba/{taskset}/{group}/{model}",
+            hp,
+            config,
+            device=device,
+        )
+        h = main.representation(run_model, all_rules, rnn=False)
         h_trans, explained_variance = main.compute_pca(h, n_components=n_components)
         if taskset == "PDM":
             tensor_on_cpu = h_trans[

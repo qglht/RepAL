@@ -155,7 +155,7 @@ class MambaSupervGym(MambaLM):
             labels,
         )
 
-    def step(self, token, caches):
+    def get_activations(self, token):
         """Function for one time step at a time: to do it for all time steps, loop for first dimension
 
         Args:
@@ -170,12 +170,33 @@ class MambaSupervGym(MambaLM):
         # logits : (B, vocab_size)
         # caches : [cache(layer) for all layers], cache : (h, inputs)
 
-        x = self.embedding(token)
-        x, caches = self.mamba.step(x, caches)
-        x = self.norm_f(x)
-        logits = self.lm_head(x)
+        # loop over first dimension of token
+        # create cache for each layer
+        cache_init = [
+            (
+                None,
+                torch.zeros(
+                    (
+                        1,
+                        int(self.lm_config.d_model * self.lm_config.expand_factor),
+                        self.hp["n_input"],
+                    )
+                ).to(self.device),
+            )
+            for _ in range(self.lm_config.n_layers)
+        ]
+        caches_list = [cache_init]
+        x = self.embedding(token[:, 0, :])
+        ipdb.set_trace()
+        x, caches = self.mamba.step(x, cache_init)
+        for i in range(1, token.shape[1]):
+            x = self.embedding(token[:, i, :])
+            x, caches = self.mamba.step(x, caches)
+            caches_list.append(caches)
+        # concatenate all the caches
+        ipdb.set_trace()
 
-        return logits, caches
+        return caches
 
     def save(self, path):
         # Check if model is wrapped by DataParallel and save accordingly
