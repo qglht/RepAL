@@ -21,7 +21,7 @@ warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprec
 os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
 
-def find_accuracy_last_checkpoint(name, device):
+def find_accuracy_model(name, device):
     # Find the latest checkpoint file
     print(f"Finding accuracy for {name}")
     checkpoint_dir = name
@@ -32,13 +32,17 @@ def find_accuracy_last_checkpoint(name, device):
     ]
     checkpoint_files.sort(key=lambda x: int(x.split("_")[1]))
     print(f"Checkpoint files : {checkpoint_files}")
-    last_checkpoint = checkpoint_files[-1]
-    # Load the checkpoint file
-    checkpoint = torch.load(
-        os.path.join(checkpoint_dir, last_checkpoint), map_location=device
-    )
 
-    return float(checkpoint["log"]["perf_min"][-1])
+    if checkpoint_files:
+        last_checkpoint = checkpoint_files[-1]
+        # Load the checkpoint file
+        checkpoint = torch.load(
+            os.path.join(checkpoint_dir, last_checkpoint), map_location=device
+        )
+
+        return float(checkpoint["log"]["perf_min"][-1])
+    else:  # return torch nan
+        return torch.tensor(float("nan"))
 
 
 def measure_dissimilarities(
