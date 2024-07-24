@@ -23,6 +23,7 @@ os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
 def find_accuracy_last_checkpoint(name, device):
     # Find the latest checkpoint file
+    print(f"Finding accuracy for {name}")
     checkpoint_dir = name
     checkpoint_files = [
         f
@@ -30,6 +31,7 @@ def find_accuracy_last_checkpoint(name, device):
         if f.startswith("epoch_") and f.endswith("_checkpoint.pth")
     ]
     checkpoint_files.sort(key=lambda x: int(x.split("_")[1]))
+    print(f"Checkpoint files : {checkpoint_files}")
     last_checkpoint = checkpoint_files[-1]
     # Load the checkpoint file
     checkpoint = torch.load(

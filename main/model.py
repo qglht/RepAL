@@ -177,7 +177,7 @@ class MambaSupervGym(MambaLM):
                 None,
                 torch.zeros(
                     (
-                        1,
+                        token.shape[0],
                         int(self.lm_config.d_model * self.lm_config.expand_factor),
                         self.hp["n_input"],
                     )
@@ -187,7 +187,6 @@ class MambaSupervGym(MambaLM):
         ]
         caches_list = [cache_init]
         x = self.embedding(token[:, 0, :])
-        ipdb.set_trace()
         x, caches = self.mamba.step(x, cache_init)
         for i in range(1, token.shape[1]):
             x = self.embedding(token[:, i, :])
