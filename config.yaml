@@ -32,15 +32,12 @@ mamba:
       - 64
     n_layers:
       - 1
-      - 2
-      - 3
-      - 4
     learning_rate:
       - 0.01
       - 0.001
     batch_size_train:
-      - 16
-      - 32
+      - 64
+      - 128
     
 PDM:
   all_rules: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT, AntiPerceptualDecisionMakingDelayResponseT]
@@ -159,8 +156,8 @@ GoNogo:
         ruleset: [AntiGoNogoDelayResponseT]
         frozen: True
 dsa:
-  n_delays: 33
-  delay_interval: 6
+  n_delays: 17
+  delay_interval: 11
   rank: 50
   device: cuda
 simulations:
