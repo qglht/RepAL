@@ -294,7 +294,7 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=
 
                 if torch.isnan(loss).any():
                     raise ValueError("Loss is NaN")
-                sys.stdout.flush()
+                
                 optim.zero_grad(set_to_none=True)
                 loss.backward()
                 optim.step()
@@ -384,8 +384,6 @@ def do_eval(run_model, log, logging, rule_train, dataloaders, rnn):
         )
         if is_nan:
             raise ValueError("Loss is NaN")
-
-        sys.stdout.flush()
 
     perf_tests_mean = torch.mean(
         torch.tensor(
