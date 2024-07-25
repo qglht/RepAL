@@ -387,6 +387,8 @@ def do_eval(run_model, log, logging, rule_train, dataloaders, rnn):
             logging.error(f"Loss is NaN")
             raise ValueError("Loss is NaN")
 
+        sys.stdout.flush()
+
     perf_tests_mean = torch.mean(
         torch.tensor(
             [
