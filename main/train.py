@@ -41,20 +41,34 @@ def create_directory_if_not_exists(directory):
 
 
 def setup_logging(log_dir):
+    # Ensure the log directory exists
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
-    logging.basicConfig(
-        filename=os.path.join(log_dir, "training.log"),
-        filemode="w",
-        format="%(asctime)s - %(levelname)s - %(message)s",
-        level=logging.INFO,
-    )
-    console = logging.StreamHandler()
-    console.setLevel(logging.INFO)
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-    console.setFormatter(formatter)
-    logging.getLogger("").addHandler(console)
-    return logging
+
+    # Create a logging object and set its level
+    logger = logging.getLogger("")
+    logger.setLevel(logging.INFO)
+
+    # Prevent adding multiple handlers in subsequent calls
+    if not logger.handlers:
+        # Create file handler to write logs to a file
+        file_handler = logging.FileHandler(os.path.join(log_dir, "training.log"))
+        file_handler.setLevel(logging.INFO)
+
+        # Create console handler to print logs to the console
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.INFO)
+
+        # Define log message format
+        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        file_handler.setFormatter(formatter)
+        console_handler.setFormatter(formatter)
+
+        # Add handlers to the logger
+        logger.addHandler(file_handler)
+        logger.addHandler(console_handler)
+
+    return logger
 
 
 def find_checkpoints(name):
