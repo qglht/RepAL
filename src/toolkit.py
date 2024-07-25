@@ -386,7 +386,16 @@ def generate_data(taskset, env):
 
 
 def get_dynamics_rnn(
-    rnn_type, activation, hidden_size, lr, model, group, taskset, device, n_components=3
+    rnn_type,
+    activation,
+    hidden_size,
+    lr,
+    batch_size,
+    model,
+    group,
+    taskset,
+    device,
+    n_components=3,
 ):
     # Load configuration and set hyperparameters
     with load_config("config.yaml") as config:
@@ -398,6 +407,7 @@ def get_dynamics_rnn(
             "activation": activation,
             "n_rnn": hidden_size,
             "learning_rate": lr,
+            "batch_size_train": batch_size,
             "l2_h": 0.00001,
             "l2_weight": 0.0001,
             "mode": "test",

@@ -12,11 +12,11 @@ rnn:
       - 128
       - 256
     learning_rate:
-      - 0.01
       - 0.001
+      - 0.0001
     batch_size_train:
-      - 16
-      - 32
+      - 64
+      - 128
     freeze:
       - True
       - False
@@ -159,9 +159,9 @@ GoNogo:
         ruleset: [AntiGoNogoDelayResponseT]
         frozen: True
 dsa:
-  n_delays: 40
-  delay_interval: 5
-  rank: 100
+  n_delays: 33
+  delay_interval: 6
+  rank: 50
   device: cuda
 simulations:
   dt: 0.01 # 20 ms
