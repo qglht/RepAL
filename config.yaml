@@ -15,8 +15,8 @@ rnn:
       - 0.001
       - 0.0001
     batch_size_train:
-      - 64
       - 128
+      - 256
     freeze:
       - True
       - False
