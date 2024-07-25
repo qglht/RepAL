@@ -5,13 +5,6 @@ from dsa_analysis import load_config
 import torch
 import multiprocessing
 from src.toolkit import pipeline
-import logging
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
@@ -25,7 +18,7 @@ def worker(task):
     try:
         pipeline(*task)
     except Exception as e:
-        logger.error(f"Error in worker: {e}")
+        print(f"Error in worker: {e}")
 
 
 def train(args: argparse.Namespace) -> None:
@@ -42,8 +35,8 @@ def train(args: argparse.Namespace) -> None:
         else [torch.device("cpu")]
     )
     i = 0
-    logger.info(f"Devices used: {devices}")
-    logger.info(f"Number of devices: {num_gpus}")
+    print(f"Devices used: {devices}")
+    print(f"Number of devices: {num_gpus}")
 
     # create a folder for each group in config['groups'] under model folder
     model_dir = f"models/{args.taskset}/{args.group}"
