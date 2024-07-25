@@ -21,6 +21,8 @@ def generate_and_submit_scripts(args: argparse.Namespace):
 #SBATCH --nodes=1
 #SBATCH --time=24:00:00
 #SBATCH --job-name={taskset}_{group}_job
+#SBATCH --output=slurm-{taskset}_{group}.out    # Output file
+#SBATCH --error=slurm-{taskset}_{group}.err     # Error file
 #SBATCH --gres=gpu:8
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=80  

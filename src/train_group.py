@@ -1,3 +1,4 @@
+import logging
 import warnings
 import os
 import argparse
@@ -6,6 +7,12 @@ import torch
 import multiprocessing
 from src.toolkit import pipeline
 from multiprocessing import Semaphore
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
@@ -16,12 +23,16 @@ os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
 
 def worker(semaphore, task):
-    with semaphore:
-        pipeline(*task)
+    try:
+        with semaphore:
+            pipeline(*task)
+    except Exception as e:
+        logger.error(f"Error in worker: {e}")
 
 
 def train(args: argparse.Namespace) -> None:
-    multiprocessing.set_start_method("fork", force=True)
+    # Try different start methods if "fork" is problematic
+    multiprocessing.set_start_method("spawn", force=True)
     config = load_config("config.yaml")
 
     # Create a list of all tasks to run
@@ -33,12 +44,13 @@ def train(args: argparse.Namespace) -> None:
         else [torch.device("cpu")]
     )
     i = 0
-    print(f"devices used : {devices}")
-    print(f"number of devices : {num_gpus}")
+    logger.info(f"Devices used: {devices}")
+    logger.info(f"Number of devices: {num_gpus}")
 
     # create a folder for each group in config['groups'] under model folder
-    if not os.path.exists(f"models/{args.taskset}/{args.group}"):
-        os.makedirs(f"models/{args.taskset}/{args.group}")
+    model_dir = f"models/{args.taskset}/{args.group}"
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
 
     for rnn_type in config["rnn"]["parameters"]["rnn_type"]:
         for activation in config["rnn"]["parameters"]["activations"]:
@@ -89,7 +101,7 @@ if __name__ == "__main__":
         "--taskset",
         type=str,
         default="PDM",
-        help="The tasket to train the model on",
+        help="The taskset to train the model on",
     )
     args = parser.parse_args()
     train(args)
