@@ -60,7 +60,7 @@ class Run_Model(nn.Module):  # (jit.ScriptModule):
     def calculate_loss(self, output, mask, labels, hidden, hp):
         # use mask to calculate loss of crossentropyloss
         loss = self.loss_fnc(output, labels)
-        loss = (loss * mask).sum() / mask.sum()
+        # loss = (loss * mask).sum() / mask.sum()
         loss_reg = (
             hidden.abs().mean() * hp["l1_h"] + hidden.norm() * hp["l2_h"]
         )  #    Regularization cost  (L1 and L2 cost) on hidden activity
@@ -114,9 +114,7 @@ class MambaSupervGym(MambaLM):
         # ipdb.set_trace()
         # predicted_classes = torch.argmax(output, dim=1)
         loss = self.loss_fnc(output, labels)
-        # mask = (mask > 1).float()
-        loss = (loss * mask).sum() / mask.sum()
-        # loss = (loss * mask).mean()
+        # loss = (loss * mask).sum() / mask.sum()
         loss_reg = 0
         for param in self.parameters():
             loss_reg += (
@@ -188,14 +186,17 @@ class MambaSupervGym(MambaLM):
         caches_list = []
         caches = cache_init
         for i in range(token.shape[1]):
+            # TODO : check change in cache over caches
             x = self.embedding(token[:, i, :])
             x, caches = self.mamba.step(x, caches)
+            print(f"caches : {caches[0][0]}")
             caches_list.append(caches)
         # concatenate all the caches
 
         caches_hidden = torch.stack(
             [caches_list[i][0][0] for i in range(len(caches_list))], dim=0
         )
+        ipdb.set_trace()
         hidden = caches_hidden.reshape(
             caches_hidden.shape[0],
             caches_hidden.shape[1],

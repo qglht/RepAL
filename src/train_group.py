@@ -1,4 +1,3 @@
-import logging
 import warnings
 import os
 import argparse
@@ -6,7 +5,7 @@ from dsa_analysis import load_config
 import torch
 import multiprocessing
 from src.toolkit import pipeline
-from multiprocessing import Semaphore
+import logging
 
 # Configure logging
 logging.basicConfig(
@@ -22,10 +21,9 @@ warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprec
 os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
 
-def worker(semaphore, task):
+def worker(task):
     try:
-        with semaphore:
-            pipeline(*task)
+        pipeline(*task)
     except Exception as e:
         logger.error(f"Error in worker: {e}")
 
@@ -74,11 +72,8 @@ def train(args: argparse.Namespace) -> None:
                         )
                         i += 1
 
-    semaphore = Semaphore(num_gpus)  # Adjust this number as necessary
-
-    processes = [
-        multiprocessing.Process(target=worker, args=(semaphore, task)) for task in tasks
-    ]
+    # Create a process for each task
+    processes = [multiprocessing.Process(target=worker, args=(task,)) for task in tasks]
 
     # Start all processes
     for process in processes:
