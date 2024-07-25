@@ -293,8 +293,9 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=
                 loss = c_lsq + c_reg
 
                 if torch.isnan(loss).any():
+                    logging.error(f"Loss is NaN")
                     raise ValueError("Loss is NaN")
-                
+
                 optim.zero_grad(set_to_none=True)
                 loss.backward()
                 optim.step()
@@ -383,6 +384,7 @@ def do_eval(run_model, log, logging, rule_train, dataloaders, rnn):
             f"{rule_test:15s}| cost {clsq_mean.item():0.6f}| c_reg {creg_mean.item():0.6f} | perf {perf_mean.item():0.2f}"
         )
         if is_nan:
+            logging.error(f"Loss is NaN")
             raise ValueError("Loss is NaN")
 
     perf_tests_mean = torch.mean(
