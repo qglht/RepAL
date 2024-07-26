@@ -4,7 +4,6 @@ import argparse
 from dsa_analysis import load_config
 import torch
 import multiprocessing
-from multiprocessing import Semaphore
 from src.toolkit import pipeline_mamba
 
 # Suppress specific Gym warnings
@@ -15,13 +14,15 @@ warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprec
 os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
 
-def worker(semaphore, task):
-    with semaphore:
+def worker(task):
+    try:
         pipeline_mamba(*task)
+    except Exception as e:
+        print(f"Error in worker: {e}")
 
 
 def train(args: argparse.Namespace) -> None:
-    multiprocessing.set_start_method("fork", force=True)
+    multiprocessing.set_start_method("spawn", force=True)
     config = load_config("config.yaml")
 
     tasks = []
@@ -58,11 +59,8 @@ def train(args: argparse.Namespace) -> None:
                     )
                     i += 1
 
-    semaphore = Semaphore(num_gpus)  # Adjust this number as necessary
-
-    processes = [
-        multiprocessing.Process(target=worker, args=(semaphore, task)) for task in tasks
-    ]
+    # Create a process for each task
+    processes = [multiprocessing.Process(target=worker, args=(task,)) for task in tasks]
 
     for process in processes:
         process.start()
