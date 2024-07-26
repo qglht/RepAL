@@ -58,6 +58,7 @@ wait $APP_PID
         "master",
         "untrained",
         "basic",
+        "anti",
     ]
 
     for i in range(len(groups)):
