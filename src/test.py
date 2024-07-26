@@ -28,7 +28,7 @@ if __name__ == "__main__":
         "master",
         "PDM",
         "cpu",
-        n_components=20,
+        n_components=3,
     )
     # get_dynamics_rnn(
     #     "leaky_gru",
