@@ -56,7 +56,7 @@ wait $APP_PID
         "pretrained_basic_anti_frozen",
         "pretrained_basic_anti_unfrozen",
         "master",
-        # "untrained",
+        "untrained",
         "basic",
     ]
 

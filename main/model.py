@@ -3,6 +3,7 @@
 import torch
 from torch import nn, jit
 import numpy as np
+import copy
 from mambapy.mamba_lm import MambaLM, MambaLMConfig
 from mambapy.mamba import Mamba, MambaConfig, RMSNorm
 import ipdb
@@ -191,14 +192,12 @@ class MambaSupervGym(MambaLM):
             # TODO : check change in cache over caches
             x = self.embedding(token[:, i, :])
             x, caches = self.mamba.step(x, caches)
-            print(f"caches : {caches[0][0]}")
-            caches_list.append(caches)
+            caches_list.append(copy.deepcopy(caches))
         # concatenate all the caches
 
         caches_hidden = torch.stack(
             [caches_list[i][0][0] for i in range(len(caches_list))], dim=0
         )
-        ipdb.set_trace()
         hidden = caches_hidden.reshape(
             caches_hidden.shape[0],
             caches_hidden.shape[1],
