@@ -89,6 +89,33 @@ def initialize_model(
         return run_model, hp
 
 
+def initialize_model_mamba(
+    taskset, d_model, n_layers, learning_rate, batch_size, device
+):
+    with load_config("config.yaml") as config:
+        all_rules = config[taskset]["rules_analysis"]
+        hp = {
+            "num_epochs": 50,
+            "batch_size_train": batch_size,
+            "learning_rate": learning_rate,
+            "l2_weight": 0.0001,
+            "mode": "test",
+        }
+        hp, log, optimizer = main.set_hyperparameters(
+            model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=all_rules
+        )
+        config = MambaLMConfig(
+            d_model=d_model,
+            n_layers=n_layers,
+            vocab_size=hp["n_input"],
+            pad_vocab_size_multiple=1,  # https://github.com/alxndrTL/mamba.py/blob/main/mamba_lm.py#L27
+            pscan=True,
+        )
+        run_model = main.MambaSupervGym(hp, config, device=device)
+
+        return run_model, hp, lm_config
+
+
 def load_model_jit(run_model_copy, checkpoint):
     # Load state dict into the new model, handling scripting:
     if isinstance(run_model_copy, torch.jit.RecursiveScriptModule):
@@ -116,8 +143,8 @@ def corresponding_training_time(n, p):
     ]
 
 
-def get_curves(taskset, model, rules, components):
-    h = main.representation(model, rules)
+def get_curves(taskset, model, rules, components, rnn):
+    h = main.representation(model, rules, rnn)
     h_trans, _ = main.compute_pca(h, n_components=components)
     if taskset == "PDM":
         tensor_on_cpu = h_trans[
@@ -604,8 +631,168 @@ def dissimilarity_over_learning(
                 # compute the curves for models and dissimilarities
                 curves = [
                     (
-                        get_curves(taskset, tuple_model[0], all_rules, components=15),
-                        get_curves(taskset, tuple_model[1], all_rules, components=15),
+                        get_curves(
+                            taskset, tuple_model[0], all_rules, components=15, rnn=True
+                        ),
+                        get_curves(
+                            taskset, tuple_model[1], all_rules, components=15, rnn=True
+                        ),
+                    )
+                    for tuple_model in models_to_compare
+                ]
+                for epoch_index in range(len(index_epochs)):
+                    dissimilarities_over_learning["cka"].append(
+                        1 - cka_measure(curves[epoch_index][0], curves[epoch_index][1])
+                    )
+                    dissimilarities_over_learning["procrustes"].append(
+                        1
+                        - procrustes_measure(
+                            curves[epoch_index][0], curves[epoch_index][1]
+                        )
+                    )
+                    dsa_comp = DSA.DSA(
+                        curves[epoch_index][0],
+                        curves[epoch_index][1],
+                        n_delays=config["dsa"]["n_delays"],
+                        rank=config["dsa"]["rank"],
+                        delay_interval=config["dsa"]["delay_interval"],
+                        verbose=True,
+                        iters=1000,
+                        lr=1e-2,
+                        device=device,
+                    )
+                    dissimilarities_over_learning["dsa"].append(dsa_comp.fit_score())
+
+            for key, value in dissimilarities_over_learning.items():
+                dissimilarities_over_learning[key] = np.array(value)
+
+        return dissimilarities_over_learning
+
+
+def dissimilarity_over_learning_mamba(
+    taskset, group1, group2, d_model, n_layers, learning_rate, batch_size, device
+):
+    with load_config("config.yaml") as config:
+        dissimilarities_over_learning = {
+            "cka": [],
+            "dsa": [],
+            "procrustes": [],
+            "accuracy_1": [],
+            "accuracy_2": [],
+        }
+        all_rules = config[taskset]["rules_analysis"]
+
+        # paths for checkpoints
+        model_name = f"mamba_{d_model}_{n_layers}_{learning_rate}_{batch_size}"
+        path_train_folder1 = os.path.join(
+            f"models/mamba/{taskset}/{group1}", model_name + f"_train"
+        )
+        path_train_folder2 = os.path.join(
+            f"models/mamba/{taskset}/{group2}", model_name + f"_train"
+        )
+
+        # check if both folders path_train_folder1 and path_train_folder2 exist
+        if os.path.exists(path_train_folder1) and os.path.exists(path_train_folder2):
+
+            # initialize model architectures
+            run_model1, hp1, lm_config1 = initialize_model_mamba(
+                taskset, d_model, n_layers, learning_rate, batch_size, device
+            )
+            run_model2, hp2, lm_config2 = initialize_model_mamba(
+                taskset, d_model, n_layers, learning_rate, batch_size, device
+            )
+
+            # get checkpoints in train path
+            checkpoint_files_1 = find_checkpoints(path_train_folder1)
+            checkpoint_files_2 = find_checkpoints(path_train_folder2)
+
+            # group models and establish correspondancy between epochs
+            models_to_compare = []
+
+            # if pretrain in group1 and group2, load checkpoints at os.path.join(f"models/{group}", model_name + f"_pretrain.pth")
+            if "pretrain" in group1 and "pretrain" in group2:
+                path_pretrain_1 = os.path.join(
+                    f"models/mamba/{taskset}/{group1}", model_name + f"_pretrain.pth"
+                )
+                path_pretrain_2 = os.path.join(
+                    f"models/mamba/{taskset}/{group2}", model_name + f"_pretrain.pth"
+                )
+                run_model1_pretrain = main.load_model_mamba(
+                    path_pretrain_1,
+                    hp1,
+                    lm_config1,
+                    device=device,
+                )
+                run_model2_pretrain = main.load_model_mamba(
+                    path_pretrain_2,
+                    hp2,
+                    lm_config2,
+                    device=device,
+                )
+                models_to_compare.extend([(run_model1_pretrain, run_model2_pretrain)])
+
+            cka_measure = similarity.make("measure.sim_metric.cka-angular-score")
+            procrustes_measure = similarity.make(
+                "measure.netrep.procrustes-angular-score"
+            )
+            if checkpoint_files_1 and checkpoint_files_2:
+                # get the models to compare
+                if len(checkpoint_files_1) < len(checkpoint_files_2):
+                    index_epochs = corresponding_training_time(
+                        len(checkpoint_files_1), len(checkpoint_files_2)
+                    )
+                    for epoch in index_epochs:
+                        run_model1_copy = copy.deepcopy(run_model1)
+                        run_model2_copy = copy.deepcopy(run_model2)
+                        checkpoint1 = torch.load(
+                            os.path.join(
+                                path_train_folder1,
+                                checkpoint_files_1[index_epochs.index(epoch)],
+                            ),
+                            map_location=device,
+                        )
+                        run_model1_copy = load_model_jit(run_model1_copy, checkpoint1)
+                        accuracy_1 = float(checkpoint1["log"]["perf_min"][-1])
+                        checkpoint2 = torch.load(
+                            os.path.join(path_train_folder2, checkpoint_files_2[epoch]),
+                            map_location=device,
+                        )
+                        run_model2_copy = load_model_jit(run_model2_copy, checkpoint2)
+                        accuracy_2 = float(checkpoint2["log"]["perf_min"][-1])
+                        models_to_compare.extend([(run_model1_copy, run_model2_copy)])
+                        dissimilarities_over_learning["accuracy_1"].append(accuracy_1)
+                        dissimilarities_over_learning["accuracy_2"].append(accuracy_2)
+                else:
+                    index_epochs = corresponding_training_time(
+                        len(checkpoint_files_2), len(checkpoint_files_1)
+                    )
+                    for epoch in index_epochs:
+                        run_model1_copy = copy.deepcopy(run_model1)
+                        run_model2_copy = copy.deepcopy(run_model2)
+                        checkpoint1 = torch.load(
+                            os.path.join(path_train_folder1, checkpoint_files_1[epoch]),
+                            map_location=device,
+                        )
+                        run_model1_copy = load_model_jit(run_model1_copy, checkpoint1)
+                        accuracy_1 = float(checkpoint1["log"]["perf_min"][-1])
+                        checkpoint2 = torch.load(
+                            os.path.join(
+                                path_train_folder2,
+                                checkpoint_files_2[index_epochs.index(epoch)],
+                            ),
+                            map_location=device,
+                        )
+                        run_model2_copy = load_model_jit(run_model2_copy, checkpoint2)
+                        accuracy_2 = float(checkpoint2["log"]["perf_min"][-1])
+                        models_to_compare.extend([(run_model1_copy, run_model2_copy)])
+                        dissimilarities_over_learning["accuracy_1"].append(accuracy_1)
+                        dissimilarities_over_learning["accuracy_2"].append(accuracy_2)
+
+                # compute the curves for models and dissimilarities
+                curves = [
+                    (
+                        get_curves(taskset, tuple_model[0], all_rules, components=15, rnn=False),
+                        get_curves(taskset, tuple_model[1], all_rules, components=15, rnn=False),
                     )
                     for tuple_model in models_to_compare
                 ]
@@ -710,7 +897,7 @@ def dissimilarity_within_learning(
                     curves = []
                     for model in models_to_compare:
                         curves.append(
-                            get_curves(taskset, model, all_rules, components=15)
+                            get_curves(taskset, model, all_rules, components=15, rnn=True)
                         )
                     print(
                         f"grouping accuracies for model {model_name} for group {group}"
