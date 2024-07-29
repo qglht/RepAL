@@ -43,7 +43,7 @@ def dissimilarity_task(
         dir_path = os.path.join(base_dir, f"{group1}_{group2}", measure)
         os.makedirs(dir_path, exist_ok=True)  # Create directory if it does not exist
 
-        npz_filename = f"{d_model}_{n_layers}_{learning_rate}_{batch_size}.npz"  # Construct filename
+        npz_filename = f"mamba_{d_model}_{n_layers}_{learning_rate}_{batch_size}.npz"  # Construct filename
         npz_filepath = os.path.join(dir_path, npz_filename)
 
         np.savez_compressed(npz_filepath, dissimilarities_model[measure])

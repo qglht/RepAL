@@ -3,7 +3,7 @@ import os
 import argparse
 import torch
 from dsa_analysis import load_config
-from src.toolkit import dissimilarity_within_learning
+from src.toolkit import dissimilarity_within_learning_mamba
 import numpy as np
 import multiprocessing
 
@@ -16,29 +16,34 @@ os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
 
 def dissimilarity_task(
-    taskset, group, rnn_type, activation, hidden_size, lr, batch_size, device
+    taskset,
+    group,
+    d_model,
+    n_layers,
+    learning_rate,
+    batch_size,
+    device,
 ):
 
     # Reinitialize the model and modules to avoid conflicts
-    dissimilarities_model = dissimilarity_within_learning(
+    dissimilarities_model = dissimilarity_within_learning_mamba(
         taskset,
         group,
-        rnn_type,
-        activation,
-        hidden_size,
-        lr,
+        d_model,
+        n_layers,
+        learning_rate,
         batch_size,
         device,
     )
 
-    base_dir = f"data/dissimilarities_within_learning/{taskset}"
+    base_dir = f"data/dissimilarities_within_learning/mamba/{taskset}"
     measures = ["cka", "procrustes", "dsa", "accuracy"]
 
     for measure in measures:
         dir_path = os.path.join(base_dir, f"{group}", measure)
         os.makedirs(dir_path, exist_ok=True)  # Create directory if it does not exist
 
-        npz_filename = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}.npz"  # Construct filename
+        npz_filename = f"mamba_{d_model}_{n_layers}_{learning_rate}_{batch_size}.npz"  # Construct filename
         npz_filepath = os.path.join(dir_path, npz_filename)
 
         np.savez_compressed(npz_filepath, dissimilarities_model[measure])
@@ -62,34 +67,32 @@ def dissimilarity(args: argparse.Namespace) -> None:
     print(f"number of devices : {num_gpus}")
 
     if not os.path.exists(
-        f"data/dissimilarities_within_learning/{args.taskset}/{args.group}"
+        f"data/dissimilarities_within_learning/mamba/{args.taskset}/{args.group}"
     ):
         os.makedirs(
-            f"data/dissimilarities_within_learning/{args.taskset}/{args.group}",
+            f"data/dissimilarities_within_learning/mamba/{args.taskset}/{args.group}",
             exist_ok=True,
         )
 
-    for rnn_type in config["rnn"]["parameters"]["rnn_type"]:
-        for activation in config["rnn"]["parameters"]["activations"]:
-            for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
-                for lr in config["rnn"]["parameters"]["learning_rate"]:
-                    for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
-                        device = devices[
-                            i % len(devices)
-                        ]  # Cycle through available devices
-                        tasks.append(
-                            (
-                                args.taskset,
-                                args.group,
-                                rnn_type,
-                                activation,
-                                hidden_size,
-                                lr,
-                                batch_size,
-                                device,
-                            )
+    for d_model in config["mamba"]["parameters"]["d_model"]:
+        for n_layers in config["mamba"]["parameters"]["n_layers"]:
+            for learning_rate in config["mamba"]["parameters"]["learning_rate"]:
+                for batch_size in config["mamba"]["parameters"]["batch_size_train"]:
+                    device = devices[
+                        i % len(devices)
+                    ]  # Cycle through available devices
+                    tasks.append(
+                        (
+                            args.taskset,
+                            args.group,
+                            d_model,
+                            n_layers,
+                            learning_rate,
+                            batch_size,
+                            device,
                         )
-                        i += 1
+                    )
+                    i += 1
 
     # Create a process for each task
     processes = [
