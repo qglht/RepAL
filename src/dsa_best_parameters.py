@@ -45,11 +45,11 @@ wait $APP_PID
 """
     number_parameters_delays = 10
 
-    n_delays = np.linspace(10, 75, number_parameters_delays, dtype=int)
+    n_delays = np.linspace(1, 50, number_parameters_delays, dtype=int)
 
     for delay in n_delays:
-        space = int(200 / delay)
-        if not os.path.exists(f"data/dsa_results/50_{delay}_{space}_ordered.csv"):
+        space = 1
+        if not os.path.exists(f"data/dsa_results/20_{delay}_{space}_ordered.csv"):
             script_content = script_template.format(n_delay=delay, delay_interval=space)
             script_filename = f"sbatch/dsa/{delay}_{space}_ordered_script.sh"
 

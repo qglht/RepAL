@@ -1214,6 +1214,8 @@ def dsa_optimisation_compositionality(rank, n_delays, delay_interval, device, or
         }
 
         model = list(all_simulations_combined.values())
+        # average model over samples
+        model = [np.mean(m, axis=0) for m in model]
         model_names = list(all_simulations_combined.keys())
 
         dsa = DSA.DSA(
@@ -1248,18 +1250,6 @@ def dsa_optimisation_compositionality(rank, n_delays, delay_interval, device, or
                 similarities_grouped_by_shared_elements[key].append(
                     similarities[model_names.index(tuple1), model_names.index(tuple2)]
                 )
-
-        # # compute median of similarities for each group and plot similarity vs number of shared elements
-        # median_similarities = {key: np.median(value) for key, value in similarities_grouped_by_shared_elements.items()}
-        # std_devs = {key: np.std(value) for key, value in similarities_grouped_by_shared_elements.items()}
-
-        # # Prepare data for plotting
-        # keys = list(median_similarities.keys())
-        # median_values = list(median_similarities.values())
-        # std_dev_values = list(std_devs.values())
-
-        # df = pd.DataFrame({'Number of shared elements': keys, 'Median similarity': median_values, 'Standard deviation': std_dev_values})
-        # Prepare lists to store DataFrame rows
         data = []
 
         # Iterate over the shared elements
