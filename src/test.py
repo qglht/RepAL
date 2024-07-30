@@ -17,7 +17,19 @@ warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprec
 os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
 if __name__ == "__main__":
-    pipeline("GoNogo", "untrained", "leaky_gru", "leaky_relu", 128, 0.001, 128, "cpu")
+    # pipeline("GoNogo", "untrained", "leaky_gru", "leaky_relu", 128, 0.001, 128, "cpu")
+    get_dynamics_rnn(
+        "leaky_gru",
+        "leaky_relu",
+        128,
+        0.01,
+        128,
+        "leaky_gru_leaky_relu_128_0.01_128_train.pth",
+        "master",
+        "PDM",
+        device="cpu",
+        n_components=20,
+    )
     # pipeline_mamba("PDM", "master", 16, 1, 1, True, 0.01, 16, "cpu")
     # get_dynamics_mamba(
     #     16,
