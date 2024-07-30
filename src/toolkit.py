@@ -456,7 +456,9 @@ def get_dynamics_rnn(
             ].cpu()
         else:
             tensor_on_cpu = h_trans[("AntiGoNogoDelayResponseT", "stimulus")].cpu()
-        return tensor_on_cpu.detach().numpy(), explained_variance
+        curve = tensor_on_cpu.detach().numpy()
+        curve = np.mean(curve, axis=1)
+        return curve, explained_variance
 
 
 def get_dynamics_mamba(
@@ -506,7 +508,9 @@ def get_dynamics_mamba(
             ].cpu()
         else:
             tensor_on_cpu = h_trans[("AntiGoNogoDelayResponseT", "stimulus")].cpu()
-        return tensor_on_cpu.detach().numpy(), explained_variance
+        curve = tensor_on_cpu.detach().numpy()
+        curve = np.mean(curve, axis=1)
+        return curve, explained_variance
 
 
 def dissimilarity_over_learning(

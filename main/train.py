@@ -258,6 +258,7 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=
     # freeze input weights or not
     # TODO : adapt it to Mamba
     if rnn:
+        ipdb.set_trace()
         if freeze:
             optim = optimizer(
                 [run_model.model.rnn.rnncell.weight_ih], lr=hp["learning_rate"]
