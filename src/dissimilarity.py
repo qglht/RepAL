@@ -14,7 +14,7 @@ from src.dsa_optimization import dsa_computation
 def generate_and_submit_scripts(args: argparse.Namespace):
     script_template = """#!/bin/bash
 #SBATCH --nodes=1
-#SBATCH --time=2:00:00
+#SBATCH --time=0:45:00
 #SBATCH --job-name={taskset}_{group1}_VS_{group2}_job
 #SBATCH --gres=gpu:1
 #SBATCH --ntasks-per-node=1
