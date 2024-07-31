@@ -120,6 +120,7 @@ def measure_dissimilarities(model, model_dict, groups, taskset, device):
 
 
 def dissimilarity(args: argparse.Namespace) -> None:
+    multiprocessing.set_start_method("spawn", force=True)
     logging = setup_logging(
         os.path.join(f"data/dissimilarities/{args.taskset}", "logs")
     )

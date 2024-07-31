@@ -120,6 +120,7 @@ def measure_dissimilarities(model, model_dict, groups, taskset, device):
 
 
 def dissimilarity(args: argparse.Namespace) -> None:
+    multiprocessing.set_start_method("spawn", force=True)
     config = load_config("config.yaml")
     groups = [
         "pretrain_frozen",
