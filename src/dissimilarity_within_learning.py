@@ -6,9 +6,9 @@ import argparse
 def generate_and_submit_scripts(args: argparse.Namespace):
     script_template = """#!/bin/bash
 #SBATCH --nodes=1
-#SBATCH --time=1:00:00
+#SBATCH --time=24:00:00
 #SBATCH --job-name=dissimilarity_within_learning_{taskset}_{group}
-#SBATCH --gres=gpu:8
+#SBATCH --gres=gpu:0
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=oxfd2547@ox.ac.uk
 
