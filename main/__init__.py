@@ -23,7 +23,4 @@ from .generate_data import (
 from .train import train, set_hyperparameters
 from .model import Run_Model, load_model, MambaSupervGym, load_model_mamba
 from .RNN_rate_dynamics import RNNLayer
-from .representation import (
-    representation,
-    compute_pca,
-)
+from .representation import representation, compute_pca, compute_common_pca

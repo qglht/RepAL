@@ -12,6 +12,7 @@ import numpy as np
 import pandas as pd
 import similarity
 import DSA
+import copy
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
@@ -134,7 +135,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                     model
                 )
                 print(f"Computing dynamics for {model} and group {group}")
-                curve, explained_variance = get_dynamics_rnn(
+                curve = get_dynamics_rnn(
                     model_type,
                     activation,
                     hidden_size,
@@ -147,8 +148,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                     n_components=20,
                 )
                 final_accuracy = find_accuracy_model(model_path, devices[0])
-                curves[group].append(curve)
-                explained_variances[group].append(explained_variance)
+                curves[group].append(copy.deepcopy(curve))
                 curves_names[group].append(model.replace(".pth", ""))
                 accuracies[group].append(final_accuracy)
 

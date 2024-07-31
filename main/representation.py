@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from tracemalloc import start
 import numpy as np
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
@@ -6,6 +7,7 @@ import ipdb
 import torch
 from torch import Value, linalg as LA
 from main import get_dataloader, get_class_instance
+import copy
 
 # import PCA
 from sklearn.decomposition import PCA
@@ -87,12 +89,22 @@ def representation(model, rules, rnn=True):
         activations[key] = torch.cat(
             values, dim=1
         )  # Concatenate the tensors along the batch dimension
-    return activations
+    # only return activations for which key[1] == 'stimulus'
+    try:
+        return activations[("AntiPerceptualDecisionMakingDelayResponseT", "stimulus")]
+    except KeyError:
+        return activations[("AntiGoNogoDelayResponseT", "stimulus")]
 
 
 def compute_pca(h, n_components=3):
     h = {k: v for k, v in h.items() if k[1] == "stimulus"}
-    data = torch.cat(list(h.values()), dim=0)
+    try:
+        h = h[("AntiPerceptualDecisionMakingDelayResponseT", "stimulus")]
+    except KeyError:
+        h = h[("AntiGoNogoDelayResponseT", "stimulus")]
+    data = h
+    # ipdb.set_trace()
+    # data = torch.cat(list(h.values()), dim=0)
     data_2d = data.reshape(-1, data.shape[-1])
 
     # Using PCA directly for dimensionality reduction:
@@ -106,12 +118,49 @@ def compute_pca(h, n_components=3):
 
     data_trans = data_trans_2d.reshape(data.shape[0], data.shape[1], n_components)
 
-    # Package back to dictionary
-    h_trans = OrderedDict()
-    i_start = 0
-    for key, val in h.items():
-        i_end = i_start + val.shape[0]
-        h_trans[key] = data_trans[i_start:i_end, :, :]
-        i_start = i_end
+    # # Package back to dictionary
+    # h_trans = OrderedDict()
+    # i_start = 0
+    # for key, val in h.items():
+    #     i_end = i_start + val.shape[0]
+    #     h_trans[key] = data_trans[i_start:i_end, :, :]
+    #     i_start = i_end
 
-    return h_trans, explained_variance_ratio
+    return data_trans, explained_variance_ratio
+
+
+def compute_common_pca(h_list, n_components=3):
+    # here h is a list of dictionaries, each containing activations for a different rule
+    data = torch.cat(h_list, dim=1)
+    data_2d = data.reshape(-1, data.shape[-1])
+
+    # Using PCA directly for dimensionality reduction:
+    pca = PCA(n_components=n_components)
+    data_trans_2d = torch.tensor(pca.fit_transform(data_2d.cpu().numpy())).to(
+        data_2d.device
+    )  # Convert back to PyTorch tensor
+
+    # Compute explained variance ratio using PCA
+    explained_variance_ratio = pca.explained_variance_ratio_.sum()
+
+    data_trans = data_trans_2d.reshape(data.shape[0], data.shape[1], n_components)
+    # Package back to list of activations as initial h_list
+    pca_h_list = []
+    start = 0
+    for i in range(len(h_list)):
+        end = start + h_list[i].shape[1]
+        curve = data_trans[:, start:end, :].cpu()
+        curve = curve.detach().numpy()
+        curve = np.mean(curve, axis=1)
+        curve_reduced = copy.deepcopy(curve)
+        pca_h_list.append(curve_reduced)
+        start = end
+
+    # h_trans = OrderedDict()
+    # i_start = 0
+    # for key, val in h.items():
+    #     i_end = i_start + val.shape[0]
+    #     h_trans[key] = data_trans[i_start:i_end, :, :]
+    #     i_start = i_end
+
+    return pca_h_list, explained_variance_ratio

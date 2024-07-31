@@ -449,16 +449,7 @@ def get_dynamics_rnn(
             device=device,
         )
         h = main.representation(run_model, all_rules)
-        h_trans, explained_variance = main.compute_pca(h, n_components=n_components)
-        if taskset == "PDM":
-            tensor_on_cpu = h_trans[
-                ("AntiPerceptualDecisionMakingDelayResponseT", "stimulus")
-            ].cpu()
-        else:
-            tensor_on_cpu = h_trans[("AntiGoNogoDelayResponseT", "stimulus")].cpu()
-        curve = tensor_on_cpu.detach().numpy()
-        curve = np.mean(curve, axis=1)
-        return curve, explained_variance
+        return h
 
 
 def get_dynamics_mamba(
@@ -501,16 +492,7 @@ def get_dynamics_mamba(
             device=device,
         )
         h = main.representation(run_model, all_rules, rnn=False)
-        h_trans, explained_variance = main.compute_pca(h, n_components=n_components)
-        if taskset == "PDM":
-            tensor_on_cpu = h_trans[
-                ("AntiPerceptualDecisionMakingDelayResponseT", "stimulus")
-            ].cpu()
-        else:
-            tensor_on_cpu = h_trans[("AntiGoNogoDelayResponseT", "stimulus")].cpu()
-        curve = tensor_on_cpu.detach().numpy()
-        curve = np.mean(curve, axis=1)
-        return curve, explained_variance
+        return h
 
 
 def dissimilarity_over_learning(
