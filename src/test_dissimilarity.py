@@ -15,6 +15,8 @@ import DSA
 import copy
 import main
 import numpy as np
+import sys
+import logging
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
@@ -24,15 +26,45 @@ warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprec
 os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
 
+def setup_logging(log_dir):
+    # Ensure the log directory exists
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+
+    # Create a logging object and set its level
+    logger = logging.getLogger("")
+    logger.setLevel(logging.INFO)
+
+    # Prevent adding multiple handlers in subsequent calls
+    if not logger.handlers:
+        # Create file handler to write logs to a file
+        file_handler = logging.FileHandler(os.path.join(log_dir, "training.log"))
+        file_handler.setLevel(logging.INFO)
+
+        # Create console handler to logging.info logs to the console
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.INFO)
+
+        # Define log message format
+        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        file_handler.setFormatter(formatter)
+        console_handler.setFormatter(formatter)
+
+        # Add handlers to the logger
+        logger.addHandler(file_handler)
+        logger.addHandler(console_handler)
+
+    return logger
+
+
 def worker(task):
     try:
         measure_dissimilarities(*task)
     except Exception as e:
-        print(f"Error in worker: {e}")
+        logging.info(f"Error in worker: {e}")
 
 
 def measure_dissimilarities(model, model_dict, groups, taskset, device):
-    print(f"Compute dissimilarities for {model}")
     config = load_config("config.yaml")
     cka_measure = similarity.make("measure.sim_metric.cka-angular-score")
     procrustes_measure = similarity.make("measure.netrep.procrustes-angular-score")
@@ -52,7 +84,7 @@ def measure_dissimilarities(model, model_dict, groups, taskset, device):
                     curves[curves_names.index(groups[i])],
                     curves[curves_names.index(groups[j])],
                 )
-                dis_dsa = DSA.DSA(
+                dis_dsa[i, j] = DSA.DSA(
                     curves[curves_names.index(groups[i])],
                     curves[curves_names.index(groups[j])],
                     n_delays=config["dsa"]["n_delays"],
@@ -88,6 +120,9 @@ def measure_dissimilarities(model, model_dict, groups, taskset, device):
 
 
 def dissimilarity(args: argparse.Namespace) -> None:
+    logging = setup_logging(
+        os.path.join(f"data/dissimilarities/{args.taskset}", "logs")
+    )
     config = load_config("config.yaml")
     groups = [
         "pretrain_frozen",
@@ -120,7 +155,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                                 if os.path.exists(
                                     f"models/{args.taskset}/{group}/{model}"
                                 ):
-                                    print(
+                                    logging.info(
                                         f"Computing dynamics for {model} and group {group}"
                                     )
                                     curve = get_dynamics_rnn(
@@ -136,7 +171,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                                     )
                                     curves[model][group] = copy.deepcopy(curve)
                             # apply PCA on common basis for all groups for the given model
-                            print(f"Computing PCA for {model}")
+                            logging.info(f"Computing PCA for {model}")
                             curves_group = list(curves[model].keys())
                             curves_reduced, _ = main.compute_common_pca(
                                 list(curves[model].values()), n_components=20
@@ -147,6 +182,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                                     curves_group.index(group)
                                 ]
 
+    sys.stdout.flush()
     tasks = []
     i = 0
     for rnn_type in config["rnn"]["parameters"]["rnn_type"]:
@@ -159,6 +195,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                             device = devices[
                                 i % len(devices)
                             ]  # Cycle through available devices
+                            logging.info(f"Compute dissimilarities for {model}")
                             tasks.append(
                                 (model, curves[model], groups, args.taskset, device)
                             )
