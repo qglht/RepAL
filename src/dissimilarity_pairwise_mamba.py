@@ -77,6 +77,7 @@ def measure_dissimilarities(
                     device=device,
                 )
                 dis_dsa.append(dsa_comp.fit_score())
+                
     return (
         models_selected,
         accuracies_group1,
@@ -134,7 +135,6 @@ def dissimilarity(args: argparse.Namespace) -> None:
                     group,
                     args.taskset,
                     devices[0],
-                    n_components=20,
                 )
                 final_accuracy = find_accuracy_model(model_path, devices[0])
                 curves[group].append(curve)

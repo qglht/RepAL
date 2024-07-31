@@ -422,7 +422,6 @@ def get_dynamics_rnn(
     group,
     taskset,
     device,
-    n_components=3,
 ):
     # Load configuration and set hyperparameters
     with load_config("config.yaml") as config:
@@ -461,7 +460,6 @@ def get_dynamics_mamba(
     group,
     taskset,
     device,
-    n_components=3,
 ):
     # Load configuration and set hyperparameters
     with load_config("config.yaml") as config:
