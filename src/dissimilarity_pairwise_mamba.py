@@ -126,14 +126,15 @@ def dissimilarity(args: argparse.Namespace) -> None:
     )
     config = load_config("config.yaml")
     groups = [
-        "pretrain_frozen",
-        "pretrain_unfrozen",
-        "pretrained_basic_anti_frozen",
-        "pretrained_basic_anti_unfrozen",
-        "master",
         "untrained",
         "basic",
         "anti",
+        "delay",
+        "master",
+        "pretrained_basic_anti_frozen",
+        "pretrain_frozen",
+        "pretrained_basic_anti_unfrozen",
+        "pretrain_unfrozen",
     ]
     num_gpus = torch.cuda.device_count()  # Get the number of GPUs available
     devices = (
