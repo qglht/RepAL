@@ -6,7 +6,6 @@ from matplotlib.pylab import f
 from dsa_analysis import load_config
 import torch
 import multiprocessing
-from main.train import accuracy
 from src.toolkit import get_dynamics_rnn
 import numpy as np
 import pandas as pd
@@ -84,7 +83,7 @@ def measure_dissimilarities(model, model_dict, groups, taskset, device):
                     curves[curves_names.index(groups[i])],
                     curves[curves_names.index(groups[j])],
                 )
-                dis_dsa[i, j] = DSA.DSA(
+                dsa_computation = DSA.DSA(
                     curves[curves_names.index(groups[i])],
                     curves[curves_names.index(groups[j])],
                     n_delays=config["dsa"]["n_delays"],
@@ -95,6 +94,7 @@ def measure_dissimilarities(model, model_dict, groups, taskset, device):
                     lr=1e-2,
                     device=device,
                 )
+                dis_dsa[i, j] = dsa_computation.fit_score()
             else:
                 dis_cka[i, j] = np.nan
                 dis_procrustes[i, j] = np.nan
