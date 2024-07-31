@@ -80,31 +80,11 @@ def measure_dissimilarities(model, model_dict, groups, taskset, device):
         dir_path = os.path.join(base_dir, measure)
         os.makedirs(dir_path, exist_ok=True)  # Create directory if it does not exist
 
-        npz_filename = f"{model}.npz"  # Construct filename
+        npz_filename = f"{model.replace('.pth','')}.npz"  # Construct filename
         npz_filepath = os.path.join(dir_path, npz_filename)
 
         np.savez_compressed(npz_filepath, dissimilarities_model[measure])
     return dis_cka, dis_procrustes, dis_dsa
-
-
-# TODO : return only the models selected
-
-
-def parse_model_info(model_name):
-    model_name = model_name.replace(".pth", "")
-    model_name = model_name.split("_")
-    model_type = model_name[0] + "_" + model_name[1]
-    if len(model_name) == 8:
-        activation = model_name[2] + "_" + model_name[3]
-        hidden_size = int(model_name[4])
-        learning_rate = float(model_name[5])
-        batch_size = int(model_name[6])
-    else:
-        activation = model_name[2]
-        hidden_size = int(model_name[3])
-        learning_rate = float(model_name[4])
-        batch_size = int(model_name[5])
-    return model_type, activation, hidden_size, learning_rate, batch_size
 
 
 def dissimilarity(args: argparse.Namespace) -> None:
@@ -132,13 +112,11 @@ def dissimilarity(args: argparse.Namespace) -> None:
             for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
                 for lr in config["rnn"]["parameters"]["learning_rate"]:
                     for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
-                        model = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}_train"
+                        model = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}_train.pth"
                         curves[model] = {}
                         for group in groups:
                             # check if the model is already trained
-                            if os.path.exists(
-                                f"models/{args.taskset}/{group}/{model}.pth"
-                            ):
+                            if os.path.exists(f"models/{args.taskset}/{group}/{model}"):
                                 print(
                                     f"Computing dynamics for {model} and group {group}"
                                 )
@@ -173,7 +151,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
             for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
                 for lr in config["rnn"]["parameters"]["learning_rate"]:
                     for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
-                        model = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}_train"
+                        model = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}_train.pth"
                         device = device = devices[
                             i % len(devices)
                         ]  # Cycle through available devices
