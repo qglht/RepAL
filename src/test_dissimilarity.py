@@ -7,7 +7,7 @@ from dsa_analysis import load_config
 import torch
 import multiprocessing
 from main.train import accuracy
-from src.toolkit import get_dynamics_mamba
+from src.toolkit import get_dynamics_rnn
 import numpy as np
 import pandas as pd
 import similarity
@@ -73,7 +73,7 @@ def measure_dissimilarities(model, model_dict, groups, taskset, device):
         "procrustes": dis_procrustes,
         "dsa": dis_dsa,
     }
-    base_dir = f"data/dissimilarities/mamba/{taskset}"
+    base_dir = f"data/dissimilarities/{taskset}"
     measures = ["cka", "procrustes", "dsa"]
 
     for measure in measures:
@@ -107,51 +107,62 @@ def dissimilarity(args: argparse.Namespace) -> None:
     )
 
     curves = {}
-    for d_model in config["mamba"]["parameters"]["d_model"]:
-        for n_layers in config["mamba"]["parameters"]["n_layers"]:
-            for learning_rate in config["mamba"]["parameters"]["learning_rate"]:
-                for batch_size in config["mamba"]["parameters"]["batch_size_train"]:
-                    model = f"mamba_{d_model}_{n_layers}_{learning_rate}_{batch_size}_train.pth"
-                    curves[model] = {}
-                    for group in groups:
-                        # check if the model is already trained
-                        if os.path.exists(
-                            f"models/mamba/{args.taskset}/{group}/{model}"
-                        ):
-                            print(f"Computing dynamics for {model} and group {group}")
-                            curve = get_dynamics_mamba(
-                                d_model,
-                                n_layers,
-                                learning_rate,
-                                batch_size,
-                                model,
-                                group,
-                                args.taskset,
-                                devices[0],
+    for rnn_type in config["rnn"]["parameters"]["rnn_type"]:
+        for activation in config["rnn"]["parameters"]["activations"]:
+            for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
+                for lr in config["rnn"]["parameters"]["learning_rate"]:
+                    for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
+                        model = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}_train.pth"
+                        if model == "leaky_gru_leaky_relu_128_0.01_128_train.pth":
+                            curves[model] = {}
+                            for group in groups:
+                                # check if the model is already trained
+                                if os.path.exists(
+                                    f"models/{args.taskset}/{group}/{model}"
+                                ):
+                                    print(
+                                        f"Computing dynamics for {model} and group {group}"
+                                    )
+                                    curve = get_dynamics_rnn(
+                                        rnn_type,
+                                        activation,
+                                        hidden_size,
+                                        lr,
+                                        batch_size,
+                                        model,
+                                        group,
+                                        args.taskset,
+                                        devices[0],
+                                    )
+                                    curves[model][group] = copy.deepcopy(curve)
+                            # apply PCA on common basis for all groups for the given model
+                            print(f"Computing PCA for {model}")
+                            curves_group = list(curves[model].keys())
+                            curves_reduced, _ = main.compute_common_pca(
+                                list(curves[model].values()), n_components=20
                             )
-                            curves[model][group] = copy.deepcopy(curve)
-                    # apply PCA on common basis for all groups for the given model
-                    print(f"Computing PCA for {model}")
-                    curves_group = list(curves[model].keys())
-                    curves_reduced, _ = main.compute_common_pca(
-                        list(curves[model].values()), n_components=20
-                    )
-                    # update
-                    for group in curves_group:
-                        curves[model][group] = curves_reduced[curves_group.index(group)]
+                            # update
+                            for group in curves_group:
+                                curves[model][group] = curves_reduced[
+                                    curves_group.index(group)
+                                ]
 
     tasks = []
     i = 0
-    for d_model in config["mamba"]["parameters"]["d_model"]:
-        for n_layers in config["mamba"]["parameters"]["n_layers"]:
-            for learning_rate in config["mamba"]["parameters"]["learning_rate"]:
-                for batch_size in config["mamba"]["parameters"]["batch_size_train"]:
-                    model = f"mamba_{d_model}_{n_layers}_{learning_rate}_{batch_size}_train.pth"
-                    device = devices[
-                        i % len(devices)
-                    ]  # Cycle through available devices
-                    tasks.append((model, curves[model], groups, args.taskset, device))
-                    i += 1
+    for rnn_type in config["rnn"]["parameters"]["rnn_type"]:
+        for activation in config["rnn"]["parameters"]["activations"]:
+            for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
+                for lr in config["rnn"]["parameters"]["learning_rate"]:
+                    for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
+                        model = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}_train.pth"
+                        if model == "leaky_gru_leaky_relu_128_0.01_128_train.pth":
+                            device = devices[
+                                i % len(devices)
+                            ]  # Cycle through available devices
+                            tasks.append(
+                                (model, curves[model], groups, args.taskset, device)
+                            )
+                            i += 1
 
     # Create a process for each task
     processes = [multiprocessing.Process(target=worker, args=(task,)) for task in tasks]

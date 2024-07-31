@@ -152,7 +152,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                 for lr in config["rnn"]["parameters"]["learning_rate"]:
                     for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
                         model = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}_train.pth"
-                        device = device = devices[
+                        device = devices[
                             i % len(devices)
                         ]  # Cycle through available devices
                         tasks.append(

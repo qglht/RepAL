@@ -143,16 +143,9 @@ def corresponding_training_time(n, p):
     ]
 
 
-def get_curves(taskset, model, rules, components, rnn):
+def get_curves(model, rules, rnn):
     h = main.representation(model, rules, rnn)
-    h_trans, _ = main.compute_pca(h, n_components=components)
-    if taskset == "PDM":
-        tensor_on_cpu = h_trans[
-            ("AntiPerceptualDecisionMakingDelayResponseT", "stimulus")
-        ].cpu()
-    else:
-        tensor_on_cpu = h_trans[("AntiGoNogoDelayResponseT", "stimulus")].cpu()
-    return tensor_on_cpu.detach().numpy()
+    return h
 
 
 def normalize_within_unit_volume(tensor):
@@ -615,15 +608,28 @@ def dissimilarity_over_learning(
                 # compute the curves for models and dissimilarities
                 curves = [
                     (
-                        get_curves(
-                            taskset, tuple_model[0], all_rules, components=15, rnn=True
-                        ),
-                        get_curves(
-                            taskset, tuple_model[1], all_rules, components=15, rnn=True
-                        ),
+                        get_curves(tuple_model[0], all_rules, rnn=True),
+                        get_curves(tuple_model[1], all_rules, rnn=True),
                     )
                     for tuple_model in models_to_compare
                 ]
+
+                # compute common PCA for each checkpoint
+                curves_flattened = [
+                    [copy.deepcopy(curve[0]), copy.deepcopy(curve[1])]
+                    for curve in curves
+                ]
+                curves_reduced_list = []
+                for epoch_index in range(len(index_epochs)):
+                    curves_reduced, _ = main.compute_common_pca(
+                        curves_flattened[epoch_index], n_components=20
+                    )
+                    curves_reduced_list.append(curves_reduced)
+                curves = [
+                    (curves_reduced_list[i][0], curves_reduced_list[i][1])
+                    for i in range(len(curves_reduced_list))
+                ]
+
                 for epoch_index in range(len(index_epochs)):
                     dissimilarities_over_learning["cka"].append(
                         1 - cka_measure(curves[epoch_index][0], curves[epoch_index][1])
@@ -775,15 +781,28 @@ def dissimilarity_over_learning_mamba(
                 # compute the curves for models and dissimilarities
                 curves = [
                     (
-                        get_curves(
-                            taskset, tuple_model[0], all_rules, components=15, rnn=False
-                        ),
-                        get_curves(
-                            taskset, tuple_model[1], all_rules, components=15, rnn=False
-                        ),
+                        get_curves(tuple_model[0], all_rules, rnn=False),
+                        get_curves(tuple_model[1], all_rules, rnn=False),
                     )
                     for tuple_model in models_to_compare
                 ]
+
+                # compute common PCA for each checkpoint
+                curves_flattened = [
+                    [copy.deepcopy(curve[0]), copy.deepcopy(curve[1])]
+                    for curve in curves
+                ]
+                curves_reduced_list = []
+                for epoch_index in range(len(index_epochs)):
+                    curves_reduced, _ = main.compute_common_pca(
+                        curves_flattened[epoch_index], n_components=20
+                    )
+                    curves_reduced_list.append(curves_reduced)
+                curves = [
+                    (curves_reduced_list[i][0], curves_reduced_list[i][1])
+                    for i in range(len(curves_reduced_list))
+                ]
+
                 for epoch_index in range(len(index_epochs)):
                     dissimilarities_over_learning["cka"].append(
                         1 - cka_measure(curves[epoch_index][0], curves[epoch_index][1])
@@ -880,15 +899,13 @@ def dissimilarity_within_learning(
                         f"computing representations for model {model_name} for group {group}"
                     )
                     print(f"len checkpoints : {len(checkpoint_files)}")
-                    # compute the curves for models and dissimilarities
 
+                    # compute the curves for models and dissimilarities
                     curves = []
                     for model in models_to_compare:
-                        curves.append(
-                            get_curves(
-                                taskset, model, all_rules, components=15, rnn=True
-                            )
-                        )
+                        curves.append(get_curves(model, all_rules, rnn=True))
+                    # performing pca
+                    curves, _ = main.compute_common_pca(curves, n_components=20)
                     print(
                         f"grouping accuracies for model {model_name} for group {group}"
                     )
@@ -1042,11 +1059,9 @@ def dissimilarity_within_learning_mamba(
 
                     curves = []
                     for model in models_to_compare:
-                        curves.append(
-                            get_curves(
-                                taskset, model, all_rules, components=15, rnn=False
-                            )
-                        )
+                        curves.append(get_curves(model, all_rules, rnn=False))
+                    # performing pca
+                    curves, _ = main.compute_common_pca(curves, n_components=20)
                     print(
                         f"grouping accuracies for model {model_name} for group {group}"
                     )
