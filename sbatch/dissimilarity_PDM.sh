@@ -2,7 +2,7 @@
 #SBATCH --nodes=1
 #SBATCH --time=24:00:00
 #SBATCH --job-name=dissimilarities_PDM_job
-#SBATCH --gres=gpu:8
+#SBATCH --gres=gpu:0
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=oxfd2547@ox.ac.uk
 

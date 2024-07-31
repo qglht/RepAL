@@ -6,7 +6,6 @@ from matplotlib.pylab import f
 from dsa_analysis import load_config
 import torch
 import multiprocessing
-from main.train import accuracy
 from src.toolkit import get_dynamics_mamba
 import numpy as np
 import pandas as pd
@@ -15,6 +14,8 @@ import DSA
 import copy
 import main
 import numpy as np
+import sys
+import logging
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
@@ -24,15 +25,45 @@ warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprec
 os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
 
+def setup_logging(log_dir):
+    # Ensure the log directory exists
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+
+    # Create a logging object and set its level
+    logger = logging.getLogger("")
+    logger.setLevel(logging.INFO)
+
+    # Prevent adding multiple handlers in subsequent calls
+    if not logger.handlers:
+        # Create file handler to write logs to a file
+        file_handler = logging.FileHandler(os.path.join(log_dir, "training.log"))
+        file_handler.setLevel(logging.INFO)
+
+        # Create console handler to logging.info logs to the console
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.INFO)
+
+        # Define log message format
+        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        file_handler.setFormatter(formatter)
+        console_handler.setFormatter(formatter)
+
+        # Add handlers to the logger
+        logger.addHandler(file_handler)
+        logger.addHandler(console_handler)
+
+    return logger
+
+
 def worker(task):
     try:
         measure_dissimilarities(*task)
     except Exception as e:
-        print(f"Error in worker: {e}")
+        logging.info(f"Error in worker: {e}")
 
 
 def measure_dissimilarities(model, model_dict, groups, taskset, device):
-    print(f"Compute dissimilarities for {model}")
     config = load_config("config.yaml")
     cka_measure = similarity.make("measure.sim_metric.cka-angular-score")
     procrustes_measure = similarity.make("measure.netrep.procrustes-angular-score")
@@ -52,7 +83,7 @@ def measure_dissimilarities(model, model_dict, groups, taskset, device):
                     curves[curves_names.index(groups[i])],
                     curves[curves_names.index(groups[j])],
                 )
-                dis_dsa = DSA.DSA(
+                dsa_computation = DSA.DSA(
                     curves[curves_names.index(groups[i])],
                     curves[curves_names.index(groups[j])],
                     n_delays=config["dsa"]["n_delays"],
@@ -63,6 +94,7 @@ def measure_dissimilarities(model, model_dict, groups, taskset, device):
                     lr=1e-2,
                     device=device,
                 )
+                dis_dsa[i, j] = dsa_computation.fit_score()
             else:
                 dis_cka[i, j] = np.nan
                 dis_procrustes[i, j] = np.nan
@@ -118,7 +150,9 @@ def dissimilarity(args: argparse.Namespace) -> None:
                         if os.path.exists(
                             f"models/mamba/{args.taskset}/{group}/{model}"
                         ):
-                            print(f"Computing dynamics for {model} and group {group}")
+                            logging.info(
+                                f"Computing dynamics for {model} and group {group}"
+                            )
                             curve = get_dynamics_mamba(
                                 d_model,
                                 n_layers,
@@ -131,7 +165,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                             )
                             curves[model][group] = copy.deepcopy(curve)
                     # apply PCA on common basis for all groups for the given model
-                    print(f"Computing PCA for {model}")
+                    logging.info(f"Computing PCA for {model}")
                     curves_group = list(curves[model].keys())
                     curves_reduced, _ = main.compute_common_pca(
                         list(curves[model].values()), n_components=20
@@ -140,6 +174,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                     for group in curves_group:
                         curves[model][group] = curves_reduced[curves_group.index(group)]
 
+    sys.stdout.flush()
     tasks = []
     i = 0
     for d_model in config["mamba"]["parameters"]["d_model"]:
@@ -147,6 +182,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
             for learning_rate in config["mamba"]["parameters"]["learning_rate"]:
                 for batch_size in config["mamba"]["parameters"]["batch_size_train"]:
                     model = f"mamba_{d_model}_{n_layers}_{learning_rate}_{batch_size}_train.pth"
+                    logging.info(f"Compute dissimilarities for {model}")
                     device = devices[
                         i % len(devices)
                     ]  # Cycle through available devices
