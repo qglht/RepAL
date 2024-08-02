@@ -133,7 +133,6 @@ def dissimilarity(args: argparse.Namespace) -> None:
         "master",
         "pretrained_basic_anti_frozen",
         "pretrain_frozen",
-        "pretrained_basic_anti_unfrozen",
         "pretrain_unfrozen",
     ]
     num_gpus = torch.cuda.device_count()  # Get the number of GPUs available
@@ -173,7 +172,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                     logging.info(f"Computing PCA for {model}")
                     curves_group = list(curves[model].keys())
                     curves_reduced, _ = main.compute_common_pca(
-                        list(curves[model].values()), n_components=20
+                        list(curves[model].values()), n_components=50
                     )
                     # update
                     for group in curves_group:

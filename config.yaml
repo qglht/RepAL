@@ -158,7 +158,7 @@ GoNogo:
 dsa:
   n_delays: 50
   delay_interval: 1
-  rank: 20
+  rank: 50
   device: cuda
 simulations:
   dt: 0.01 # 20 ms
