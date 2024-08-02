@@ -16,6 +16,7 @@ import main
 import numpy as np
 import sys
 import logging
+import ipdb
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
@@ -150,36 +151,44 @@ def dissimilarity(args: argparse.Namespace) -> None:
                 for lr in config["rnn"]["parameters"]["learning_rate"]:
                     for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
                         model = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}_train.pth"
-                        curves[model] = {}
-                        for group in groups:
-                            # check if the model is already trained
-                            if os.path.exists(f"models/{args.taskset}/{group}/{model}"):
-                                logging.info(
-                                    f"Computing dynamics for {model} and group {group}"
-                                )
-                                curve = get_dynamics_rnn(
-                                    rnn_type,
-                                    activation,
-                                    hidden_size,
-                                    lr,
-                                    batch_size,
-                                    model,
-                                    group,
-                                    args.taskset,
-                                    devices[0],
-                                )
-                                curves[model][group] = copy.deepcopy(curve)
-                        # apply PCA on common basis for all groups for the given model
-                        logging.info(f"Computing PCA for {model}")
-                        curves_group = list(curves[model].keys())
-                        curves_reduced, _ = main.compute_common_pca(
-                            list(curves[model].values()), n_components=20
-                        )
-                        # update
-                        for group in curves_group:
-                            curves[model][group] = curves_reduced[
-                                curves_group.index(group)
-                            ]
+                        if model == "leaky_gru_relu_128_0.001_128_train.pth":
+                            curves[model] = {}
+                            for group in groups:
+                                # check if the model is already trained
+                                if os.path.exists(
+                                    f"models/{args.taskset}/{group}/{model}"
+                                ):
+                                    logging.info(
+                                        f"Computing dynamics for {model} and group {group}"
+                                    )
+                                    curve = get_dynamics_rnn(
+                                        rnn_type,
+                                        activation,
+                                        hidden_size,
+                                        lr,
+                                        batch_size,
+                                        model,
+                                        group,
+                                        args.taskset,
+                                        devices[0],
+                                    )
+                                    curves[model][group] = copy.deepcopy(curve)
+                            # apply PCA on common basis for all groups for the given model
+                            logging.info(f"Computing PCA for {model}")
+                            curves_group = list(curves[model].keys())
+                            curves_reduced, _ = main.compute_common_pca(
+                                list(curves[model].values()), n_components=20
+                            )
+                            # update
+                            for group in curves_group:
+                                curves[model][group] = curves_reduced[
+                                    curves_group.index(group)
+                                ]
+                            logging.info(
+                                f"Computed PCA for {model} with groups : {curves_group}"
+                            )
+                            logging.info(f"results: {curves[model]}")
+                            # ipdb.set_trace()
 
     sys.stdout.flush()
     tasks = []
@@ -190,14 +199,15 @@ def dissimilarity(args: argparse.Namespace) -> None:
                 for lr in config["rnn"]["parameters"]["learning_rate"]:
                     for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
                         model = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}_train.pth"
-                        device = devices[
-                            i % len(devices)
-                        ]  # Cycle through available devices
-                        logging.info(f"Compute dissimilarities for {model}")
-                        tasks.append(
-                            (model, curves[model], groups, args.taskset, device)
-                        )
-                        i += 1
+                        if model == "leaky_gru_relu_128_0.001_128_train.pth":
+                            device = devices[
+                                i % len(devices)
+                            ]  # Cycle through available devices
+                            logging.info(f"Compute dissimilarities for {model}")
+                            tasks.append(
+                                (model, curves[model], groups, args.taskset, device)
+                            )
+                            i += 1
 
     # Create a process for each task
     processes = [multiprocessing.Process(target=worker, args=(task,)) for task in tasks]
