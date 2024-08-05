@@ -127,9 +127,6 @@ def dissimilarity(args: argparse.Namespace) -> None:
     config = load_config("config.yaml")
     groups = [
         "untrained",
-        "basic",
-        "anti",
-        "delay",
         "master",
         "pretrained_basic_anti_frozen",
         "pretrain_frozen",
