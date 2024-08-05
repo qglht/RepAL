@@ -435,7 +435,7 @@ def get_dynamics_rnn(
             model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=ruleset
         )
         run_model = main.load_model(
-            f"models/{taskset}/{group}/{model}",
+            f"../models/{taskset}/{group}/{model}",
             hp,
             RNNLayer,
             device=device,
@@ -477,7 +477,7 @@ def get_dynamics_mamba(
             pscan=True,
         )
         run_model = main.load_model_mamba(
-            f"models/mamba/{taskset}/{group}/{model}",
+            f"../models/mamba/{taskset}/{group}/{model}",
             hp,
             config,
             device=device,

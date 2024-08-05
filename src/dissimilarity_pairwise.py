@@ -153,7 +153,9 @@ def dissimilarity(args: argparse.Namespace) -> None:
                         curves[model] = {}
                         for group in groups:
                             # check if the model is already trained
-                            if os.path.exists(f"models/{args.taskset}/{group}/{model}"):
+                            if os.path.exists(
+                                f"../models/{args.taskset}/{group}/{model}"
+                            ):
                                 logging.info(
                                     f"Computing dynamics for {model} and group {group}"
                                 )
