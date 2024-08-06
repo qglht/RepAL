@@ -25,7 +25,8 @@ from collections import OrderedDict
 import torch
 import ipdb
 from torch import nn, jit
-from mambapy.lm import MambaConfig
+from mambapy.mamba_lm import MambaLM, MambaLMConfig
+from mambapy.mamba import Mamba, MambaConfig, RMSNorm
 import yaml
 
 # Suppress specific Gym warnings
@@ -103,7 +104,7 @@ def initialize_model_mamba(
         hp, log, optimizer = main.set_hyperparameters(
             model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=all_rules
         )
-        config = MambaConfig(
+        config = MambaLMConfig(
             d_model=d_model,
             n_layers=n_layers,
             vocab_size=hp["n_input"],
@@ -301,7 +302,7 @@ def pipeline_mamba(
                     ruleset=all_rules,
                     rule_trains=rules_pretrain,
                 )
-                config = MambaConfig(
+                config = MambaLMConfig(
                     d_model=d_model,
                     n_layers=n_layers,
                     vocab_size=hp["n_input"],
@@ -326,7 +327,7 @@ def pipeline_mamba(
                         ruleset=all_rules,
                         rule_trains=rules_train,
                     )
-                    config = MambaConfig(
+                    config = MambaLMConfig(
                         d_model=d_model,
                         n_layers=n_layers,
                         vocab_size=hp["n_input"],
@@ -356,7 +357,7 @@ def pipeline_mamba(
                         ruleset=all_rules,
                         rule_trains=rules_train,
                     )
-                    config = MambaConfig(
+                    config = MambaLMConfig(
                         d_model=d_model,
                         n_layers=n_layers,
                         vocab_size=hp["n_input"],
@@ -379,7 +380,7 @@ def pipeline_mamba(
                 hp, log, optimizer = main.set_hyperparameters(
                     model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=rules_train
                 )
-                config = MambaConfig(
+                config = MambaLMConfig(
                     d_model=d_model,
                     n_layers=n_layers,
                     vocab_size=hp["n_input"],
@@ -468,7 +469,7 @@ def get_dynamics_mamba(
         hp, _, _ = main.set_hyperparameters(
             model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=ruleset
         )
-        config = MambaConfig(
+        config = MambaLMConfig(
             d_model=d_model,
             n_layers=n_layers,
             vocab_size=hp["n_input"],
