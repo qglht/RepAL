@@ -113,7 +113,7 @@ def initialize_model_mamba(
         )
         run_model = main.MambaSupervGym(hp, config, device=device)
 
-        return run_model, hp, lm_config
+        return run_model, hp, config
 
 
 def load_model_jit(run_model_copy, checkpoint):
