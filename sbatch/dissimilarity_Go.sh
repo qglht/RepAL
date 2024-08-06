@@ -10,10 +10,10 @@ module load cuda/11.2
 module load pytorch/1.9.0
 module load python/miniconda3
 
-source activate repal
-poetry install
+source activate repal3
 
-(poetry run python -m src.dissimilarity_pairwise --taskset GoNogo) &
+
+(python -m src.dissimilarity_pairwise --taskset GoNogo) &
 
 # PID of the application
 APP_PID=$!

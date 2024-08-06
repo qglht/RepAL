@@ -16,10 +16,10 @@ module load cuda/11.2
 module load pytorch/1.9.0
 module load python/miniconda3
 
-source activate repal
-poetry install
+source activate repal3
 
-(poetry run python -m src.dissimilarity_over_learning_per_group_mamba --taskset {taskset} --group1 {group1} --group2 {group2}) & 
+
+(python -m src.dissimilarity_over_learning_per_group_mamba --taskset {taskset} --group1 {group1} --group2 {group2}) & 
 
 # PID of the application
 APP_PID=$!

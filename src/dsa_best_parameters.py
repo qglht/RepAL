@@ -23,10 +23,10 @@ module load cuda/11.2
 module load pytorch/1.9.0
 module load python/miniconda3
 
-source activate repal
-poetry install
+source activate repal3
 
-(poetry run python -m src.dsa_optimization --n_delay {n_delay} --delay_interval {delay_interval} --ordered) &
+
+(python -m src.dsa_optimization --n_delay {n_delay} --delay_interval {delay_interval} --ordered) &
 
 # PID of the application
 APP_PID=$!
