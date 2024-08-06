@@ -14,9 +14,9 @@ def generate_and_submit_scripts(args: argparse.Namespace):
 
 module load cuda/11.2
 module load pytorch/1.9.0
-module load python/anaconda3
+module load python/miniconda3
 
-source activate dsa
+source activate repal
 poetry install
 
 (poetry run python -m src.dissimilarity_over_learning_per_group_mamba --taskset {taskset} --group1 {group1} --group2 {group2}) & 
@@ -43,9 +43,6 @@ wait $APP_PID
         ("untrained", "master"),
         ("pretrain_frozen", "master"),
         ("pretrain_unfrozen", "master"),
-        ("pretrained_basic_anti_frozen", "master"),
-        ("pretrained_basic_anti_unfrozen", "pretrained_basic_anti_frozen"),
-        ("pretrained_basic_anti_unfrozen", "master"),
     ]
 
     for group in groups_to_compare_over_learning:

@@ -14,9 +14,9 @@ def generate_and_submit_scripts(args: argparse.Namespace):
 
 module load cuda/11.2
 module load pytorch/1.9.0
-module load python/anaconda3
+module load python/miniconda3
 
-source activate dsa
+source activate repal
 poetry install
 
 (poetry run python -m src.dissimilarity_within_learning_per_group --taskset {taskset} --group {group}) & 
@@ -43,8 +43,6 @@ wait $APP_PID
         "pretrain_frozen",
         "pretrain_unfrozen",
         "master",
-        "pretrained_basic_anti_frozen",
-        "pretrained_basic_anti_unfrozen",
         "untrained",
     ]
 

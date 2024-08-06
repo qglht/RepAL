@@ -8,9 +8,9 @@
 
 module load cuda/11.2
 module load pytorch/1.9.0
-module load python/anaconda3
+module load python/miniconda3
 
-source activate dsa
+source activate repal
 poetry install
 
 poetry run python -m src.dissimilarity_within_learning --taskset PDM

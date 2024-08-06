@@ -29,9 +29,9 @@ def generate_and_submit_scripts(args: argparse.Namespace):
 
 module load cuda/11.2
 module load pytorch/1.9.0
-module load python/anaconda3
+module load python/miniconda3
 
-source activate dsa
+source activate repal
 poetry install
 
 (poetry run python -m src.train_group --taskset {taskset} --group {group}) & 

@@ -21,9 +21,9 @@ def generate_and_submit_scripts():
 
 module load cuda/11.2
 module load pytorch/1.9.0
-module load python/anaconda3
+module load python/miniconda3
 
-source activate dsa
+source activate repal
 poetry install
 
 (poetry run python -m src.dsa_optimization --n_delay {n_delay} --delay_interval {delay_interval} --ordered) &
