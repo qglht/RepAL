@@ -4,8 +4,8 @@ import torch
 from torch import nn, jit
 import numpy as np
 import copy
-from mambapy.mamba_lm import MambaLM, MambaLMConfig
-from mambapy.mamba import Mamba, MambaConfig, RMSNorm
+from mambapy.lm import LM
+from mambapy.mamba import Mamba, RMSNorm
 import ipdb
 
 
@@ -92,7 +92,7 @@ class Run_Model(nn.Module):  # (jit.ScriptModule):
         torch.save(self.model.state_dict(), path)
 
 
-class MambaSupervGym(MambaLM):
+class MambaSupervGym(LM):
     def __init__(self, hp, lm_config, device):
         super().__init__(lm_config)
         self.lm_config = lm_config
