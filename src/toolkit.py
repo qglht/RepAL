@@ -622,7 +622,7 @@ def dissimilarity_over_learning(
                 curves_reduced_list = []
                 for epoch_index in range(len(index_epochs)):
                     curves_reduced, _ = main.compute_common_pca(
-                        curves_flattened[epoch_index], n_components=50
+                        curves_flattened[epoch_index], n_components=20
                     )
                     curves_reduced_list.append(curves_reduced)
                 curves = [
@@ -795,7 +795,7 @@ def dissimilarity_over_learning_mamba(
                 curves_reduced_list = []
                 for epoch_index in range(len(index_epochs)):
                     curves_reduced, _ = main.compute_common_pca(
-                        curves_flattened[epoch_index], n_components=50
+                        curves_flattened[epoch_index], n_components=20
                     )
                     curves_reduced_list.append(curves_reduced)
                 curves = [
@@ -904,8 +904,7 @@ def dissimilarity_within_learning(
                     curves = []
                     for model in models_to_compare:
                         curves.append(get_curves(model, all_rules, rnn=True))
-                    # performing pca
-                    curves, _ = main.compute_common_pca(curves, n_components=50)
+
                     print(
                         f"grouping accuracies for model {model_name} for group {group}"
                     )
@@ -942,6 +941,16 @@ def dissimilarity_within_learning(
                                         print(f"index model 1 : {100*index_model1/p}")
                                         model1 = groups[i][index_model1]
                                         model2 = groups[j][index_model2]
+                                        # performing pca
+                                        curves_model1_model2, _ = (
+                                            main.compute_common_pca(
+                                                [model1, model2], n_components=20
+                                            )
+                                        )
+                                        model1, model2 = (
+                                            curves_model1_model2[0],
+                                            curves_model1_model2[1],
+                                        )
 
                                         dissimilarities_cka.append(
                                             1 - cka_measure(model1, model2)
@@ -1060,8 +1069,7 @@ def dissimilarity_within_learning_mamba(
                     curves = []
                     for model in models_to_compare:
                         curves.append(get_curves(model, all_rules, rnn=False))
-                    # performing pca
-                    curves, _ = main.compute_common_pca(curves, n_components=50)
+
                     print(
                         f"grouping accuracies for model {model_name} for group {group}"
                     )
@@ -1098,6 +1106,15 @@ def dissimilarity_within_learning_mamba(
                                         print(f"index model 1 : {100*index_model1/p}")
                                         model1 = groups[i][index_model1]
                                         model2 = groups[j][index_model2]
+                                        # compute common PCA for both
+                                        # performing pca
+                                        curves_model1_model2, _ = (
+                                            main.compute_common_pca(
+                                                [model1, model2], n_components=20
+                                            )
+                                        )
+                                        model1 = curves_model1_model2[0]
+                                        model2 = curves_model1_model2[1]
 
                                         dissimilarities_cka.append(
                                             1 - cka_measure(model1, model2)
