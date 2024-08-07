@@ -64,47 +64,47 @@ PDM:
       train:
         ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
         frozen: False
-    pretrained_basic_anti_frozen:
+    pretrain_basic_frozen:
+      pretrain:
+        ruleset: [PerceptualDecisionMakingT]
+      train:
+        ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+        frozen: True
+    pretrain_anti_frozen:
+      pretrain:
+        ruleset: [AntiPerceptualDecisionMakingT]
+      train:
+        ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+        frozen: True
+    pretrain_delay_frozen:
+      pretrain:
+        ruleset: [PerceptualDecisionMakingDelayResponseT]
+      train:
+        ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+        frozen: True
+    pretrain_basic_anti_frozen:
       pretrain:
         ruleset: [PerceptualDecisionMakingT, AntiPerceptualDecisionMakingT]
       train:
         ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
         frozen: True
-    pretrained_basic_anti_unfrozen:
-      pretrain:
-        ruleset: [PerceptualDecisionMakingT, AntiPerceptualDecisionMakingT]
-      train:
-        ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
-        frozen: False
-    pretrained_basic_delay_frozen:
+    pretrain_basic_delay_frozen:
       pretrain:
         ruleset: [PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT]
       train:
         ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
         frozen: True
-    delay: 
-      pretrain:
-        ruleset: []
-      train:
-        ruleset: [PerceptualDecisionMakingDelayResponseT]
-        frozen: False
-    anti:
-      pretrain:
-        ruleset: []
-      train:
-        ruleset: [AntiPerceptualDecisionMakingT]
-        frozen: False
-    basic:
-      pretrain:
-        ruleset: []
-      train:
-        ruleset: [PerceptualDecisionMakingT]
-        frozen: False
-    untrained:
+    master_frozen:
       pretrain:
         ruleset: []
       train:
         ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+        frozen: True
+    untrained:
+      pretrain:
+        ruleset: []
+      train:
+        ruleset: []
         frozen: True
 GoNogo: 
   all_rules: [GoNogoT, AntiGoNogoT, GoNogoDelayResponseT, AntiGoNogoDelayResponseT]
@@ -128,47 +128,47 @@ GoNogo:
       train:
         ruleset: [AntiGoNogoDelayResponseT]
         frozen: False
-    pretrained_basic_anti_frozen:
+    pretrain_basic_frozen:
+      pretrain:
+        ruleset: [GoNogoT]
+      train:
+        ruleset: [AntiGoNogoDelayResponseT]
+        frozen: True
+    pretrain_anti_frozen:
+      pretrain:
+        ruleset: [AntiGoNogoT]
+      train:
+        ruleset: [AntiGoNogoDelayResponseT]
+        frozen: True
+    pretrain_delay_frozen:
+      pretrain:
+        ruleset: [GoNogoDelayResponseT]
+      train:
+        ruleset: [AntiGoNogoDelayResponseT]
+        frozen: True
+    pretrain_basic_anti_frozen:
       pretrain:
         ruleset: [GoNogoT, AntiGoNogoT]
       train:
         ruleset: [AntiGoNogoDelayResponseT]
         frozen: True
-    pretrained_basic_anti_unfrozen:
-      pretrain:
-        ruleset: [GoNogoT, AntiGoNogoT]
-      train:
-        ruleset: [AntiGoNogoDelayResponseT]
-        frozen: False
-    pretrained_basic_delay_frozen:
+    pretrain_basic_delay_frozen:
       pretrain:
         ruleset: [GoNogoT, GoNogoDelayResponseT]
       train:
         ruleset: [AntiGoNogoDelayResponseT]
         frozen: True
-    delay:
-      pretrain:
-        ruleset: []
-      train:
-        ruleset: [GoNogoDelayResponseT]
-        frozen: False
-    anti:
-      pretrain:
-        ruleset: []
-      train:
-        ruleset: [AntiGoNogoT]
-        frozen: False
-    basic:
-      pretrain:
-        ruleset: []
-      train:
-        ruleset: [GoNogoT]
-        frozen: False
-    untrained:
+    master_frozen:
       pretrain:
         ruleset: []
       train:
         ruleset: [AntiGoNogoDelayResponseT]
+        frozen: True
+    untrained:
+      pretrain:
+        ruleset: []
+      train:
+        ruleset: []
         frozen: True
 dsa:
   n_delays: 33
