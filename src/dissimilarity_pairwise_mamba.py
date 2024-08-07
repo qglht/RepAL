@@ -169,7 +169,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                     logging.info(f"Computing PCA for {model}")
                     curves_group = list(curves[model].keys())
                     curves_reduced, _ = main.compute_common_pca(
-                        list(curves[model].values()), n_components=50
+                        list(curves[model].values()), n_components=20
                     )
                     # update
                     for group in curves_group:
