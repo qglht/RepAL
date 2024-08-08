@@ -90,10 +90,22 @@ def representation(model, rules, rnn=True):
             values, dim=1
         )  # Concatenate the tensors along the batch dimension
     # only return activations for which key[1] == 'stimulus'
+    activations_stimulus = None
     try:
-        return activations[("AntiPerceptualDecisionMakingDelayResponseT", "stimulus")]
+        activations_stimulus = activations[
+            ("AntiPerceptualDecisionMakingDelayResponseT", "stimulus")
+        ]
     except KeyError:
-        return activations[("AntiGoNogoDelayResponseT", "stimulus")]
+        activations_stimulus = activations[("AntiGoNogoDelayResponseT", "stimulus")]
+
+    # center and standardize the activations
+    flattened_activations = activations_stimulus.reshape(
+        -1, activations_stimulus.shape[-1]
+    )
+    mean_activations = torch.mean(flattened_activations, dim=0)
+    std_activations = torch.std(flattened_activations, dim=0)
+    activations_stimulus = (activations_stimulus - mean_activations) / std_activations
+    return activations_stimulus
 
 
 def compute_pca(h, n_components=3):
