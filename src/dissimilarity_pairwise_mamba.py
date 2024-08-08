@@ -75,17 +75,23 @@ def measure_dissimilarities(model, model_dict, groups, taskset, device):
     for i in range(len(groups)):
         for j in range(i, len(groups)):
             if groups[i] in curves_names and groups[j] in curves_names:
+                curve_i = curves[curves_names.index(groups[i])]
+                curve_j = curves[curves_names.index(groups[j])]
+                # compute PCA on common basis for 2 groups
+                curves, _ = main.compute_common_pca([curve_i, curve_j], n_components=20)
+                curve_i = curves[0]
+                curve_j = curves[1]
                 dis_cka[i, j] = 1 - cka_measure(
-                    curves[curves_names.index(groups[i])],
-                    curves[curves_names.index(groups[j])],
+                    curve_i,
+                    curve_j,
                 )
                 dis_procrustes[i, j] = 1 - procrustes_measure(
-                    curves[curves_names.index(groups[i])],
-                    curves[curves_names.index(groups[j])],
+                    curve_i,
+                    curve_j,
                 )
                 dsa_computation = DSA.DSA(
-                    curves[curves_names.index(groups[i])],
-                    curves[curves_names.index(groups[j])],
+                    curve_i,
+                    curve_j,
                     n_delays=config["dsa"]["n_delays"],
                     rank=config["dsa"]["rank"],
                     delay_interval=config["dsa"]["delay_interval"],
@@ -165,15 +171,6 @@ def dissimilarity(args: argparse.Namespace) -> None:
                                 devices[0],
                             )
                             curves[model][group] = copy.deepcopy(curve)
-                    # apply PCA on common basis for all groups for the given model
-                    logging.info(f"Computing PCA for {model}")
-                    curves_group = list(curves[model].keys())
-                    curves_reduced, _ = main.compute_common_pca(
-                        list(curves[model].values()), n_components=20
-                    )
-                    # update
-                    for group in curves_group:
-                        curves[model][group] = curves_reduced[curves_group.index(group)]
 
     sys.stdout.flush()
     tasks = []
