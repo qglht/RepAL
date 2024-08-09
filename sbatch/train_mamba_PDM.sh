@@ -22,4 +22,4 @@ source activate repal3  # If necessary, depends on cluster setup
   # Install additional Python packages as needed
 
 # Run the application and monitor GPU status in parallel
-python -m src.train_mamba --taskset GoNogo
+python -m src.train_mamba --taskset PDM
