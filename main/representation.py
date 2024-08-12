@@ -78,6 +78,10 @@ def representation(model, rules, rnn=True):
                 else:
 
                     h = model.get_activations(inputs)
+
+                # move to cpu
+                h = h.cpu()
+
                 h_byepoch = get_indexes(hp["dt"], timing, seq_length, h, rule)
                 for key, value in h_byepoch.items():
                     activations.setdefault(key, []).append(
@@ -148,9 +152,7 @@ def compute_common_pca(h_list, n_components=3):
 
     # Using PCA directly for dimensionality reduction:
     pca = PCA(n_components=n_components)
-    data_trans_2d = torch.tensor(pca.fit_transform(data_2d.cpu().numpy())).to(
-        data_2d.device
-    )  # Convert back to PyTorch tensor
+    data_trans_2d = torch.tensor(pca.fit_transform(data_2d.cpu().numpy()))
 
     # Compute explained variance ratio using PCA
     explained_variance_ratio = pca.explained_variance_ratio_.sum()
