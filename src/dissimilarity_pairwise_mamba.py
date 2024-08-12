@@ -27,8 +27,7 @@ os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
 def setup_logging(log_dir):
     # Ensure the log directory exists
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
+    os.makedirs(log_dir, exist_ok=True)
 
     # Create a logging object and set its level
     logger = logging.getLogger("")
