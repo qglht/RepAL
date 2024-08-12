@@ -43,6 +43,7 @@ wait $APP_PID
         ("untrained", "master"),
         ("pretrain_frozen", "master"),
         ("pretrain_unfrozen", "master"),
+        ("pretrain_anti_frozen", "master"),
     ]
 
     for group in groups_to_compare_over_learning:
