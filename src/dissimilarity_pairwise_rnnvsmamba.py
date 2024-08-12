@@ -139,7 +139,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
     groups = [
         "untrained",
         "master",
-        "pretrained_basic_anti_frozen",
+        "pretrain_basic_anti_frozen",
         "pretrain_frozen",
         "pretrain_unfrozen",
     ]
