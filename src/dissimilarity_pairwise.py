@@ -64,7 +64,7 @@ def worker(task):
         logging.info(f"Error in worker: {e}")
 
 
-def measure_dissimilarities(model, model_dict, groups, taskset, device):
+def measure_dissimilarities(model, model_dict, groups, taskset, logging, device):
     config = load_config("config.yaml")
     cka_measure = similarity.make("measure.sim_metric.cka-angular-score")
     procrustes_measure = similarity.make("measure.netrep.procrustes-angular-score")
@@ -115,13 +115,14 @@ def measure_dissimilarities(model, model_dict, groups, taskset, device):
     base_dir = f"data/dissimilarities/{taskset}"
     measures = ["cka", "procrustes", "dsa"]
 
+    logging.info(f"Saving dissimilarities for {model}")
     for measure in measures:
         dir_path = os.path.join(base_dir, measure)
         os.makedirs(dir_path, exist_ok=True)  # Create directory if it does not exist
 
         npz_filename = f"{model.replace('.pth','')}.npz"  # Construct filename
         npz_filepath = os.path.join(dir_path, npz_filename)
-
+        logging.info(f"Saving dissimilarities for {model} in {npz_filepath}")
         np.savez_compressed(npz_filepath, dissimilarities_model[measure])
     return dis_cka, dis_procrustes, dis_dsa
 
@@ -192,7 +193,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                         ]  # Cycle through available devices
                         logging.info(f"Compute dissimilarities for {model}")
                         tasks.append(
-                            (model, curves[model], groups, args.taskset, device)
+                            (model, curves[model], groups, args.taskset, logging, device)
                         )
                         i += 1
 
