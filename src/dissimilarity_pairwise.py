@@ -193,7 +193,14 @@ def dissimilarity(args: argparse.Namespace) -> None:
                         ]  # Cycle through available devices
                         logging.info(f"Compute dissimilarities for {model}")
                         tasks.append(
-                            (model, curves[model], groups, args.taskset, logging, device)
+                            (
+                                model,
+                                curves[model],
+                                groups,
+                                args.taskset,
+                                logging,
+                                device,
+                            )
                         )
                         i += 1
 

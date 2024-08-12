@@ -38,24 +38,32 @@ done
 
 wait $APP_PID
 """
-    groups_to_compare_over_learning = [
-        ("pretrain_frozen", "pretrain_unfrozen"),
-        ("untrained", "master"),
-        ("pretrain_frozen", "master"),
-        ("pretrain_unfrozen", "master"),
+    groups = [
+        "untrained",
+        "master_frozen",
+        "master",
+        "pretrain_basic_frozen",
+        "pretrain_anti_frozen",
+        "pretrain_delay_frozen",
+        "pretrain_basic_anti_frozen",
+        "pretrain_basic_delay_frozen",
+        "pretrain_frozen",
+        "pretrain_unfrozen",
     ]
 
-    for group in groups_to_compare_over_learning:
-        script_content = script_template.format(
-            taskset=args.taskset, group1=group[0], group2=group[1]
-        )
-        script_filename = f"sbatch/dissimilarities_over_learning/mamba/{args.taskset}/{group[0]}_{group[1]}_script.sh"
+    for i in range(len(groups)):
+        for j in range(i + 1, len(groups)):
+            group = [groups[i], groups[j]]
+            script_content = script_template.format(
+                taskset=args.taskset, group1=group[0], group2=group[1]
+            )
+            script_filename = f"sbatch/dissimilarities_over_learning/mamba/{args.taskset}/{group[0]}_{group[1]}_script.sh"
 
-        with open(script_filename, "w") as script_file:
-            script_file.write(script_content)
+            with open(script_filename, "w") as script_file:
+                script_file.write(script_content)
 
-        # Submit the job to the cluster
-        call(f"sbatch {script_filename}", shell=True)
+            # Submit the job to the cluster
+            call(f"sbatch {script_filename}", shell=True)
 
 
 if __name__ == "__main__":
