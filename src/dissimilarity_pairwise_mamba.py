@@ -116,7 +116,6 @@ def measure_dissimilarities(model, model_dict, groups, taskset, logging, device)
     logging.info(f"Saving dissimilarities for {model}")
     for measure in measures:
         dir_path = os.path.join(base_dir, measure)
-        os.makedirs(dir_path, exist_ok=True)  # Create directory if it does not exist
 
         npz_filename = f"{model.replace('.pth','')}.npz"  # Construct filename
         npz_filepath = os.path.join(dir_path, npz_filename)
@@ -128,7 +127,7 @@ def measure_dissimilarities(model, model_dict, groups, taskset, logging, device)
 def dissimilarity(args: argparse.Namespace) -> None:
     multiprocessing.set_start_method("spawn", force=True)
     logging = setup_logging(
-        os.path.join(f"data/dissimilarities/{args.taskset}", "logs")
+        os.path.join(f"data/dissimilarities/mamba/{args.taskset}", "logs")
     )
     config = load_config("config.yaml")
     groups = [
@@ -151,6 +150,12 @@ def dissimilarity(args: argparse.Namespace) -> None:
     )
 
     curves = {}
+    # create directories if don't exist
+    for measure in ["cka", "procrustes", "dsa"]:
+        os.makedirs(
+            f"data/dissimilarities/mamba/{args.taskset}/{measure}", exist_ok=True
+        )
+
     for d_model in config["mamba"]["parameters"]["d_model"]:
         for n_layers in config["mamba"]["parameters"]["n_layers"]:
             for learning_rate in config["mamba"]["parameters"]["learning_rate"]:
@@ -189,7 +194,9 @@ def dissimilarity(args: argparse.Namespace) -> None:
                     device = devices[
                         i % len(devices)
                     ]  # Cycle through available devices
-                    tasks.append((model, curves[model], groups, args.taskset, logging, device))
+                    tasks.append(
+                        (model, curves[model], groups, args.taskset, logging, device)
+                    )
                     i += 1
 
     # Create a process for each task

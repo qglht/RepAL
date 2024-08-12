@@ -74,6 +74,7 @@ def measure_dissimilarities(model, model_dict, groups, taskset, logging, device)
     for i in range(len(groups)):
         for j in range(i, len(groups)):
             if groups[i] in curves_names and groups[j] in curves_names:
+                
                 curve_i = curves[curves_names.index(groups[i])]
                 curve_j = curves[curves_names.index(groups[j])]
                 # compute PCA on common basis for 2 groups
@@ -110,13 +111,13 @@ def measure_dissimilarities(model, model_dict, groups, taskset, logging, device)
         "procrustes": dis_procrustes,
         "dsa": dis_dsa,
     }
+    logging.info(f"dissimilarities : {dissimilarities_model}")
     base_dir = f"data/dissimilarities/{taskset}"
     measures = ["cka", "procrustes", "dsa"]
 
     logging.info(f"Saving dissimilarities for {model}")
     for measure in measures:
         dir_path = os.path.join(base_dir, measure)
-        os.makedirs(dir_path, exist_ok=True)  # Create directory if it does not exist
 
         npz_filename = f"{model.replace('.pth','')}.npz"  # Construct filename
         npz_filepath = os.path.join(dir_path, npz_filename)
@@ -149,7 +150,9 @@ def dissimilarity(args: argparse.Namespace) -> None:
         if num_gpus > 0
         else [torch.device("cpu")]
     )
-
+    # create directories if don't exist
+    for measure in ["cka", "procrustes", "dsa"]:
+        os.makedirs(f"data/dissimilarities/{args.taskset}/{measure}", exist_ok=True)
     curves = {}
     for rnn_type in config["rnn"]["parameters"]["rnn_type"]:
         for activation in config["rnn"]["parameters"]["activations"]:
