@@ -152,6 +152,7 @@ def compute_pca(h, n_components=3):
 
 def compute_common_pca(h_list, n_components=3):
     # here h is a list of dictionaries, each containing activations for a different rule
+    print(f"len(h_list): {len(h_list)}")
     h_list = [h if torch.is_tensor(h) else torch.tensor(h) for h in h_list]
     data = torch.cat(h_list, dim=1)
     data_2d = data.reshape(-1, data.shape[-1])
@@ -177,6 +178,7 @@ def compute_common_pca(h_list, n_components=3):
     pca_h_list = []
     start = 0
     for i in range(len(h_list)):
+        print(f"i: {i}")
         end = start + h_list[i].shape[1]
         curve = data_trans[:, start:end, :].cpu()
         curve = curve.detach().numpy()

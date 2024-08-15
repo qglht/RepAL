@@ -44,10 +44,13 @@ def measure_dissimilarities(model, model_dict, groups, taskset, device):
     for i in range(len(groups)):
         for j in range(i, len(groups)):
             if groups[i] in curves_names and groups[j] in curves_names:
-                print(f"Computing PCA between {groups[i]} and {groups[j]}")
+                print(f"Finding curves for {groups[i]} and {groups[j]}")
+                print(f"curves names : {curves_names}")
+                # ToDO error er
                 curve_i = curves[curves_names.index(groups[i])]
                 curve_j = curves[curves_names.index(groups[j])]
                 # compute PCA on common basis for 2 groups
+                print(f"Computing PCA for {groups[i]} and {groups[j]}")
                 curves, _ = main.compute_common_pca([curve_i, curve_j], n_components=20)
                 print(f"Computing dissimilarities between {groups[i]} and {groups[j]}")
                 curve_i = curves[0]
