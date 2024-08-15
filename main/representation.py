@@ -109,7 +109,7 @@ def representation(model, rules, rnn=True):
     mean_activations = torch.mean(flattened_activations, dim=0)
     std_activations = torch.std(flattened_activations, dim=0)
     activations_stimulus = (activations_stimulus - mean_activations) / std_activations
-    return activations_stimulus
+    return activations_stimulus.to(model.device)
 
 
 def compute_pca(h, n_components=3):
@@ -152,8 +152,9 @@ def compute_common_pca(h_list, n_components=3):
 
     # Using PCA directly for dimensionality reduction:
     pca = PCA(n_components=n_components)
-    data_trans_2d = torch.tensor(pca.fit_transform(data_2d.cpu().numpy()))
-
+    data_trans_2d = torch.tensor(pca.fit_transform(data_2d.cpu().numpy())).to(
+        data_2d.device
+    )
     # Compute explained variance ratio using PCA
     explained_variance_ratio = pca.explained_variance_ratio_.sum()
 
@@ -163,9 +164,7 @@ def compute_common_pca(h_list, n_components=3):
     start = 0
     for i in range(len(h_list)):
         end = start + h_list[i].shape[1]
-        curve = data_trans[:, start:end, :].cpu()
-        curve = curve.detach().numpy()
-        # curve = np.mean(curve, axis=1)
+        curve = data_trans[:, start:end, :]
         curve_reduced = copy.deepcopy(curve)
         pca_h_list.append(curve_reduced)
         start = end
