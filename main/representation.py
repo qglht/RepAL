@@ -164,7 +164,8 @@ def compute_common_pca(h_list, n_components=3):
     start = 0
     for i in range(len(h_list)):
         end = start + h_list[i].shape[1]
-        curve = data_trans[:, start:end, :]
+        curve = data_trans[:, start:end, :].cpu()
+        curve = curve.detach().numpy()
         curve_reduced = copy.deepcopy(curve)
         pca_h_list.append(curve_reduced)
         start = end

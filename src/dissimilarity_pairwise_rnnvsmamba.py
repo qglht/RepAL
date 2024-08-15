@@ -15,7 +15,6 @@ import copy
 import main
 import numpy as np
 import sys
-import logging
 import ipdb
 
 # Suppress specific Gym warnings
@@ -26,41 +25,11 @@ warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprec
 os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
 
-def setup_logging(log_dir):
-    # Ensure the log directory exists
-    os.makedirs(log_dir, exist_ok=True)
-
-    # Create a logging object and set its level
-    logger = logging.getLogger("")
-    logger.setLevel(logging.INFO)
-
-    # Prevent adding multiple handlers in subsequent calls
-    if not logger.handlers:
-        # Create file handler to write logs to a file
-        file_handler = logging.FileHandler(os.path.join(log_dir, "training.log"))
-        file_handler.setLevel(logging.INFO)
-
-        # Create console handler to logging.info logs to the console
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.INFO)
-
-        # Define log message format
-        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-        file_handler.setFormatter(formatter)
-        console_handler.setFormatter(formatter)
-
-        # Add handlers to the logger
-        logger.addHandler(file_handler)
-        logger.addHandler(console_handler)
-
-    return logger
-
-
 def worker(task):
     try:
         measure_dissimilarities(*task)
     except Exception as e:
-        logging.info(f"Error in worker: {e}")
+        print(f"Error in worker: {e}")
 
 
 def measure_dissimilarities(
@@ -131,9 +100,6 @@ def measure_dissimilarities(
 
 def dissimilarity(args: argparse.Namespace) -> None:
     multiprocessing.set_start_method("spawn", force=True)
-    logging = setup_logging(
-        os.path.join(f"data/dissimilarities/{args.taskset}", "logs")
-    )
     config = load_config("config.yaml")
     groups = [
         "untrained",
@@ -160,7 +126,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                         for group in groups:
                             # check if the model is already trained
                             if os.path.exists(f"models/{args.taskset}/{group}/{model}"):
-                                logging.info(
+                                print(
                                     f"Computing dynamics for {model} and group {group}"
                                 )
                                 curve = get_dynamics_rnn(
@@ -188,9 +154,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                         if os.path.exists(
                             f"models/mamba/{args.taskset}/{group}/{model}"
                         ):
-                            logging.info(
-                                f"Computing dynamics for {model} and group {group}"
-                            )
+                            print(f"Computing dynamics for {model} and group {group}")
                             curve = get_dynamics_mamba(
                                 d_model,
                                 n_layers,
@@ -225,7 +189,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                                         # check if (model_rnn, model_mamba) is already computed
                                         pair = tuple(sorted((model_rnn, model_mamba)))
                                         if pair not in computed_pairs:
-                                            logging.info(
+                                            print(
                                                 f"Compute dissimilarities for {model_rnn} and {model_mamba}"
                                             )
                                             device = devices[i % len(devices)]
