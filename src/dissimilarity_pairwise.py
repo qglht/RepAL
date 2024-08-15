@@ -15,7 +15,6 @@ import copy
 import main
 import numpy as np
 import sys
-import logging
 import ipdb
 
 # Suppress specific Gym warnings
@@ -26,43 +25,14 @@ warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprec
 os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
 
-def setup_logging(log_dir):
-    # Ensure the log directory exists
-    os.makedirs(log_dir, exist_ok=True)
-    # Create a logging object and set its level
-    logger = logging.getLogger("")
-    logger.setLevel(logging.INFO)
-
-    # Prevent adding multiple handlers in subsequent calls
-    if not logger.handlers:
-        # Create file handler to write logs to a file
-        file_handler = logging.FileHandler(os.path.join(log_dir, "training.log"))
-        file_handler.setLevel(logging.INFO)
-
-        # Create console handler to logging.info logs to the console
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.INFO)
-
-        # Define log message format
-        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-        file_handler.setFormatter(formatter)
-        console_handler.setFormatter(formatter)
-
-        # Add handlers to the logger
-        logger.addHandler(file_handler)
-        logger.addHandler(console_handler)
-
-    return logger
-
-
 def worker(task):
     try:
         measure_dissimilarities(*task)
     except Exception as e:
-        logging.info(f"Error in worker: {e}")
+        print(f"Error in worker: {e}")
 
 
-def measure_dissimilarities(model, model_dict, groups, taskset, logging, device):
+def measure_dissimilarities(model, model_dict, groups, taskset, device):
     config = load_config("config.yaml")
     cka_measure = similarity.make("measure.sim_metric.cka-angular-score")
     procrustes_measure = similarity.make("measure.netrep.procrustes-angular-score")
@@ -74,9 +44,7 @@ def measure_dissimilarities(model, model_dict, groups, taskset, logging, device)
     for i in range(len(groups)):
         for j in range(i, len(groups)):
             if groups[i] in curves_names and groups[j] in curves_names:
-                logging.info(
-                    f"Computing dissimilarities between {groups[i]} and {groups[j]}"
-                )
+                print(f"Computing dissimilarities between {groups[i]} and {groups[j]}")
                 curve_i = curves[curves_names.index(groups[i])]
                 curve_j = curves[curves_names.index(groups[j])]
                 # compute PCA on common basis for 2 groups
@@ -113,26 +81,23 @@ def measure_dissimilarities(model, model_dict, groups, taskset, logging, device)
         "procrustes": dis_procrustes,
         "dsa": dis_dsa,
     }
-    logging.info(f"dissimilarities : {dissimilarities_model}")
+    print(f"dissimilarities : {dissimilarities_model}")
     base_dir = f"data/dissimilarities/{taskset}"
     measures = ["cka", "procrustes", "dsa"]
 
-    logging.info(f"Saving dissimilarities for {model}")
+    print(f"Saving dissimilarities for {model}")
     for measure in measures:
         dir_path = os.path.join(base_dir, measure)
 
         npz_filename = f"{model.replace('.pth','')}.npz"  # Construct filename
         npz_filepath = os.path.join(dir_path, npz_filename)
-        logging.info(f"Saving dissimilarities for {model} in {npz_filepath}")
+        print(f"Saving dissimilarities for {model} in {npz_filepath}")
         np.savez_compressed(npz_filepath, dissimilarities_model[measure])
     return dis_cka, dis_procrustes, dis_dsa
 
 
 def dissimilarity(args: argparse.Namespace) -> None:
     multiprocessing.set_start_method("spawn", force=True)
-    logging = setup_logging(
-        os.path.join(f"data/dissimilarities/{args.taskset}", "logs")
-    )
     config = load_config("config.yaml")
     groups = [
         "untrained",
@@ -166,7 +131,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                         for group in groups:
                             # check if the model is already trained
                             if os.path.exists(f"models/{args.taskset}/{group}/{model}"):
-                                logging.info(
+                                print(
                                     f"Computing dynamics for {model} and group {group}"
                                 )
                                 curve = get_dynamics_rnn(
@@ -194,14 +159,13 @@ def dissimilarity(args: argparse.Namespace) -> None:
                         device = devices[
                             i % len(devices)
                         ]  # Cycle through available devices
-                        logging.info(f"Compute dissimilarities for {model}")
+                        print(f"Compute dissimilarities for {model}")
                         tasks.append(
                             (
                                 model,
                                 curves[model],
                                 groups,
                                 args.taskset,
-                                logging,
                                 device,
                             )
                         )
