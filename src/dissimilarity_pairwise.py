@@ -44,17 +44,15 @@ def measure_dissimilarities(model, model_dict, groups, taskset, device):
     for i in range(len(groups)):
         for j in range(i, len(groups)):
             if groups[i] in curves_names and groups[j] in curves_names:
-                print(f"Finding curves for {groups[i]} and {groups[j]}")
-                print(f"curves names : {curves_names}")
-                # ToDO error er
                 curve_i = curves[curves_names.index(groups[i])]
                 curve_j = curves[curves_names.index(groups[j])]
                 # compute PCA on common basis for 2 groups
-                print(f"Computing PCA for {groups[i]} and {groups[j]}")
-                curves, _ = main.compute_common_pca([curve_i, curve_j], n_components=20)
+                curves_pca, _ = main.compute_common_pca(
+                    [curve_i, curve_j], n_components=20
+                )
                 print(f"Computing dissimilarities between {groups[i]} and {groups[j]}")
-                curve_i = curves[0]
-                curve_j = curves[1]
+                curve_i = curves_pca[0]
+                curve_j = curves_pca[1]
                 dis_cka[i, j] = 1 - cka_measure(
                     curve_i,
                     curve_j,
@@ -85,7 +83,6 @@ def measure_dissimilarities(model, model_dict, groups, taskset, device):
         "procrustes": dis_procrustes,
         "dsa": dis_dsa,
     }
-    print(f"dissimilarities : {dissimilarities_model}")
     base_dir = f"data/dissimilarities/{taskset}"
     measures = ["cka", "procrustes", "dsa"]
 
@@ -131,28 +128,25 @@ def dissimilarity(args: argparse.Namespace) -> None:
                 for lr in config["rnn"]["parameters"]["learning_rate"]:
                     for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
                         model = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}_train.pth"
-                        if model == "leaky_gru_leaky_relu_128_0.01_128_train.pth":
-                            curves[model] = {}
-                            for group in groups:
-                                # check if the model is already trained
-                                if os.path.exists(
-                                    f"models/{args.taskset}/{group}/{model}"
-                                ):
-                                    print(
-                                        f"Computing dynamics for {model} and group {group}"
-                                    )
-                                    curve = get_dynamics_rnn(
-                                        rnn_type,
-                                        activation,
-                                        hidden_size,
-                                        lr,
-                                        batch_size,
-                                        model,
-                                        group,
-                                        args.taskset,
-                                        devices[0],
-                                    )
-                                    curves[model][group] = copy.deepcopy(curve)
+                        curves[model] = {}
+                        for group in groups:
+                            # check if the model is already trained
+                            if os.path.exists(f"models/{args.taskset}/{group}/{model}"):
+                                print(
+                                    f"Computing dynamics for {model} and group {group}"
+                                )
+                                curve = get_dynamics_rnn(
+                                    rnn_type,
+                                    activation,
+                                    hidden_size,
+                                    lr,
+                                    batch_size,
+                                    model,
+                                    group,
+                                    args.taskset,
+                                    devices[0],
+                                )
+                                curves[model][group] = copy.deepcopy(curve)
 
     sys.stdout.flush()
     tasks = []
@@ -163,21 +157,20 @@ def dissimilarity(args: argparse.Namespace) -> None:
                 for lr in config["rnn"]["parameters"]["learning_rate"]:
                     for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
                         model = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}_train.pth"
-                        if model == "leaky_gru_leaky_relu_128_0.01_128_train.pth":
-                            device = devices[
-                                i % len(devices)
-                            ]  # Cycle through available devices
-                            print(f"Compute dissimilarities for {model}")
-                            tasks.append(
-                                (
-                                    model,
-                                    curves[model],
-                                    groups,
-                                    args.taskset,
-                                    device,
-                                )
+                        device = devices[
+                            i % len(devices)
+                        ]  # Cycle through available devices
+                        print(f"Compute dissimilarities for {model}")
+                        tasks.append(
+                            (
+                                model,
+                                curves[model],
+                                groups,
+                                args.taskset,
+                                device,
                             )
-                            i += 1
+                        )
+                        i += 1
 
     # Create a process for each task
     processes = [multiprocessing.Process(target=worker, args=(task,)) for task in tasks]
