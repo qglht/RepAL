@@ -131,25 +131,28 @@ def dissimilarity(args: argparse.Namespace) -> None:
                 for lr in config["rnn"]["parameters"]["learning_rate"]:
                     for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
                         model = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}_train.pth"
-                        curves[model] = {}
-                        for group in groups:
-                            # check if the model is already trained
-                            if os.path.exists(f"models/{args.taskset}/{group}/{model}"):
-                                print(
-                                    f"Computing dynamics for {model} and group {group}"
-                                )
-                                curve = get_dynamics_rnn(
-                                    rnn_type,
-                                    activation,
-                                    hidden_size,
-                                    lr,
-                                    batch_size,
-                                    model,
-                                    group,
-                                    args.taskset,
-                                    devices[0],
-                                )
-                                curves[model][group] = copy.deepcopy(curve)
+                        if model == "leaky_gru_leaky_relu_128_0.01_128_train.pth":
+                            curves[model] = {}
+                            for group in groups:
+                                # check if the model is already trained
+                                if os.path.exists(
+                                    f"models/{args.taskset}/{group}/{model}"
+                                ):
+                                    print(
+                                        f"Computing dynamics for {model} and group {group}"
+                                    )
+                                    curve = get_dynamics_rnn(
+                                        rnn_type,
+                                        activation,
+                                        hidden_size,
+                                        lr,
+                                        batch_size,
+                                        model,
+                                        group,
+                                        args.taskset,
+                                        devices[0],
+                                    )
+                                    curves[model][group] = copy.deepcopy(curve)
 
     sys.stdout.flush()
     tasks = []
@@ -160,20 +163,21 @@ def dissimilarity(args: argparse.Namespace) -> None:
                 for lr in config["rnn"]["parameters"]["learning_rate"]:
                     for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
                         model = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}_train.pth"
-                        device = devices[
-                            i % len(devices)
-                        ]  # Cycle through available devices
-                        print(f"Compute dissimilarities for {model}")
-                        tasks.append(
-                            (
-                                model,
-                                curves[model],
-                                groups,
-                                args.taskset,
-                                device,
+                        if model == "leaky_gru_leaky_relu_128_0.01_128_train.pth":
+                            device = devices[
+                                i % len(devices)
+                            ]  # Cycle through available devices
+                            print(f"Compute dissimilarities for {model}")
+                            tasks.append(
+                                (
+                                    model,
+                                    curves[model],
+                                    groups,
+                                    args.taskset,
+                                    device,
+                                )
                             )
-                        )
-                        i += 1
+                            i += 1
 
     # Create a process for each task
     processes = [multiprocessing.Process(target=worker, args=(task,)) for task in tasks]
