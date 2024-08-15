@@ -74,7 +74,9 @@ def measure_dissimilarities(model, model_dict, groups, taskset, logging, device)
     for i in range(len(groups)):
         for j in range(i, len(groups)):
             if groups[i] in curves_names and groups[j] in curves_names:
-                
+                logging.info(
+                    f"Computing dissimilarities between {groups[i]} and {groups[j]}"
+                )
                 curve_i = curves[curves_names.index(groups[i])]
                 curve_j = curves[curves_names.index(groups[j])]
                 # compute PCA on common basis for 2 groups
