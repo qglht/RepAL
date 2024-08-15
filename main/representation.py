@@ -4,6 +4,7 @@ import numpy as np
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 import ipdb
+from sklearn.impute import SimpleImputer
 import torch
 from torch import Value, linalg as LA
 from main import get_dataloader, get_class_instance
@@ -102,14 +103,18 @@ def representation(model, rules, rnn=True):
     except KeyError:
         activations_stimulus = activations[("AntiGoNogoDelayResponseT", "stimulus")]
 
-    # center and standardize the activations
+    # Center and standardize the activations
     flattened_activations = activations_stimulus.reshape(
         -1, activations_stimulus.shape[-1]
     )
     mean_activations = torch.mean(flattened_activations, dim=0)
     std_activations = torch.std(flattened_activations, dim=0)
+
+    # Handle potential division by zero
+    std_activations[std_activations == 0] = 1.0
+
     activations_stimulus = (activations_stimulus - mean_activations) / std_activations
-    return activations_stimulus.to(model.device)
+    return activations_stimulus
 
 
 def compute_pca(h, n_components=3):
@@ -147,14 +152,23 @@ def compute_pca(h, n_components=3):
 
 def compute_common_pca(h_list, n_components=3):
     # here h is a list of dictionaries, each containing activations for a different rule
+    h_list = [h if torch.is_tensor(h) else torch.tensor(h) for h in h_list]
     data = torch.cat(h_list, dim=1)
     data_2d = data.reshape(-1, data.shape[-1])
 
-    # Using PCA directly for dimensionality reduction:
+    # Convert to numpy array for PCA
+    data_2d_np = data_2d.cpu().numpy()
+
+    # Handle NaN values by imputing with the mean of the column
+    imputer = SimpleImputer(strategy="mean")
+    data_2d_np = imputer.fit_transform(data_2d_np)
+
+    # Perform PCA on the imputed data
     pca = PCA(n_components=n_components)
-    data_trans_2d = torch.tensor(pca.fit_transform(data_2d.cpu().numpy())).to(
-        data_2d.device
-    )
+    data_trans_2d_np = pca.fit_transform(data_2d_np)
+
+    # Convert the transformed data back to a PyTorch tensor on the original device
+    data_trans_2d = torch.tensor(data_trans_2d_np)
     # Compute explained variance ratio using PCA
     explained_variance_ratio = pca.explained_variance_ratio_.sum()
 
