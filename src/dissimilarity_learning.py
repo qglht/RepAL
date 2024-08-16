@@ -53,7 +53,7 @@ wait $APP_PID
 
     for i in range(len(groups) - 1, -1, -1):
         if groups[i] == "master":
-            for j in range(len(groups)):
+            for j in range(len(groups) - 1, -1, -1):
                 group = [groups[i], groups[j]]
                 script_content = script_template.format(
                     taskset=args.taskset, group1=group[0], group2=group[1]
