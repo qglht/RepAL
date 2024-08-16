@@ -51,7 +51,7 @@ wait $APP_PID
         "pretrain_unfrozen",
     ]
 
-    for i in range(len(groups)):
+    for i in range(len(groups) - 1, -1, -1):
         for j in range(i + 1, len(groups)):
             group = [groups[i], groups[j]]
             script_content = script_template.format(
