@@ -52,18 +52,19 @@ wait $APP_PID
     ]
 
     for i in range(len(groups) - 1, -1, -1):
-        for j in range(i + 1, len(groups)):
-            group = [groups[i], groups[j]]
-            script_content = script_template.format(
-                taskset=args.taskset, group1=group[0], group2=group[1]
-            )
-            script_filename = f"sbatch/dissimilarities_over_learning/mamba/{args.taskset}/{group[0]}_{group[1]}_script.sh"
+        if groups[i] == "master":
+            for j in range(len(groups)):
+                group = [groups[i], groups[j]]
+                script_content = script_template.format(
+                    taskset=args.taskset, group1=group[0], group2=group[1]
+                )
+                script_filename = f"sbatch/dissimilarities_over_learning/mamba/{args.taskset}/{group[0]}_{group[1]}_script.sh"
 
-            with open(script_filename, "w") as script_file:
-                script_file.write(script_content)
+                with open(script_filename, "w") as script_file:
+                    script_file.write(script_content)
 
-            # Submit the job to the cluster
-            call(f"sbatch {script_filename}", shell=True)
+                # Submit the job to the cluster
+                call(f"sbatch {script_filename}", shell=True)
 
 
 if __name__ == "__main__":
