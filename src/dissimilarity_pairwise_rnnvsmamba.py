@@ -198,7 +198,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                                             tasks.append(
                                                 (
                                                     model_rnn,
-                                                    curves_rnn[model],
+                                                    curves_rnn[model_rnn],
                                                     model_mamba,
                                                     curves_mamba[model_mamba],
                                                     groups,
