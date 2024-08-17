@@ -51,10 +51,14 @@ wait $APP_PID
         "pretrain_unfrozen",
     ]
 
-    for i in range(len(groups) - 1, -1, -1):
-        if groups[i] == "master":
-            for j in range(len(groups) - 1, -1, -1):
-                group = [groups[i], groups[j]]
+    for i in range(len(groups)):
+        for j in range(len(groups)):
+            group = [groups[i], groups[j]]
+            folder_npz_name_1 = f"data/dissimilarities_over_learning/mamba/{args.taskset}/{group[0]}_{group[1]}"
+            folder_npz_name_2 = f"data/dissimilarities_over_learning/mamba/{args.taskset}/{group[1]}_{group[0]}"
+            if not os.path.exists(folder_npz_name_1) and not os.path.exists(
+                folder_npz_name_2
+            ):
                 script_content = script_template.format(
                     taskset=args.taskset, group1=group[0], group2=group[1]
                 )
