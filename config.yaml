@@ -171,8 +171,8 @@ GoNogo:
         ruleset: []
         frozen: True
 dsa:
-  n_delays: 33
-  delay_interval: 6
+  n_delays: 17
+  delay_interval: 11
   rank: 100
   device: cuda
 simulations:
