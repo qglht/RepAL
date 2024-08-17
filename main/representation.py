@@ -41,7 +41,7 @@ def get_indexes(dt, timing, seq_length, h, rule):
     return h_byepoch
 
 
-def representation(model, rules, rnn=True):
+def representation(model, rules, rnn=True, rnn_vs_mamba=False):
     hp = model.hp
     rules = [rules] if isinstance(rules, str) else (rules or hp["rules"])
     activations = OrderedDict()
@@ -52,16 +52,25 @@ def representation(model, rules, rnn=True):
             env = get_class_instance(rule, config=hp)
             timing = env.timing
             seq_length = int(sum(timing.values()) / hp["dt"])
-
-            dataloader = get_dataloader(
-                env=rule,
-                batch_size=hp["batch_size_train"],
-                num_workers=0,
-                shuffle=False,
-                mode="test",
-            )[
-                "test"
-            ]  # Directly access the test dataloader
+            if not rnn_vs_mamba:
+                dataloader = get_dataloader(
+                    env=rule,
+                    batch_size=hp["batch_size_train"],
+                    num_workers=0,
+                    shuffle=False,
+                    mode="test",
+                )[
+                    "test"
+                ]  # Directly access the test dataloader
+            else:
+                # For RNN vs MAMBA comparison, use a smaller batch size and the same bs
+                dataloader = get_dataloader(
+                    env=rule,
+                    batch_size=64,
+                    num_workers=0,
+                    shuffle=False,
+                    mode="test",
+                )["test"]
 
             for inputs, labels, mask in dataloader:
                 if rnn:
@@ -154,6 +163,9 @@ def compute_common_pca(h_list, n_components=3):
     # here h is a list of dictionaries, each containing activations for a different rule
     print(f"len(h_list): {len(h_list)}")
     h_list = [h if torch.is_tensor(h) else torch.tensor(h) for h in h_list]
+    # print the shapes of the tensors in h_list
+    for i, h in enumerate(h_list):
+        print(f"h_list[{i}].shape: {h.shape}")
     data = torch.cat(h_list, dim=1)
     data_2d = data.reshape(-1, data.shape[-1])
 
