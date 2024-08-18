@@ -46,7 +46,7 @@ def measure_dissimilarities(
     dis_procrustes = np.zeros((len(groups), len(groups)))
     dis_dsa = np.zeros((len(groups), len(groups)))
     for i in range(len(groups)):
-        for j in range(i, len(groups)):
+        for j in range(len(groups)):
             if groups[i] in curves_names_rnn and groups[j] in curves_names_mamba:
                 curve_i = curves_rnn[curves_names_rnn.index(groups[i])]
                 curve_j = curves_mamba[curves_names_mamba.index(groups[j])]
@@ -105,8 +105,13 @@ def dissimilarity(args: argparse.Namespace) -> None:
     config = load_config("config.yaml")
     groups = [
         "untrained",
+        "master_frozen",
         "master",
+        "pretrain_basic_frozen",
+        "pretrain_anti_frozen",
+        "pretrain_delay_frozen",
         "pretrain_basic_anti_frozen",
+        "pretrain_basic_delay_frozen",
         "pretrain_frozen",
         "pretrain_unfrozen",
     ]
