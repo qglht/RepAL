@@ -3,7 +3,11 @@
 import torch
 from torch import nn, jit
 import numpy as np
+import copy
+from mambapy.mamba_lm import MambaLM, MambaLMConfig
+from mambapy.mamba import Mamba, MambaConfig, RMSNorm
 import ipdb
+
 
 class Model(nn.Module):
     def __init__(self, hp, RNNLayer):
@@ -49,13 +53,16 @@ class Run_Model(nn.Module):  # (jit.ScriptModule):
         self.device = device
         self.model.to(self.device)
         self.loss_fnc = (
-            nn.MSELoss() if hp["loss_type"] == "lsq" else nn.CrossEntropyLoss(reduction="none")
+            nn.MSELoss()
+            if hp["loss_type"] == "lsq"
+            else nn.CrossEntropyLoss(reduction="none")
         )
 
-    def calculate_loss(self, output, mask, labels,  hidden, hp):
+    def calculate_loss(self, output, mask, labels, hidden, hp):
         # use mask to calculate loss of crossentropyloss
-        loss = self.loss_fnc(output,labels)
-        loss = (loss * mask).mean()
+        loss = self.loss_fnc(output, labels)
+        # loss = (loss * mask).sum() / mask.sum()
+        loss = loss.mean()
         loss_reg = (
             hidden.abs().mean() * hp["l1_h"] + hidden.norm() * hp["l2_h"]
         )  #    Regularization cost  (L1 and L2 cost) on hidden activity
@@ -71,7 +78,7 @@ class Run_Model(nn.Module):  # (jit.ScriptModule):
         hp = self.hp
         output, hidden = self.model(inputs)
         output = output.view(-1, hp["n_output"])
-        loss, loss_reg = self.calculate_loss(output, mask, labels, hidden,hp)
+        loss, loss_reg = self.calculate_loss(output, mask, labels, hidden, hp)
         return (
             loss,
             loss_reg,
@@ -85,8 +92,133 @@ class Run_Model(nn.Module):  # (jit.ScriptModule):
         torch.save(self.model.state_dict(), path)
 
 
+class MambaSupervGym(MambaLM):
+    def __init__(self, hp, lm_config, device):
+        super().__init__(lm_config)
+        self.lm_config = lm_config
+        self.device = device
+        self.config = lm_config.to_mamba_config()
+        self.hp = hp
+
+        # Initialize layers
+        self.embedding = nn.Linear(
+            self.hp["n_input"], self.config.d_model, bias=True
+        ).to(self.device)
+        self.mamba = Mamba(self.config).to(self.device)
+        self.norm_f = RMSNorm(self.config.d_model).to(self.device)
+        self.lm_head = nn.Linear(
+            self.config.d_model, self.hp["n_output"], bias=False
+        ).to(self.device)
+        self.loss_fnc = nn.CrossEntropyLoss(reduction="none").to(self.device)
+
+    def calculate_loss(self, output, mask, labels):
+        # Use mask to calculate loss of crossentropyloss
+        # ipdb.set_trace()
+        # predicted_classes = torch.argmax(output, dim=1)
+        loss = self.loss_fnc(output, labels)
+        loss = loss.mean()
+        # loss = (loss * mask).sum() / mask.sum()
+        loss_reg = 0
+        for param in self.parameters():
+            loss_reg += (
+                param.abs().mean() * self.hp["l1_weight"]
+                + param.norm() * self.hp["l2_weight"]
+            )  #    Regularization cost  (L1 and L2 cost) on weights
+        return loss, loss_reg
+
+    def forward(self, tokens, labels, mask):
+        """Function for all time steps directly
+
+        Args:
+            tokens (_type_): _description_
+            labels (_type_): _description_
+            mask (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
+        # tokens : (B, L)
+        # logits : (B, L, vocab_size)
+        x = self.embedding(tokens)
+
+        x = self.mamba(x)
+        x = self.norm_f(x)
+
+        logits = self.lm_head(x)
+        logits = logits.view(-1, self.hp["n_output"])
+        loss, loss_reg = self.calculate_loss(logits, mask, labels)
+
+        return (
+            loss,
+            loss_reg,
+            logits,
+            None,
+            labels,
+        )
+
+    def get_activations(self, token):
+        """Function for one time step at a time: to do it for all time steps, loop for first dimension
+
+        Args:
+            token (_type_): _description_
+            caches (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
+        # token : (B)
+        # caches : [cache(layer) for all layers], cache : (h, inputs)
+        # logits : (B, vocab_size)
+        # caches : [cache(layer) for all layers], cache : (h, inputs)
+
+        # loop over first dimension of token
+        # create cache for each layer
+        cache_init = [
+            (
+                None,
+                torch.zeros(
+                    (
+                        token.shape[0],
+                        int(self.lm_config.d_model * self.lm_config.expand_factor),
+                        self.hp["n_input"],
+                    )
+                ).to(self.device),
+            )
+            for _ in range(self.lm_config.n_layers)
+        ]
+        caches_list = []
+        caches = cache_init
+        for i in range(token.shape[1]):
+            # TODO : check change in cache over caches
+            x = self.embedding(token[:, i, :])
+            x, caches = self.mamba.step(x, caches)
+            caches_list.append(copy.deepcopy(caches))
+        # concatenate all the caches
+
+        caches_hidden = torch.stack(
+            [caches_list[i][0][0] for i in range(len(caches_list))], dim=0
+        )
+        hidden = caches_hidden.reshape(
+            caches_hidden.shape[0],
+            caches_hidden.shape[1],
+            caches_hidden.shape[2] * caches_hidden.shape[3],
+        )
+        return hidden
+
+    def save(self, path):
+        # Check if model is wrapped by DataParallel and save accordingly
+        torch.save(self.state_dict(), path)
+
+
 def load_model(path, hp, RNNLayer, device):
     model = Run_Model(hp, RNNLayer, device)
     state_dict = torch.load(path, map_location=device)
     model.model.load_state_dict(state_dict)
+    return model
+
+
+def load_model_mamba(path, hp, lm_config, device):
+    model = MambaSupervGym(hp, lm_config, device)
+    state_dict = torch.load(path, map_location=device)
+    model.load_state_dict(state_dict)
     return model

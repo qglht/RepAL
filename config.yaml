@@ -1,5 +1,3 @@
-all_rules: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT, AntiPerceptualDecisionMakingDelayResponseT] #[GoNogoT, AntiGoNogoT, GoNogoDelayResponseT, AntiGoNogoDelayResponseT]
-rules_analysis: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT, AntiPerceptualDecisionMakingDelayResponseT]
 rnn:
   parameters:
     rnn_type: 
@@ -14,124 +12,168 @@ rnn:
       - 128
       - 256
     learning_rate:
-      - 0.0001
+      - 0.01
       - 0.001
     batch_size_train:
+      - 64
       - 128
-      - 256
     freeze:
       - True
       - False
     nopretrain:
       - True
       - False
-groups:
-  master:
-    pretrain:
-      ruleset: []
-    train:
-      ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
-      frozen: False
-  pretrain_frozen:
-    pretrain: 
-      ruleset: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT]
-    train:
-      ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
-      frozen: True
-  pretrain_unfrozen:
-    pretrain: 
-      ruleset: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT]
-    train:
-      ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
-      frozen: False
-  delay: 
-    pretrain:
-      ruleset: []
-    train:
-      ruleset: [PerceptualDecisionMakingDelayResponseT]
-      frozen: False
-  anti:
-    pretrain:
-      ruleset: []
-    train:
-      ruleset: [AntiPerceptualDecisionMakingT]
-      frozen: False
-  basic:
-    pretrain:
-      ruleset: []
-    train:
-      ruleset: [PerceptualDecisionMakingT]
-      frozen: False
-  untrained:
-    pretrain:
-      ruleset: []
-    train:
-      ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
-      frozen: True
-  # pretrained_PDM_APDM:
-  #   pretrain:
-  #     ruleset: [PerceptualDecisionMakingT, AntiPerceptualDecisionMakingT]
-  #   train:
-  #     ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
-  #     frozen: True
-  # pretrained_APDM_DPDM:
-  #   pretrain:
-  #     ruleset: [AntiPerceptualDecisionMakingT,PerceptualDecisionMakingDelayResponseT]
-  #   train:
-  #     ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
-  #     frozen: True
-  # pretrained_PDM_DPDM:
-  #   pretrain:
-  #     ruleset: [PerceptualDecisionMakingT,PerceptualDecisionMakingDelayResponseT]
-  #   train:
-  #     ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
-  #     frozen: True
-  # master-gonogo:
-  #   pretrain:
-  #     ruleset: []
-  #   train:
-  #     ruleset: [AntiGoNogoDelayResponseT]
-  #     frozen: False
-  # pretrain_frozen-gonogo:
-  #   pretrain:
-  #     ruleset: [GoNogoT, AntiGoNogoT, GoNogoDelayResponseT]
-  #   train:
-  #     ruleset: [AntiGoNogoDelayResponseT]
-  #     frozen: True
-  # pretrain_unfrozen-gonogo:
-  #   pretrain:
-  #     ruleset: [GoNogoT, AntiGoNogoT, GoNogoDelayResponseT]
-  #   train:
-  #     ruleset: [AntiGoNogoDelayResponseT]
-  #     frozen: False
-  # delay-gonogo:
-  #   pretrain:
-  #     ruleset: []
-  #   train:
-  #     ruleset: [GoNogoDelayResponseT]
-  #     frozen: False
-  # anti-gonogo:
-  #   pretrain:
-  #     ruleset: []
-  #   train:
-  #     ruleset: [AntiGoNogoT]
-  #     frozen: False
-  # basic-gonogo:
-  #   pretrain:
-  #     ruleset: []
-  #   train:
-  #     ruleset: [GoNogoT]
-  #     frozen: False
-  # untrained-gonogo:
-  #   pretrain:
-  #     ruleset: []
-  #   train:
-  #     ruleset: [AntiGoNogoDelayResponseT]
-  #     frozen: True
+mamba:
+  parameters:
+    d_model:
+      - 8
+      - 16
+    n_layers:
+      - 1
+      - 2
+    learning_rate:
+      - 0.01
+      - 0.005
+      - 0.001
+      - 0.0005
+    batch_size_train:
+      - 16
+      - 32
+      - 64
+      - 128
+    
+PDM:
+  all_rules: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT, AntiPerceptualDecisionMakingDelayResponseT]
+  rules_analysis: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT, AntiPerceptualDecisionMakingDelayResponseT]
+  groups:
+    master:
+      pretrain:
+        ruleset: []
+      train:
+        ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+        frozen: False
+    pretrain_frozen:
+      pretrain: 
+        ruleset: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT]
+      train:
+        ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+        frozen: True
+    pretrain_unfrozen:
+      pretrain: 
+        ruleset: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT]
+      train:
+        ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+        frozen: False
+    pretrain_basic_frozen:
+      pretrain:
+        ruleset: [PerceptualDecisionMakingT]
+      train:
+        ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+        frozen: True
+    pretrain_anti_frozen:
+      pretrain:
+        ruleset: [AntiPerceptualDecisionMakingT]
+      train:
+        ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+        frozen: True
+    pretrain_delay_frozen:
+      pretrain:
+        ruleset: [PerceptualDecisionMakingDelayResponseT]
+      train:
+        ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+        frozen: True
+    pretrain_basic_anti_frozen:
+      pretrain:
+        ruleset: [PerceptualDecisionMakingT, AntiPerceptualDecisionMakingT]
+      train:
+        ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+        frozen: True
+    pretrain_basic_delay_frozen:
+      pretrain:
+        ruleset: [PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT]
+      train:
+        ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+        frozen: True
+    master_frozen:
+      pretrain:
+        ruleset: []
+      train:
+        ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+        frozen: True
+    untrained:
+      pretrain:
+        ruleset: []
+      train:
+        ruleset: []
+        frozen: True
+GoNogo: 
+  all_rules: [GoNogoT, AntiGoNogoT, GoNogoDelayResponseT, AntiGoNogoDelayResponseT]
+  rules_analysis: [GoNogoT, AntiGoNogoT, GoNogoDelayResponseT, AntiGoNogoDelayResponseT]
+  groups:
+    master:
+      pretrain:
+        ruleset: []
+      train:
+        ruleset: [AntiGoNogoDelayResponseT]
+        frozen: False
+    pretrain_frozen:
+      pretrain:
+        ruleset: [GoNogoT, AntiGoNogoT, GoNogoDelayResponseT]
+      train:
+        ruleset: [AntiGoNogoDelayResponseT]
+        frozen: True
+    pretrain_unfrozen:
+      pretrain:
+        ruleset: [GoNogoT, AntiGoNogoT, GoNogoDelayResponseT]
+      train:
+        ruleset: [AntiGoNogoDelayResponseT]
+        frozen: False
+    pretrain_basic_frozen:
+      pretrain:
+        ruleset: [GoNogoT]
+      train:
+        ruleset: [AntiGoNogoDelayResponseT]
+        frozen: True
+    pretrain_anti_frozen:
+      pretrain:
+        ruleset: [AntiGoNogoT]
+      train:
+        ruleset: [AntiGoNogoDelayResponseT]
+        frozen: True
+    pretrain_delay_frozen:
+      pretrain:
+        ruleset: [GoNogoDelayResponseT]
+      train:
+        ruleset: [AntiGoNogoDelayResponseT]
+        frozen: True
+    pretrain_basic_anti_frozen:
+      pretrain:
+        ruleset: [GoNogoT, AntiGoNogoT]
+      train:
+        ruleset: [AntiGoNogoDelayResponseT]
+        frozen: True
+    pretrain_basic_delay_frozen:
+      pretrain:
+        ruleset: [GoNogoT, GoNogoDelayResponseT]
+      train:
+        ruleset: [AntiGoNogoDelayResponseT]
+        frozen: True
+    master_frozen:
+      pretrain:
+        ruleset: []
+      train:
+        ruleset: [AntiGoNogoDelayResponseT]
+        frozen: True
+    untrained:
+      pretrain:
+        ruleset: []
+      train:
+        ruleset: []
+        frozen: True
 dsa:
-  n_delays: 15
-  delay_interval: 13
-  rank: 50
+  n_delays: 33
+  delay_interval: 6
+  rank: 100
   device: cuda
 simulations:
   dt: 0.01 # 20 ms
@@ -144,16 +186,16 @@ simulations:
       }
   perturbations: 
     model1: 
-      epoch1: 0.005
-      epoch2: 0.0025
-      epoch3: 0.00125
+      epoch1: 0.01
+      epoch2: 0.005
+      epoch3: 0.0025
     model2:
-      epoch1: 0.005
-      epoch2: 0.0025
-      epoch3: 0.00125
+      epoch1: 0.01
+      epoch2: 0.005
+      epoch3: 0.0025
     model3: 
-      epoch1: 0.005
-      epoch2: 0.0025
-      epoch3: 0.00125  
+      epoch1: 0.01
+      epoch2: 0.005
+      epoch3: 0.0025
   sigma: 1
   order: [0,1,2,3]

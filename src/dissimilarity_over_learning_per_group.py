@@ -2,59 +2,117 @@ import warnings
 import os
 import argparse
 import torch
-import pandas as pd
+import numpy as np
 from dsa_analysis import load_config
 from src.toolkit import dissimilarity_over_learning
+import multiprocessing
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
 warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprecated.*")
 
 # Set environment variable to ignore Gym deprecation warnings
-os.environ['GYM_IGNORE_DEPRECATION_WARNINGS'] = '1'
+os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
-def dissimilarity_task(params):
-    args, rnn_type, activation, hidden_size, lr, batch_size, device = params
-    dissimilarities_model = dissimilarity_over_learning(args.group1, args.group2, rnn_type, activation, hidden_size, lr, batch_size, device)
-    dissimilarities = {
-        "group1": args.group1,
-        "group2": args.group2,
-        "rnn_type": rnn_type,
-        "activation": activation,
-        "hidden_size": hidden_size,
-        "lr": lr,
-        "batch_size": batch_size,
-        "cka": dissimilarities_model["cka"],
-        "procrustes": dissimilarities_model["procrustes"],
-        "dsa": dissimilarities_model["dsa"]
-    }
-    print(f"dissimilarities dsa : {dissimilarities_model['dsa']}")
-    print(f"Len of dissimilarities : dsa {len(dissimilarities_model['dsa'])}")
-    return dissimilarities
+
+def dissimilarity_task(
+    taskset, group1, group2, rnn_type, activation, hidden_size, lr, batch_size, device
+):
+    dissimilarities_model = dissimilarity_over_learning(
+        taskset,
+        group1,
+        group2,
+        rnn_type,
+        activation,
+        hidden_size,
+        lr,
+        batch_size,
+        device,
+    )
+
+    base_dir = f"data/dissimilarities_over_learning/{taskset}"
+    measures = ["cka", "procrustes", "dsa", "accuracy_1", "accuracy_2"]
+
+    for measure in measures:
+        dir_path = os.path.join(base_dir, f"{group1}_{group2}", measure)
+        os.makedirs(dir_path, exist_ok=True)  # Create directory if it does not exist
+
+        npz_filename = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}.npz"  # Construct filename
+        npz_filepath = os.path.join(dir_path, npz_filename)
+
+        np.savez_compressed(npz_filepath, dissimilarities_model[measure])
+    return dissimilarities_model
+
 
 def dissimilarity(args: argparse.Namespace) -> None:
+    multiprocessing.set_start_method("spawn", force=True)
     config = load_config("config.yaml")
+
+    # Create a list of all tasks to run
+    tasks = []
     num_gpus = torch.cuda.device_count()  # Get the number of GPUs available
-    devices = [torch.device(f"cuda:{i}") for i in range(num_gpus)] if num_gpus > 0 else [torch.device("cpu")]
-    print(f"Number of GPUs available: {num_gpus}")
-    device_index = 0
-    results = []
-    
-    diss_index = 0
+    devices = (
+        [torch.device(f"cuda:{i}") for i in range(num_gpus)]
+        if num_gpus > 0
+        else [torch.device("cpu")]
+    )
+    i = 0
+    print(f"devices used : {devices}")
+    print(f"number of devices : {num_gpus}")
+
+    if not os.path.exists(
+        f"data/dissimilarities_over_learning/{args.taskset}/{args.group1}_{args.group2}"
+    ):
+        os.makedirs(
+            f"data/dissimilarities_over_learning/{args.taskset}/{args.group1}_{args.group2}",
+            exist_ok=True,
+        )
+
     for rnn_type in config["rnn"]["parameters"]["rnn_type"]:
         for activation in config["rnn"]["parameters"]["activations"]:
             for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
                 for lr in config["rnn"]["parameters"]["learning_rate"]:
                     for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
-                        print(f"Index : {100*diss_index/64}")
-                        results.append(dissimilarity_task((args, rnn_type, activation, hidden_size, lr, batch_size, devices[device_index])))
-    
-    # Create DataFrame keeping lists intact
-    dissimilarities_df = pd.DataFrame(results)
-    dissimilarities_df.to_csv(f"data/dissimilarities_over_learning/{args.group1}_{args.group2}.csv", index=False)
+                        device = devices[
+                            i % len(devices)
+                        ]  # Cycle through available devices
+                        tasks.append(
+                            (
+                                args.taskset,
+                                args.group1,
+                                args.group2,
+                                rnn_type,
+                                activation,
+                                hidden_size,
+                                lr,
+                                batch_size,
+                                device,
+                            )
+                        )
+                        i += 1
+
+    # Create a process for each task
+    processes = [
+        multiprocessing.Process(target=dissimilarity_task, args=task) for task in tasks
+    ]
+
+    # Start all processes
+    for process in processes:
+        process.start()
+
+    # Wait for all processes to finish
+    for process in processes:
+        process.join()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train the model")
+    parser.add_argument(
+        "--taskset",
+        type=str,
+        default="PDM",
+        help="taskset to compare on",
+    )
     parser.add_argument(
         "--group1",
         type=str,

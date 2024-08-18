@@ -3,7 +3,7 @@
 ## How to install
 
 - install poetry : curl -sSL https://install.python-poetry.org | python3 -
-- run the following command to install necessary dependancies : poetry install 
+- run the following command to install necessary dependancies :  
 - create folders for models and data: mkdir models data
 
 ## How to use
@@ -40,7 +40,8 @@ Use the validated metrics to apply them to a known case of compositional learnin
 - generate the data: sbatch sbatch/generate_data.sh
 - train the models: sbatch sbatch/train.sh
 - compute dissimilarity of computational dynamics of models: sbatch sbatch/dissimilarity.sh
-- compute dissimilarities of learning dynamics of models: sbatch sbatch/dissimilarity_learning.sh
+- compute dissimilarities of learning dynamics of models: sbatch sbatch/dissimilarity_over_learning.sh
+- compute dissimilarities of learning dynamics of models within groups: sbatch sbatch/dissimilarity_within_learning.sh
 - analysis of the results: notebooks/analysis_rnn.ipynb
 
 ## References

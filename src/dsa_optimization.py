@@ -13,10 +13,10 @@ warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
 warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprecated.*")
 
 # Set environment variable to ignore Gym deprecation warnings
-os.environ['GYM_IGNORE_DEPRECATION_WARNINGS'] = '1'
+os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
+
 
 def dsa_computation(args: argparse.Namespace) -> None:
-
     num_gpus = torch.cuda.device_count()  # Get the number of GPUs available
     devices = (
         [torch.device(f"cuda:{i}") for i in range(num_gpus)]
@@ -24,10 +24,13 @@ def dsa_computation(args: argparse.Namespace) -> None:
         else [torch.device("cpu")]
     )
 
-    rank=50
+    rank = 20
 
-    dsa_optimisation_compositionality(rank, args.n_delay, args.delay_interval, devices[0], args.ordered, args.overwrite)
+    dsa_optimisation_compositionality(
+        rank, args.n_delay, args.delay_interval, devices[0], args.ordered
+    )
     return
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Dsa optimisation")
@@ -45,15 +48,15 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--ordered",
-        type=bool,
-        default=False,
-        help="if taking into account order or not"
+        action="store_true",
+        help="if taking into account order or not",
     )
     parser.add_argument(
-        "--overwrite",
-        type=bool,
-        default=False,
-        help="if overwriting or not"
+        "--no-ordered",
+        action="store_false",
+        dest="ordered",
+        help="if not taking into account order",
     )
+    parser.set_defaults(ordered=False)
     args = parser.parse_args()
     dsa_computation(args)

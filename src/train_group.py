@@ -11,9 +11,18 @@ warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
 warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprecated.*")
 
 # Set environment variable to ignore Gym deprecation warnings
-os.environ['GYM_IGNORE_DEPRECATION_WARNINGS'] = '1'
+os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
+
+
+def worker(task):
+    try:
+        pipeline(*task)
+    except Exception as e:
+        print(f"Error in worker: {e}")
+
 
 def train(args: argparse.Namespace) -> None:
+    # Try different start methods if "fork" is problematic
     multiprocessing.set_start_method("spawn", force=True)
     config = load_config("config.yaml")
 
@@ -26,12 +35,13 @@ def train(args: argparse.Namespace) -> None:
         else [torch.device("cpu")]
     )
     i = 0
-    print(f"devices used : {devices}")
-    print(f"number of devices : {num_gpus}")
+    print(f"Devices used: {devices}")
+    print(f"Number of devices: {num_gpus}")
 
     # create a folder for each group in config['groups'] under model folder
-    if not os.path.exists(f"models/{args.group}"):
-        os.makedirs(f"models/{args.group}")
+    model_dir = f"models/{args.taskset}/{args.group}"
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
 
     for rnn_type in config["rnn"]["parameters"]["rnn_type"]:
         for activation in config["rnn"]["parameters"]["activations"]:
@@ -41,13 +51,22 @@ def train(args: argparse.Namespace) -> None:
                         device = devices[
                             i % len(devices)
                         ]  # Cycle through available devices
-                        tasks.append((args.group, rnn_type, activation, hidden_size, lr, batch_size, device))
+                        tasks.append(
+                            (
+                                args.taskset,
+                                args.group,
+                                rnn_type,
+                                activation,
+                                hidden_size,
+                                lr,
+                                batch_size,
+                                device,
+                            )
+                        )
                         i += 1
 
     # Create a process for each task
-    processes = [
-        multiprocessing.Process(target=pipeline, args=task) for task in tasks
-    ]
+    processes = [multiprocessing.Process(target=worker, args=(task,)) for task in tasks]
 
     # Start all processes
     for process in processes:
@@ -57,6 +76,7 @@ def train(args: argparse.Namespace) -> None:
     for process in processes:
         process.join()
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train the model")
     parser.add_argument(
@@ -64,6 +84,12 @@ if __name__ == "__main__":
         type=str,
         default="master",
         help="The group to train the model on",
+    )
+    parser.add_argument(
+        "--taskset",
+        type=str,
+        default="PDM",
+        help="The taskset to train the model on",
     )
     args = parser.parse_args()
     train(args)

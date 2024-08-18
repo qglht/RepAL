@@ -51,7 +51,7 @@ def corresponding_training_time(n, p):
     return [min(range(p), key=lambda j: abs(int(100 * i / (n - 1)) - int(100 * j / (p - 1)))) for i in range(n)]
 
 def get_curves(model, rules, components):
-    h = main.representation(model, rules)
+    h = main.representation(model, rules, rnn=True)
     h_trans, explained_variance = main.compute_pca(h, n_components=components)
     return h_trans[("AntiPerceptualDecisionMakingDelayResponseT", "stimulus")].detach().numpy()
 

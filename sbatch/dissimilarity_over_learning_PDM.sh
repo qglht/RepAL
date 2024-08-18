@@ -8,9 +8,9 @@
 
 module load cuda/11.2
 module load pytorch/1.9.0
-module load python/anaconda3
+module load python/miniconda3
 
-source activate dsa
-poetry install
+source activate repal3
 
-poetry run python -m src.dissimilarity_learning
+
+python -m src.dissimilarity_learning --taskset PDM
