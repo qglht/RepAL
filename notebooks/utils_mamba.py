@@ -151,6 +151,50 @@ def find_group_pairs(config, taskset):
     return group_pairs
 
 
+def find_group_pairs_master(config, taskset):
+    groups = list(config[taskset]["groups"].keys())
+    # generate all possible pairs of groups
+    pairs = [
+        (groups[i], groups[j])
+        for i in range(len(groups))
+        for j in range(i, len(groups))
+        if groups[i] == "master" or groups[j] == "master"
+    ]
+    # remove the (master, master) pair
+    pairs = [pair for pair in pairs if "frozen" in pair[0] or "frozen" in pair[1]]
+    # group pairs of groups by how many tasks they share in their training curriculum
+    group_pairs = {}
+    for pair in pairs:
+        group1, group2 = pair
+        if group1 == "master":
+            group2_tasks = (
+                config[taskset]["groups"][group2]["pretrain"]["ruleset"]
+                # + config[taskset]["groups"][group2]["train"]["ruleset"]
+                # if config[taskset]["groups"][group2]["train"]["frozen"] == False
+                # else config[taskset]["groups"][group2]["pretrain"]["ruleset"]
+            )
+            if len(group2_tasks) == 0:
+                shared_tasks = 0
+            else:
+                shared_tasks = 100 * len(group2_tasks) / 3
+        elif group2 == "master":
+            group1_tasks = (
+                config[taskset]["groups"][group1]["pretrain"]["ruleset"]
+                # + config[taskset]["groups"][group1]["train"]["ruleset"]
+                # if config[taskset]["groups"][group1]["train"]["frozen"] == False
+                # else config[taskset]["groups"][group1]["pretrain"]["ruleset"]
+            )
+            if len(group1_tasks) == 0:
+                shared_tasks = 0
+            else:
+                shared_tasks = 100 * len(group1_tasks) / 3
+        try:
+            group_pairs[shared_tasks].append(pair)
+        except KeyError:
+            group_pairs[shared_tasks] = [pair]
+    return group_pairs
+
+
 def dissimilarities_per_percentage_of_shared_task(group_pairs, df):
     dissimilarities_per_shared_task = {
         "dsa": {perc: [] for perc in group_pairs.keys()},

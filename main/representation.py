@@ -112,17 +112,17 @@ def representation(model, rules, rnn=True, rnn_vs_mamba=False):
     except KeyError:
         activations_stimulus = activations[("AntiGoNogoDelayResponseT", "stimulus")]
 
-    # Center and standardize the activations
-    flattened_activations = activations_stimulus.reshape(
-        -1, activations_stimulus.shape[-1]
-    )
-    mean_activations = torch.mean(flattened_activations, dim=0)
-    std_activations = torch.std(flattened_activations, dim=0)
+    # # Center and standardize the activations
+    # flattened_activations = activations_stimulus.reshape(
+    #     -1, activations_stimulus.shape[-1]
+    # )
+    # mean_activations = torch.mean(flattened_activations, dim=0)
+    # std_activations = torch.std(flattened_activations, dim=0)
 
-    # Handle potential division by zero
-    std_activations[std_activations == 0] = 1.0
+    # # Handle potential division by zero
+    # std_activations[std_activations == 0] = 1.0
 
-    activations_stimulus = (activations_stimulus - mean_activations) / std_activations
+    # activations_stimulus = (activations_stimulus - mean_activations) / std_activations
     return activations_stimulus
 
 
@@ -171,31 +171,42 @@ def compute_common_pca(h_list, n_components=3):
 
     # Define the target number of neurons (minimum n_neurons)
     min_neurons = min(h_list[0].shape[2], h_list[1].shape[2])
+    max_neurons = max(h_list[0].shape[2], h_list[1].shape[2])
 
-    # index to reduce
-    index_to_reduce = 0 if h_list[0].shape[2] > min_neurons else 1
-    # find the h_list with the max number of neurons
-    h_to_reduce = h_list[index_to_reduce]
+    if min_neurons < max_neurons:
+        # index to reduce
+        index_to_reduce = 0 if h_list[0].shape[2] > min_neurons else 1
+        # find the h_list with the max number of neurons
+        h_to_reduce = h_list[index_to_reduce]
 
-    # Flatten the first two dimensions (n_time and n_batch) for PCA
-    flattened_h1 = h_to_reduce.reshape(-1, h_to_reduce.shape[2])
+        # Flatten the first two dimensions (n_time and n_batch) for PCA
+        flattened_h1 = h_to_reduce.reshape(-1, h_to_reduce.shape[2])
 
-    # Apply PCA to reduce h_list[1] to min_neurons
-    pca = PCA(n_components=min_neurons)
-    reduced_h1 = pca.fit_transform(flattened_h1)
+        # Apply PCA to reduce h_list[1] to min_neurons
+        pca = PCA(n_components=min_neurons)
+        reduced_h1 = pca.fit_transform(flattened_h1)
 
-    # Reshape back to original n_time and n_batch dimensions
-    reduced_h1 = torch.tensor(reduced_h1).reshape(
-        h_to_reduce.shape[0], h_to_reduce.shape[1], min_neurons
-    )
+        # Reshape back to original n_time and n_batch dimensions
+        reduced_h1 = torch.tensor(reduced_h1).reshape(
+            h_to_reduce.shape[0], h_to_reduce.shape[1], min_neurons
+        )
 
-    # Replace the original h_list[1] with the reduced version
-    h_list[index_to_reduce] = reduced_h1
+        # Replace the original h_list[1] with the reduced version
+        h_list[index_to_reduce] = reduced_h1
 
-    # # print the shapes of the tensors in h_list transformed
-    for i, h in enumerate(h_list):
-        print(f"h_list[{i}].shape after Transformation: {h.shape}")
+        # # print the shapes of the tensors in h_list transformed
+        for i, h in enumerate(h_list):
+            print(f"h_list[{i}].shape after Transformation: {h.shape}")
+
     data = torch.cat(h_list, dim=1)
+    
+    # mean center and std data
+    mean_activations = torch.mean(data, dim=0)
+    std_activations = torch.std(data, dim=0)
+    # Handle potential division by zero
+    std_activations[std_activations == 0] = 1.0
+    data = (data - mean_activations) / std_activations
+
     data_2d = data.reshape(-1, data.shape[-1])
 
     # Convert to numpy array for PCA
