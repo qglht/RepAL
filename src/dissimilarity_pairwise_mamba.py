@@ -187,9 +187,13 @@ def dissimilarity(args: argparse.Namespace) -> None:
                                 devices[0],
                             )
                             curves[model][group] = copy.deepcopy(curve)
-                            accuracies[model][group] = find_accuracy_model(
-                                f"models/mamba/{args.taskset}/{group}/{model_folder}",
-                                devices[0],
+                            accuracies[model][group] = (
+                                find_accuracy_model(
+                                    f"models/mamba/{args.taskset}/{group}/{model_folder}",
+                                    devices[0],
+                                )
+                                if group != "untrained"
+                                else float(-1)
                             )
 
     sys.stdout.flush()
