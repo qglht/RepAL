@@ -1,21 +1,17 @@
 import warnings
 import os
 import argparse
-
-from matplotlib.pylab import f
 from dsa_analysis import load_config
 import torch
 import multiprocessing
 from src.toolkit import get_dynamics_rnn
 import numpy as np
-import pandas as pd
 import similarity
 import DSA
 import copy
 import main
 import numpy as np
 import sys
-import ipdb
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
@@ -32,7 +28,36 @@ def worker(task):
         print(f"Error in worker: {e}")
 
 
-def measure_dissimilarities(model, model_dict, groups, taskset, device):
+def find_accuracy_model(name, device):
+    # Find the latest checkpoint file
+    print(f"Finding accuracy for {name}")
+    checkpoint_dir = name
+    checkpoint_files = [
+        f
+        for f in os.listdir(checkpoint_dir)
+        if f.startswith("epoch_") and f.endswith("_checkpoint.pth")
+    ]
+
+    if checkpoint_files:
+        checkpoint_files.sort(key=lambda x: int(x.split("_")[1]))
+        print(f"Checkpoint files : {checkpoint_files}")
+        if len(checkpoint_files) < 50:
+            return float(1)
+        else:
+            last_checkpoint = checkpoint_files[-1]
+            # Load the checkpoint file
+            checkpoint = torch.load(
+                os.path.join(checkpoint_dir, last_checkpoint), map_location=device
+            )
+
+            return float(checkpoint["log"]["perf_min"][-1])
+    else:  # return torch nan
+        return float(-1)
+
+
+def measure_dissimilarities(
+    model, model_dict, accuracies_dict, groups, taskset, device
+):
     config = load_config("config.yaml")
     cka_measure = similarity.make("measure.sim_metric.cka-angular-score")
     procrustes_measure = similarity.make("measure.netrep.procrustes-angular-score")
@@ -41,6 +66,13 @@ def measure_dissimilarities(model, model_dict, groups, taskset, device):
     dis_cka = np.zeros((len(groups), len(groups)))
     dis_procrustes = np.zeros((len(groups), len(groups)))
     dis_dsa = np.zeros((len(groups), len(groups)))
+    accuracies_array = np.zeros((len(groups), 1))
+
+    # getting accuracies
+    for i in range(len(groups)):
+        accuracies_array[i] = accuracies_dict[groups[i]]
+
+    # getting dissimilarities
     for i in range(len(groups)):
         for j in range(i, len(groups)):
             if groups[i] in curves_names and groups[j] in curves_names:
@@ -82,9 +114,11 @@ def measure_dissimilarities(model, model_dict, groups, taskset, device):
         "cka": dis_cka,
         "procrustes": dis_procrustes,
         "dsa": dis_dsa,
+        "accuracy": accuracies_array,
     }
+
     base_dir = f"data/dissimilarities/{taskset}"
-    measures = ["cka", "procrustes", "dsa"]
+    measures = ["cka", "procrustes", "dsa", "accuracy"]
 
     print(f"Saving dissimilarities for {model}")
     for measure in measures:
@@ -122,13 +156,16 @@ def dissimilarity(args: argparse.Namespace) -> None:
     for measure in ["cka", "procrustes", "dsa"]:
         os.makedirs(f"data/dissimilarities/{args.taskset}/{measure}", exist_ok=True)
     curves = {}
+    accuracies = {}
     for rnn_type in config["rnn"]["parameters"]["rnn_type"]:
         for activation in config["rnn"]["parameters"]["activations"]:
             for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
                 for lr in config["rnn"]["parameters"]["learning_rate"]:
                     for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
                         model = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}_train.pth"
+                        model_folder = model.replace(".pth", "")
                         curves[model] = {}
+                        accuracies[model] = {}
                         for group in groups:
                             # check if the model is already trained
                             if os.path.exists(f"models/{args.taskset}/{group}/{model}"):
@@ -147,6 +184,10 @@ def dissimilarity(args: argparse.Namespace) -> None:
                                     devices[0],
                                 )
                                 curves[model][group] = copy.deepcopy(curve)
+                                accuracies[model][group] = find_accuracy_model(
+                                    f"models/{args.taskset}/{group}/{model_folder}",
+                                    devices[0],
+                                )
 
     sys.stdout.flush()
     tasks = []
@@ -165,6 +206,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                             (
                                 model,
                                 curves[model],
+                                accuracies[model],
                                 groups,
                                 args.taskset,
                                 device,
