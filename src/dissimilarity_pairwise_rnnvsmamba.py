@@ -207,7 +207,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                                             computed_pairs.add(pair)
 
     # Create a semaphore to limit the number of concurrent processes
-    num_workers = 64  # Adjust this number based on your system's capabilities
+    num_workers = 8  # Adjust this number based on your system's capabilities
     semaphore = multiprocessing.Semaphore(num_workers)
 
     # Create a process for each task and pass the semaphore
