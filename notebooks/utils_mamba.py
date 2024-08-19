@@ -271,8 +271,10 @@ def get_dissimilarities_groups(taskset):
 def get_dissimilarities_shared_task_shared_curriculum(
     group_pairs, dissimilarities_groups, x_values
 ):
-
-    diss_cc = {measure: {shared: [] for shared in group_pairs} for measure in measures}
+    measures_selected = ["cka", "dsa", "procrustes", "accuracy_1", "accuracy_2"]
+    diss_cc = {
+        measure: {shared: [] for shared in group_pairs} for measure in measures_selected
+    }
     for measure in diss_cc:
         for shared in diss_cc[measure]:
             for pair in group_pairs[shared]:
