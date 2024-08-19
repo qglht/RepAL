@@ -1,21 +1,17 @@
 import warnings
 import os
 import argparse
-
-from matplotlib.pylab import f
-from dsa_analysis import load_config
 import torch
 import multiprocessing
-from src.toolkit import get_dynamics_rnn, get_dynamics_mamba
 import numpy as np
-import pandas as pd
+import copy
+import sys
+
+from dsa_analysis import load_config
+from src.toolkit import get_dynamics_rnn, get_dynamics_mamba
 import similarity
 import DSA
-import copy
 import main
-import numpy as np
-import sys
-import ipdb
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
@@ -25,11 +21,13 @@ warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprec
 os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
 
-def worker(task):
-    try:
-        measure_dissimilarities(*task)
-    except Exception as e:
-        print(f"Error in worker: {e}")
+# Semaphore to control the number of concurrent processes
+def worker(task, semaphore):
+    with semaphore:
+        try:
+            measure_dissimilarities(*task)
+        except Exception as e:
+            print(f"Error in worker: {e}")
 
 
 def measure_dissimilarities(
@@ -56,14 +54,8 @@ def measure_dissimilarities(
                 )
                 curve_i = curves_pca[0]
                 curve_j = curves_pca[1]
-                dis_cka[i, j] = 1 - cka_measure(
-                    curve_i,
-                    curve_j,
-                )
-                dis_procrustes[i, j] = 1 - procrustes_measure(
-                    curve_i,
-                    curve_j,
-                )
+                dis_cka[i, j] = 1 - cka_measure(curve_i, curve_j)
+                dis_procrustes[i, j] = 1 - procrustes_measure(curve_i, curve_j)
                 dsa_computation = DSA.DSA(
                     curve_i,
                     curve_j,
@@ -214,8 +206,14 @@ def dissimilarity(args: argparse.Namespace) -> None:
                                             i += 1
                                             computed_pairs.add(pair)
 
-    # Create a process for each task
-    processes = [multiprocessing.Process(target=worker, args=(task,)) for task in tasks]
+    # Create a semaphore to limit the number of concurrent processes
+    num_workers = 64  # Adjust this number based on your system's capabilities
+    semaphore = multiprocessing.Semaphore(num_workers)
+
+    # Create a process for each task and pass the semaphore
+    processes = [
+        multiprocessing.Process(target=worker, args=(task, semaphore)) for task in tasks
+    ]
 
     # Start all processes
     for process in processes:
@@ -224,7 +222,6 @@ def dissimilarity(args: argparse.Namespace) -> None:
     # Wait for all processes to finish
     for process in processes:
         process.join()
-    return
 
 
 if __name__ == "__main__":
