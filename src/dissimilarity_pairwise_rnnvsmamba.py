@@ -1,6 +1,7 @@
 import warnings
 import os
 import argparse
+from matplotlib.pylab import f
 import torch
 import multiprocessing
 import numpy as np
@@ -20,6 +21,8 @@ warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprec
 # Set environment variable to ignore Gym deprecation warnings
 os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
+config = load_config("config.yaml")
+
 
 # Semaphore to control the number of concurrent processes
 def worker(task, semaphore):
@@ -28,12 +31,16 @@ def worker(task, semaphore):
             measure_dissimilarities(*task)
         except Exception as e:
             print(f"Error in worker: {e}")
+        finally:
+            # Clear GPU memory
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
 
 def measure_dissimilarities(
     model_rnn, model_dict_rnn, model_mamba, model_dict_mamba, groups, taskset, device
 ):
-    config = load_config("config.yaml")
+
     cka_measure = similarity.make("measure.sim_metric.cka-angular-score")
     procrustes_measure = similarity.make("measure.netrep.procrustes-angular-score")
     curves_names_rnn = list(model_dict_rnn.keys())
@@ -94,7 +101,6 @@ def measure_dissimilarities(
 
 def dissimilarity(args: argparse.Namespace) -> None:
     multiprocessing.set_start_method("spawn", force=True)
-    config = load_config("config.yaml")
     groups = [
         "untrained",
         "master_frozen",
@@ -114,6 +120,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
         else [torch.device("cpu")]
     )
 
+    print(f"Computing dynamics for all models")
     curves_rnn = {}
     for rnn_type in config["rnn"]["parameters"]["rnn_type"]:
         for activation in config["rnn"]["parameters"]["activations"]:
@@ -125,10 +132,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                         for group in groups:
                             # check if the model is already trained
                             if os.path.exists(f"models/{args.taskset}/{group}/{model}"):
-                                print(
-                                    f"Computing dynamics for {model} and group {group}"
-                                )
-                                curve = get_dynamics_rnn(
+                                curves_rnn[model][group] = get_dynamics_rnn(
                                     rnn_type,
                                     activation,
                                     hidden_size,
@@ -139,7 +143,9 @@ def dissimilarity(args: argparse.Namespace) -> None:
                                     args.taskset,
                                     devices[0],
                                 )
-                                curves_rnn[model][group] = copy.deepcopy(curve)
+                                # Clear GPU memory after each model processing
+                                if torch.cuda.is_available():
+                                    torch.cuda.empty_cache()
 
     curves_mamba = {}
     for d_model in config["mamba"]["parameters"]["d_model"]:
@@ -153,8 +159,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                         if os.path.exists(
                             f"models/mamba/{args.taskset}/{group}/{model}"
                         ):
-                            print(f"Computing dynamics for {model} and group {group}")
-                            curve = get_dynamics_mamba(
+                            curves_mamba[model][group] = get_dynamics_mamba(
                                 d_model,
                                 n_layers,
                                 learning_rate,
@@ -164,11 +169,14 @@ def dissimilarity(args: argparse.Namespace) -> None:
                                 args.taskset,
                                 devices[0],
                             )
-                            curves_mamba[model][group] = copy.deepcopy(curve)
+                            # Clear GPU memory after each model processing
+                            if torch.cuda.is_available():
+                                torch.cuda.empty_cache()
 
     sys.stdout.flush()
     tasks = []
     i = 0
+    print(f"Computing dissimilarities for all models")
     computed_pairs = set()
     for rnn_type in config["rnn"]["parameters"]["rnn_type"]:
         for activation in config["rnn"]["parameters"]["activations"]:
