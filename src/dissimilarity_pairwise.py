@@ -153,7 +153,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
         else [torch.device("cpu")]
     )
     # create directories if don't exist
-    for measure in ["cka", "procrustes", "dsa"]:
+    for measure in ["cka", "procrustes", "dsa", "accuracy"]:
         os.makedirs(f"data/dissimilarities/{args.taskset}/{measure}", exist_ok=True)
     curves = {}
     accuracies = {}

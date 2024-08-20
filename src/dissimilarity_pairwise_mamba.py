@@ -157,7 +157,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
     curves = {}
     accuracies = {}
     # create directories if don't exist
-    for measure in ["cka", "procrustes", "dsa"]:
+    for measure in ["cka", "procrustes", "dsa", "accuracy"]:
         os.makedirs(
             f"data/dissimilarities/mamba/{args.taskset}/{measure}", exist_ok=True
         )
