@@ -31,10 +31,6 @@ def worker(task, semaphore):
             measure_dissimilarities(*task)
         except Exception as e:
             print(f"Error in worker: {e}")
-        finally:
-            # Clear GPU memory
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
 
 
 def measure_dissimilarities(
@@ -87,15 +83,18 @@ def measure_dissimilarities(
     }
     base_dir = f"data/dissimilarities_mamba_rnn/{taskset}"
     measures = ["cka", "procrustes", "dsa"]
-
+    print(f"Saving dissimilarities for {model_rnn} and {model_mamba}")
     for measure in measures:
         dir_path = os.path.join(base_dir, measure)
         os.makedirs(dir_path, exist_ok=True)  # Create directory if it does not exist
 
         npz_filename = f"{model_rnn.replace('.pth','')}_{model_mamba.replace('.pth','')}.npz"  # Construct filename
         npz_filepath = os.path.join(dir_path, npz_filename)
-
+        print(
+            f"Saving dissimilarities for {model_rnn} and {model_mamba} in {npz_filepath}"
+        )
         np.savez_compressed(npz_filepath, dissimilarities_model[measure])
+        print(f"Dissimilarities saved in {npz_filepath}")
     return dis_cka, dis_procrustes, dis_dsa
 
 
@@ -174,8 +173,6 @@ def dissimilarity(args: argparse.Namespace) -> None:
                                 torch.cuda.empty_cache()
 
     sys.stdout.flush()
-    tasks = []
-    i = 0
     print(f"Computing dissimilarities for all models")
     computed_pairs = set()
     for rnn_type in config["rnn"]["parameters"]["rnn_type"]:
@@ -184,6 +181,8 @@ def dissimilarity(args: argparse.Namespace) -> None:
                 for lr in config["rnn"]["parameters"]["learning_rate"]:
                     for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
                         model_rnn = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}_train.pth"
+                        tasks = []
+                        i = 0
                         for d_model in config["mamba"]["parameters"]["d_model"]:
                             for n_layers in config["mamba"]["parameters"]["n_layers"]:
                                 for learning_rate in config["mamba"]["parameters"][
@@ -214,22 +213,33 @@ def dissimilarity(args: argparse.Namespace) -> None:
                                             i += 1
                                             computed_pairs.add(pair)
 
-    # Create a semaphore to limit the number of concurrent processes
-    num_workers = 8  # Adjust this number based on your system's capabilities
-    semaphore = multiprocessing.Semaphore(num_workers)
+                        print(f"Number of tasks: {len(tasks)}")
+                        # Create a semaphore to limit the number of concurrent processes
+                        num_workers = (
+                            8  # Adjust this number based on your system's capabilities
+                        )
+                        semaphore = multiprocessing.Semaphore(num_workers)
 
-    # Create a process for each task and pass the semaphore
-    processes = [
-        multiprocessing.Process(target=worker, args=(task, semaphore)) for task in tasks
-    ]
+                        # Create a process for each task and pass the semaphore
+                        processes = [
+                            multiprocessing.Process(
+                                target=worker, args=(task, semaphore)
+                            )
+                            for task in tasks
+                        ]
 
-    # Start all processes
-    for process in processes:
-        process.start()
+                        # Start all processes
+                        for process in processes:
+                            process.start()
 
-    # Wait for all processes to finish
-    for process in processes:
-        process.join()
+                        # Wait for all processes to finish
+                        for process in processes:
+                            process.join()
+
+                        if torch.cuda.is_available():
+                            for i in range(torch.cuda.device_count()):
+                                torch.cuda.set_device(i)
+                                torch.cuda.empty_cache()
 
 
 if __name__ == "__main__":

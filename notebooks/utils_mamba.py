@@ -161,7 +161,18 @@ def find_group_pairs_master(config, taskset):
         if groups[i] == "master" or groups[j] == "master"
     ]
     # remove the (master, master) pair
-    pairs = [pair for pair in pairs if "frozen" in pair[0] or "frozen" in pair[1]]
+    pairs = [pair for pair in pairs if pair[0] != pair[1]]
+    # remove the pair containign unfrozen and the one containing master_frozen
+    pairs = [
+        pair
+        for pair in pairs
+        if pair[0] != "pretrain_unfrozen" and pair[1] != "pretrain_unfrozen"
+    ]
+    pairs = [
+        pair
+        for pair in pairs
+        if pair[0] != "master_frozen" and pair[1] != "master_frozen"
+    ]
     # group pairs of groups by how many tasks they share in their training curriculum
     group_pairs = {}
     for pair in pairs:
