@@ -178,8 +178,9 @@ def t_test_dissimilarity(df, group1, group2, measure):
 
 
 # function to perform t-test on all pairs of groups for a given measure
-def t_test_all_pairs(df, measure):
+def t_test_all_pairs(dg, measure):
     # map groups
+    df = dg.copy()
     df["group2"] = df["group2"].apply(map_group)
     df["group1"] = df["group1"].apply(map_group)
     print(df["group2"].unique())
@@ -270,9 +271,7 @@ def find_group_pairs_master(config, taskset):
         if pair[0] != "pretrain_unfrozen" and pair[1] != "pretrain_unfrozen"
     ]
     pairs = [
-        pair
-        for pair in pairs
-        if pair[0] != "master_frozen" and pair[1] != "master_frozen"
+        pair for pair in pairs if pair[0] != "untrained" and pair[1] != "untrained"
     ]
 
     # group pairs of groups by how many tasks they share in their training curriculum
@@ -337,7 +336,10 @@ def dissimilarities_per_percentage_of_shared_task(group_pairs, df):
 def get_dissimilarities_groups(taskset):
     # take all the folder names under data/dissimilarities_over_learning/{taskset}
     groups_training = os.listdir(f"../data/dissimilarities_over_learning/{taskset}")
-    groups_training = [group for group in groups_training if group != ".DS_Store"]
+    groups_training = [
+        group for group in groups_training if group != ".DS_Store" and "master" in group
+    ]
+    # groups_training = [group for group in groups_training if "master" in group]
     dissimilarities_groups = {group: None for group in groups_training}
 
     for group_training in groups_training:
@@ -382,7 +384,7 @@ def get_dissimilarities_groups(taskset):
 def get_dissimilarities_shared_task_shared_curriculum(
     group_pairs, dissimilarities_groups, x_values
 ):
-    measures_selected = ["cka", "dsa", "procrustes", "accuracy_1", "accuracy_2"]
+    measures_selected = ["cka", "dsa", "procrustes"]
     diss_cc = {
         measure: {shared: [] for shared in group_pairs} for measure in measures_selected
     }
@@ -404,7 +406,7 @@ def get_dissimilarities_shared_task_shared_curriculum(
             y_new = []
             for i in range(len(x_values)):
                 y_new.append(
-                    np.nanmean([diss[1][i] for diss in diss_cc[measure][shared]])
+                    np.nanmedian([diss[1][i] for diss in diss_cc[measure][shared]])
                 )
             diss_cc[measure][shared] = [x_new, y_new]
     return diss_cc
