@@ -99,7 +99,8 @@ def measure_dissimilarities(
 
 
 def dissimilarity(args: argparse.Namespace) -> None:
-    multiprocessing.set_start_method("spawn", force=True)
+    multiprocessing.set_start_method("fork", force=True)
+    # set to spawn otherwise it will raise an error
     groups = [
         "untrained",
         "master_frozen",
@@ -236,10 +237,9 @@ def dissimilarity(args: argparse.Namespace) -> None:
                         for process in processes:
                             process.join()
 
+                        # Clear GPU memory after each model processing
                         if torch.cuda.is_available():
-                            for i in range(torch.cuda.device_count()):
-                                torch.cuda.set_device(i)
-                                torch.cuda.empty_cache()
+                            torch.cuda.empty_cache()
 
 
 if __name__ == "__main__":

@@ -89,6 +89,8 @@ def get_dataframe(path, taskset):
         "group2": [],
         "measure": [],
         "dissimilarity": [],
+        "accuracy_1": [],
+        "accuracy_2": [],
     }
 
     dissimilarities = {measure: [] for measure in measures}
@@ -101,24 +103,30 @@ def get_dataframe(path, taskset):
                 model_type, activation, hidden_size, lr, batch_size = parse_model_info(
                     file
                 )
-                with np.load(file_path, allow_pickle=True) as data:
-                    dissimilarities[measure].append(data["arr_0"])
-                    for i in range(len(groups)):
-                        for j in range(len(groups)):
-                            array_dissimilarities = remove_nan(
-                                replace_nan_diagonal(data["arr_0"])
-                            )
-                            if array_dissimilarities is not None:
-                                array_dissimilarities = symmetric(array_dissimilarities)
-                                df["model_type"].append(model_type)
-                                df["activation"].append(activation)
-                                df["hidden_size"].append(hidden_size)
-                                df["lr"].append(lr)
-                                df["batch_size"].append(batch_size)
-                                df["group1"].append(groups[i])
-                                df["group2"].append(groups[j])
-                                df["measure"].append(measure)
-                                df["dissimilarity"].append(array_dissimilarities[i, j])
+                data = np.load(file_path, allow_pickle=True)
+                data_accuracy = np.load(
+                    file_path.replace(measure, "accuracy"), allow_pickle=True
+                )
+                dissimilarities[measure].append(data["arr_0"])
+                for i in range(len(groups)):
+                    for j in range(len(groups)):
+                        array_dissimilarities = remove_nan(
+                            replace_nan_diagonal(data["arr_0"])
+                        )
+                        array_accuracy = remove_nan(data_accuracy["arr_0"])
+                        if array_dissimilarities is not None:
+                            array_dissimilarities = symmetric(array_dissimilarities)
+                            df["model_type"].append(model_type)
+                            df["activation"].append(activation)
+                            df["hidden_size"].append(hidden_size)
+                            df["lr"].append(lr)
+                            df["batch_size"].append(batch_size)
+                            df["group1"].append(groups[i])
+                            df["group2"].append(groups[j])
+                            df["measure"].append(measure)
+                            df["dissimilarity"].append(array_dissimilarities[i, j])
+                            df["accuracy_1"].append(array_accuracy[i][0])
+                            df["accuracy_2"].append(array_accuracy[j][0])
     return pd.DataFrame(df)
 
 

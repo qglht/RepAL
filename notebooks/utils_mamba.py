@@ -81,6 +81,8 @@ def get_dataframe(taskset):
         "group2": [],
         "measure": [],
         "dissimilarity": [],
+        "accuracy_1": [],
+        "accuracy_2": [],
     }
     dissimilarities = {measure: [] for measure in measures}
     for measure in measures:
@@ -90,23 +92,29 @@ def get_dataframe(taskset):
             file_path = os.path.join(path_measure, file)
             if file_path.endswith(".npz"):
                 d_model, n_layers, learning_rate, batch_size = parse_model_info(file)
-                with np.load(file_path, allow_pickle=True) as data:
-                    dissimilarities[measure].append(data["arr_0"])
-                    for i in range(len(groups)):
-                        for j in range(len(groups)):
-                            array_dissimilarities = remove_nan(
-                                replace_nan_diagonal(data["arr_0"])
-                            )
-                            if array_dissimilarities is not None:
-                                array_dissimilarities = symmetric(array_dissimilarities)
-                                df["d_model"].append(d_model)
-                                df["n_layers"].append(n_layers)
-                                df["learning_rate"].append(learning_rate)
-                                df["batch_size"].append(batch_size)
-                                df["group1"].append(groups[i])
-                                df["group2"].append(groups[j])
-                                df["measure"].append(measure)
-                                df["dissimilarity"].append(array_dissimilarities[i, j])
+                data = np.load(file_path, allow_pickle=True)
+                data_accuracy = np.load(
+                    file_path.replace(measure, "accuracy"), allow_pickle=True
+                )
+                dissimilarities[measure].append(data["arr_0"])
+                for i in range(len(groups)):
+                    for j in range(len(groups)):
+                        array_dissimilarities = remove_nan(
+                            replace_nan_diagonal(data["arr_0"])
+                        )
+                        array_accuracy = remove_nan(data_accuracy["arr_0"])
+                        if array_dissimilarities is not None:
+                            array_dissimilarities = symmetric(array_dissimilarities)
+                            df["d_model"].append(d_model)
+                            df["n_layers"].append(n_layers)
+                            df["learning_rate"].append(learning_rate)
+                            df["batch_size"].append(batch_size)
+                            df["group1"].append(groups[i])
+                            df["group2"].append(groups[j])
+                            df["measure"].append(measure)
+                            df["dissimilarity"].append(array_dissimilarities[i, j])
+                            df["accuracy_1"].append(array_accuracy[i][0])
+                            df["accuracy_2"].append(array_accuracy[j][0])
     return pd.DataFrame(df)
 
 
@@ -169,9 +177,7 @@ def find_group_pairs_master(config, taskset):
         if pair[0] != "pretrain_unfrozen" and pair[1] != "pretrain_unfrozen"
     ]
     pairs = [
-        pair
-        for pair in pairs
-        if pair[0] != "master_frozen" and pair[1] != "master_frozen"
+        pair for pair in pairs if pair[0] != "master_frozen" and pair[1] != "master_frozen"
     ]
     # group pairs of groups by how many tasks they share in their training curriculum
     group_pairs = {}
@@ -243,7 +249,7 @@ def get_dissimilarities_groups(taskset):
     for group_training in groups_training:
         path = f"../data/dissimilarities_over_learning/mamba/{taskset}/{group_training}"
         measures = ["cka", "dsa", "procrustes", "accuracy_1", "accuracy_2"]
-        sampling = [0, 25, 50, 75, 100]
+        sampling = [0, 50, 100]
         dissimilarities = {measure: [] for measure in measures}
 
         for measure in measures:
@@ -260,7 +266,7 @@ def get_dissimilarities_groups(taskset):
         }
         for measure in measures:
             for dissimilarity in dissimilarities[measure]:
-                if dissimilarity.shape[0] > 4:
+                if dissimilarity.shape[0] > 2:
                     dissimilarities_interpolated[measure][0].append(dissimilarity[0])
                     for i in range(len(sampling) - 1):
                         index_start = int(sampling[i] / 100 * (dissimilarity.shape[0]))
@@ -268,11 +274,11 @@ def get_dissimilarities_groups(taskset):
                             sampling[i + 1] / 100 * (dissimilarity.shape[0])
                         )
                         dissimilarities_interpolated[measure][i + 1].append(
-                            np.median(dissimilarity[index_start:index_end])
+                            np.nanmedian(dissimilarity[index_start:index_end])
                         )
         for measure in measures:
             for group in range(len(sampling)):
-                dissimilarities_interpolated[measure][group] = np.mean(
+                dissimilarities_interpolated[measure][group] = np.nanmean(
                     dissimilarities_interpolated[measure][group]
                 )
         dissimilarities_groups[group_training] = dissimilarities_interpolated
