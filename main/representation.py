@@ -98,6 +98,9 @@ def representation(model, rules, rnn=True, rnn_vs_mamba=False):
                         value
                     )  # Accumulate in a list
 
+            del dataloader
+            torch.cuda.empty_cache()  # If using GPU
+
     # Merge accumulated activations:
     for key, values in activations.items():
         activations[key] = torch.cat(
@@ -199,7 +202,7 @@ def compute_common_pca(h_list, n_components=3):
             print(f"h_list[{i}].shape after Transformation: {h.shape}")
 
     data = torch.cat(h_list, dim=1)
-    
+
     # mean center and std data
     mean_activations = torch.mean(data, dim=0)
     std_activations = torch.std(data, dim=0)

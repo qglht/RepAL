@@ -212,13 +212,15 @@ class MambaSupervGym(MambaLM):
 
 def load_model(path, hp, RNNLayer, device):
     model = Run_Model(hp, RNNLayer, device)
-    state_dict = torch.load(path, map_location=device)
+    with open(path, "rb") as f:
+        state_dict = torch.load(f, map_location=device)
     model.model.load_state_dict(state_dict)
     return model
 
 
 def load_model_mamba(path, hp, lm_config, device):
     model = MambaSupervGym(hp, lm_config, device)
-    state_dict = torch.load(path, map_location=device)
+    with open(path, "rb") as f:
+        state_dict = torch.load(f, map_location=device)
     model.load_state_dict(state_dict)
     return model
