@@ -7,7 +7,7 @@ import multiprocessing
 import numpy as np
 import copy
 import sys
-
+import gc
 from dsa_analysis import load_config
 from src.toolkit import get_dynamics_rnn, get_dynamics_mamba
 import similarity
@@ -21,24 +21,19 @@ warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprec
 # Set environment variable to ignore Gym deprecation warnings
 os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
-config = load_config("config.yaml")
-
 
 # Semaphore to control the number of concurrent processes
-def worker(task, semaphore):
-    with semaphore:
-        try:
-            measure_dissimilarities(*task)
-        except Exception as e:
-            print(f"Error in worker: {e}")
+def worker(task):
+    try:
+        measure_dissimilarities(*task)
+    except Exception as e:
+        print(f"Error in worker: {e}")
 
 
 def measure_dissimilarities(
     model_rnn, model_dict_rnn, model_mamba, model_dict_mamba, groups, taskset, device
 ):
 
-    cka_measure = similarity.make("measure.sim_metric.cka-angular-score")
-    procrustes_measure = similarity.make("measure.netrep.procrustes-angular-score")
     curves_names_rnn = list(model_dict_rnn.keys())
     curves_rnn = list(model_dict_rnn.values())
     curves_names_mamba = list(model_dict_mamba.keys())
@@ -95,7 +90,16 @@ def measure_dissimilarities(
         )
         np.savez_compressed(npz_filepath, dissimilarities_model[measure])
         print(f"Dissimilarities saved in {npz_filepath}")
-    return dis_cka, dis_procrustes, dis_dsa
+
+    del dis_cka, dis_procrustes, dis_dsa
+    del curves_rnn, curves_mamba, curves_pca
+    del curves_names_rnn, curves_names_mamba
+    del model_dict_rnn, model_dict_mamba
+    del dissimilarities_model
+    # Clear GPU memory after each model processing
+    torch.cuda.empty_cache()
+    gc.collect()
+    return
 
 
 def dissimilarity(args: argparse.Namespace) -> None:
@@ -215,17 +219,10 @@ def dissimilarity(args: argparse.Namespace) -> None:
                                             computed_pairs.add(pair)
 
                         print(f"Number of tasks: {len(tasks)}")
-                        # Create a semaphore to limit the number of concurrent processes
-                        num_workers = (
-                            8  # Adjust this number based on your system's capabilities
-                        )
-                        semaphore = multiprocessing.Semaphore(num_workers)
 
                         # Create a process for each task and pass the semaphore
                         processes = [
-                            multiprocessing.Process(
-                                target=worker, args=(task, semaphore)
-                            )
+                            multiprocessing.Process(target=worker, args=(task,))
                             for task in tasks
                         ]
 
@@ -237,12 +234,11 @@ def dissimilarity(args: argparse.Namespace) -> None:
                         for process in processes:
                             process.join()
 
-                        # Clear GPU memory after each model processing
-                        if torch.cuda.is_available():
-                            torch.cuda.empty_cache()
-
 
 if __name__ == "__main__":
+    config = load_config("config.yaml")
+    cka_measure = similarity.make("measure.sim_metric.cka-angular-score")
+    procrustes_measure = similarity.make("measure.netrep.procrustes-angular-score")
     parser = argparse.ArgumentParser(description="Train the model")
     parser.add_argument(
         "--taskset",

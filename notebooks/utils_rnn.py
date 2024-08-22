@@ -1,10 +1,16 @@
 import sys
 import os
 
+from networkx import group_closeness_centrality
+
 # Add the root directory to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir)))
 
 from dsa_analysis import load_config, visualize
+from scipy import stats
+from scipy.stats import ttest_ind
+from scipy.stats import mannwhitneyu
+from statsmodels.stats.multitest import multipletests
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -128,6 +134,81 @@ def get_dataframe(path, taskset):
                             df["accuracy_1"].append(array_accuracy[i][0])
                             df["accuracy_2"].append(array_accuracy[j][0])
     return pd.DataFrame(df)
+
+
+# Define the mapping for group2
+def map_group(group):
+    if group in [
+        "pretrain_basic_frozen",
+        "pretrain_anti_frozen",
+        "pretrain_delay_frozen",
+        "pretrain_basic_anti_frozen",
+        "pretrain_basic_delay_frozen",
+    ]:
+        return "pretrain_partial"
+    return group
+
+
+def t_test_dissimilarity(df, group1, group2, measure):
+    # get data
+    data_group1 = df[
+        (df["group1"] == group1)
+        & (df["group2"] == "master")
+        & (df["measure"] == measure)  # or the opposite
+        | (
+            (df["group1"] == "master")
+            & (df["group2"] == group1)
+            & (df["measure"] == measure)
+        )
+    ]["dissimilarity"]
+    data_group2 = df[
+        (df["group1"] == group2)
+        & (df["group2"] == "master")
+        & (df["measure"] == measure)
+        | (
+            (df["group1"] == "master")
+            & (df["group2"] == group2)
+            & (df["measure"] == measure)
+        )
+    ]["dissimilarity"]
+    # perform t-test
+    t_stat, p_val = stats.ttest_ind(data_group1, data_group2)
+    # stat, p_value = mannwhitneyu(data_group1, data_group2)
+    return t_stat, p_val
+
+
+# function to perform t-test on all pairs of groups for a given measure
+def t_test_all_pairs(df, measure):
+    # map groups
+    df["group2"] = df["group2"].apply(map_group)
+    df["group1"] = df["group1"].apply(map_group)
+    print(df["group2"].unique())
+    groups = [
+        "untrained",
+        "master_frozen",
+        "pretrain_partial",
+        "pretrain_frozen",
+        "pretrain_unfrozen",
+    ]
+    p_values = []
+    groups_pairs = []
+    for group1 in groups:
+        for group2 in groups:
+            if group1 != group2:
+                t_stat, p_val = t_test_dissimilarity(df, group1, group2, measure)
+                p_values.append(p_val)
+                groups_pairs.append((group1, group2))
+    # adjust p-values
+    adjusted_p_values = multipletests(p_values, method="fdr_bh")[1]
+    # store results in a dataframe
+    t_test_results_df = pd.DataFrame(
+        {
+            "pairs": groups_pairs,
+            "p_value": p_values,
+            "adjusted_p_value": adjusted_p_values,
+        }
+    )
+    return t_test_results_df
 
 
 def find_group_pairs(config, taskset):

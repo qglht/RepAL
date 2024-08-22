@@ -96,9 +96,11 @@ def measure_dissimilarities(
                 dsa_computation = DSA.DSA(
                     curve_i,
                     curve_j,
-                    n_delays=config["dsa"]["n_delays"],
+                    # n_delays=config["dsa"]["n_delays"],
+                    n_delays=50,
                     rank=config["dsa"]["rank"],
-                    delay_interval=config["dsa"]["delay_interval"],
+                    # delay_interval=config["dsa"]["delay_interval"],
+                    delay_interval=3,
                     verbose=True,
                     iters=1000,
                     lr=1e-2,

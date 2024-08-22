@@ -25,6 +25,7 @@ rsatoolbox = "^0.1.5"
 pytorch-lightning = "^2.2.2"
 neurogym = "^0.0.2"
 bokeh = "^3.4.2"
+statsmodels = "^0.14.2"
 
 
 [build-system]
