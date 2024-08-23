@@ -185,6 +185,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                 model = (
                     f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}_train.pth"
                 )
+                model_folder = model.replace(".pth", "")
                 curves_rnn[model] = {}
                 accuracies_rnn[model] = {}
                 for group in groups:
@@ -220,6 +221,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
     for learning_rate in config["mamba"]["parameters"]["learning_rate"]:
         for batch_size in config["mamba"]["parameters"]["batch_size_train"]:
             model = f"mamba_{d_model}_{n_layers}_{learning_rate}_{batch_size}_train.pth"
+            model_folder = model.replace(".pth", "")
             curves_mamba[model] = {}
             accuracies_mamba[model] = {}
             for group in groups:

@@ -5,6 +5,10 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), os.pardir)))
 
 from dsa_analysis import load_config, visualize
+from scipy import stats
+from scipy.stats import ttest_ind
+from scipy.stats import mannwhitneyu
+from statsmodels.stats.multitest import multipletests
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -70,7 +74,7 @@ def remove_nan_list(lists):
     return [remove_nan(arr) for arr in lists]
 
 
-def get_dataframe(taskset):
+def get_dataframe(path, taskset):
     path = f"../data/dissimilarities/mamba/{taskset}/"
     df = {
         "d_model": [],
@@ -116,6 +120,82 @@ def get_dataframe(taskset):
                             df["accuracy_1"].append(array_accuracy[i][0])
                             df["accuracy_2"].append(array_accuracy[j][0])
     return pd.DataFrame(df)
+
+
+# Define the mapping for group2
+def map_group(group):
+    if group in [
+        "pretrain_basic_frozen",
+        "pretrain_anti_frozen",
+        "pretrain_delay_frozen",
+        "pretrain_basic_anti_frozen",
+        "pretrain_basic_delay_frozen",
+    ]:
+        return "pretrain_partial"
+    return group
+
+
+def t_test_dissimilarity(df, group1, group2, measure):
+    # get data
+    data_group1 = df[
+        (df["group1"] == group1)
+        & (df["group2"] == "master")
+        & (df["measure"] == measure)  # or the opposite
+        | (
+            (df["group1"] == "master")
+            & (df["group2"] == group1)
+            & (df["measure"] == measure)
+        )
+    ]["dissimilarity"]
+    data_group2 = df[
+        (df["group1"] == group2)
+        & (df["group2"] == "master")
+        & (df["measure"] == measure)
+        | (
+            (df["group1"] == "master")
+            & (df["group2"] == group2)
+            & (df["measure"] == measure)
+        )
+    ]["dissimilarity"]
+    # perform t-test
+    t_stat, p_val = stats.ttest_ind(data_group1, data_group2)
+    # stat, p_value = mannwhitneyu(data_group1, data_group2)
+    return t_stat, p_val
+
+
+# function to perform t-test on all pairs of groups for a given measure
+def t_test_all_pairs(dg, measure):
+    # map groups
+    df = dg.copy()
+    df["group2"] = df["group2"].apply(map_group)
+    df["group1"] = df["group1"].apply(map_group)
+    print(df["group2"].unique())
+    groups = [
+        "untrained",
+        "master_frozen",
+        "pretrain_partial",
+        "pretrain_frozen",
+        "pretrain_unfrozen",
+    ]
+    p_values = []
+    groups_pairs = []
+    for group1 in groups:
+        for group2 in groups:
+            if group1 != group2:
+                t_stat, p_val = t_test_dissimilarity(df, group1, group2, measure)
+                p_values.append(p_val)
+                groups_pairs.append((group1, group2))
+    # adjust p-values
+    adjusted_p_values = multipletests(p_values, method="fdr_bh")[1]
+    # store results in a dataframe
+    t_test_results_df = pd.DataFrame(
+        {
+            "pairs": groups_pairs,
+            "p_value": p_values,
+            "adjusted_p_value": adjusted_p_values,
+        }
+    )
+    return t_test_results_df
 
 
 def find_group_pairs(config, taskset):
@@ -177,7 +257,7 @@ def find_group_pairs_master(config, taskset):
         if pair[0] != "pretrain_unfrozen" and pair[1] != "pretrain_unfrozen"
     ]
     pairs = [
-        pair for pair in pairs if pair[0] != "master_frozen" and pair[1] != "master_frozen"
+        pair for pair in pairs if pair[0] != "untrained" and pair[1] != "untrained"
     ]
     # group pairs of groups by how many tasks they share in their training curriculum
     group_pairs = {}
@@ -249,7 +329,7 @@ def get_dissimilarities_groups(taskset):
     for group_training in groups_training:
         path = f"../data/dissimilarities_over_learning/mamba/{taskset}/{group_training}"
         measures = ["cka", "dsa", "procrustes", "accuracy_1", "accuracy_2"]
-        sampling = [0, 50, 100]
+        sampling = [0, 25, 50, 75, 100]
         dissimilarities = {measure: [] for measure in measures}
 
         for measure in measures:
@@ -278,7 +358,7 @@ def get_dissimilarities_groups(taskset):
                         )
         for measure in measures:
             for group in range(len(sampling)):
-                dissimilarities_interpolated[measure][group] = np.nanmean(
+                dissimilarities_interpolated[measure][group] = np.nanmedian(
                     dissimilarities_interpolated[measure][group]
                 )
         dissimilarities_groups[group_training] = dissimilarities_interpolated
@@ -288,7 +368,7 @@ def get_dissimilarities_groups(taskset):
 def get_dissimilarities_shared_task_shared_curriculum(
     group_pairs, dissimilarities_groups, x_values
 ):
-    measures_selected = ["cka", "dsa", "procrustes", "accuracy_1", "accuracy_2"]
+    measures_selected = ["cka", "dsa", "procrustes"]
     diss_cc = {
         measure: {shared: [] for shared in group_pairs} for measure in measures_selected
     }
@@ -310,7 +390,7 @@ def get_dissimilarities_shared_task_shared_curriculum(
             y_new = []
             for i in range(len(x_values)):
                 y_new.append(
-                    np.nanmean([diss[1][i] for diss in diss_cc[measure][shared]])
+                    np.nanmedian([diss[1][i] for diss in diss_cc[measure][shared]])
                 )
             diss_cc[measure][shared] = [x_new, y_new]
     return diss_cc

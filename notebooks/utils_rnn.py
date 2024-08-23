@@ -374,7 +374,7 @@ def get_dissimilarities_groups(taskset):
                         )
         for measure in measures:
             for group in range(len(sampling)):
-                dissimilarities_interpolated[measure][group] = np.mean(
+                dissimilarities_interpolated[measure][group] = np.nanmedian(
                     dissimilarities_interpolated[measure][group]
                 )
         dissimilarities_groups[group_training] = dissimilarities_interpolated
