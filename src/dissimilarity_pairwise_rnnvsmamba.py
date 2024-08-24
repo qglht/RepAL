@@ -81,8 +81,10 @@ def measure_dissimilarities(
 
     # getting accuracies
     for i in range(len(groups)):
-        accuracies_array_rnn[i] = accuracies_dict_rnn[groups[i]]
-        accuracies_array_mamba[i] = accuracies_dict_mamba[groups[i]]
+        if groups[i] in accuracies_dict_rnn:
+            accuracies_array_rnn[i] = accuracies_dict_rnn[groups[i]]
+        if groups[i] in accuracies_dict_mamba:
+            accuracies_array_mamba[i] = accuracies_dict_mamba[groups[i]]
 
     # dissimilarities to compute : master against everything /
     for i in range(len(groups)):
