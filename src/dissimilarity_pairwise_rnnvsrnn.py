@@ -227,7 +227,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                                         ]:
                                             model2 = f"{rnn_type2}_{activation2}_{hidden_size2}_{lr2}_{batch_size2}_train.pth"
                                             device = devices[0]
-                                            pair = sorted([model1, model2])
+                                            pair = tuple(sorted((model1, model2)))
                                             if pair not in computed_pairs:
                                                 print(
                                                     f"Compute dissimilarities for {mode1} and {model2}"
