@@ -1,5 +1,6 @@
 import sys
 import os
+from turtle import st
 
 from networkx import group_closeness_centrality
 
@@ -149,6 +150,25 @@ def map_group(group):
     return group
 
 
+def t_standart_error_dissimilarity(df, group, measure):
+    # get data
+    data_group = df[
+        (df["group1"] == group)
+        & (df["group2"] == "master")
+        & (df["measure"] == measure)  # or the opposite
+        | (
+            (df["group1"] == "master")
+            & (df["group2"] == group)
+            & (df["measure"] == measure)
+        )
+    ]["dissimilarity"]
+    mean_dissimilarities = data_group.mean()
+    n = len(data_group)
+    standard_error = data_group.std() / np.sqrt(n)
+
+    return mean_dissimilarities, standard_error
+
+
 def t_test_dissimilarity(df, group1, group2, measure):
     # get data
     data_group1 = df[
@@ -207,6 +227,37 @@ def t_test_all_pairs(dg, measure):
             "pairs": groups_pairs,
             "p_value": p_values,
             "adjusted_p_value": adjusted_p_values,
+        }
+    )
+    return t_test_results_df
+
+
+# function to compute standard error intervals for all groups
+def t_standart_error_dissimilarity_all_groups(dg, measure):
+    # map groups
+    df = dg.copy()
+    df["group2"] = df["group2"].apply(map_group)
+    df["group1"] = df["group1"].apply(map_group)
+    print(df["group2"].unique())
+    groups = [
+        "untrained",
+        "master_frozen",
+        "pretrain_partial",
+        "pretrain_frozen",
+        "pretrain_unfrozen",
+    ]
+    mean_dissimilarities = []
+    standard_errors = []
+    for group in groups:
+        mean_diss, std_error = t_standart_error_dissimilarity(df, group, measure)
+        mean_dissimilarities.append(mean_diss)
+        standard_errors.append(std_error)
+    # store results in a dataframe
+    t_test_results_df = pd.DataFrame(
+        {
+            "group": groups,
+            "mean_dissimilarities": mean_dissimilarities,
+            "standard_errors": standard_errors,
         }
     )
     return t_test_results_df

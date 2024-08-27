@@ -22,14 +22,6 @@ warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprec
 os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
 
-# Semaphore to control the number of concurrent processes
-def worker(task):
-    try:
-        measure_dissimilarities(*task)
-    except Exception as e:
-        print(f"Error in worker: {e}")
-
-
 def find_accuracy_model(name, device):
     # Find the latest checkpoint file
     print(f"Finding accuracy for {name}")
@@ -139,20 +131,10 @@ def measure_dissimilarities(
         np.savez_compressed(npz_filepath, dissimilarities_model[measure])
         print(f"Dissimilarities saved in {npz_filepath}")
 
-    del dis_cka, dis_procrustes, dis_dsa
-    del curves_rnn, curves_mamba, curves_pca
-    del curves_names_rnn, curves_names_mamba
-    del model_dict_rnn, model_dict_mamba
-    del dissimilarities_model
-    # Clear GPU memory after each model processing
-    torch.cuda.empty_cache()
-    gc.collect()
     return
 
 
 def dissimilarity(args: argparse.Namespace) -> None:
-    multiprocessing.set_start_method("fork", force=True)
-    # set to spawn otherwise it will raise an error
     groups = [
         "untrained",
         "master_frozen",
@@ -212,9 +194,6 @@ def dissimilarity(args: argparse.Namespace) -> None:
                             if group != "untrained"
                             else float(-1)
                         )
-                        # Clear GPU memory after each model processing
-                        if torch.cuda.is_available():
-                            torch.cuda.empty_cache()
 
     curves_mamba = {}
     accuracies_mamba = {}
@@ -247,9 +226,6 @@ def dissimilarity(args: argparse.Namespace) -> None:
                         if group != "untrained"
                         else float(-1)
                     )
-                    # Clear GPU memory after each model processing
-                    if torch.cuda.is_available():
-                        torch.cuda.empty_cache()
 
     sys.stdout.flush()
     print(f"Computing dissimilarities for all models")
@@ -262,8 +238,6 @@ def dissimilarity(args: argparse.Namespace) -> None:
                 model_rnn = (
                     f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}_train.pth"
                 )
-                tasks = []
-                i = 0
                 d_model = 8
                 n_layers = 1
                 for learning_rate in config["mamba"]["parameters"]["learning_rate"]:
@@ -275,38 +249,19 @@ def dissimilarity(args: argparse.Namespace) -> None:
                             print(
                                 f"Compute dissimilarities for {model_rnn} and {model_mamba}"
                             )
-                            device = devices[i % len(devices)]
-                            tasks.append(
-                                (
-                                    model_rnn,
-                                    curves_rnn[model_rnn],
-                                    accuracies_rnn[model_rnn],
-                                    model_mamba,
-                                    curves_mamba[model_mamba],
-                                    accuracies_mamba[model_mamba],
-                                    groups,
-                                    args.taskset,
-                                    device,
-                                )
+                            device = devices[0]
+                            measure_dissimilarities(
+                                model_rnn,
+                                curves_rnn[model_rnn],
+                                accuracies_rnn[model_rnn],
+                                model_mamba,
+                                curves_mamba[model_mamba],
+                                accuracies_mamba[model_mamba],
+                                groups,
+                                args.taskset,
+                                device,
                             )
-                            i += 1
                             computed_pairs.add(pair)
-
-                print(f"Number of tasks: {len(tasks)}")
-
-                # Create a process for each task and pass the semaphore
-                processes = [
-                    multiprocessing.Process(target=worker, args=(task,))
-                    for task in tasks
-                ]
-
-                # Start all processes
-                for process in processes:
-                    process.start()
-
-                # Wait for all processes to finish
-                for process in processes:
-                    process.join()
 
 
 if __name__ == "__main__":
