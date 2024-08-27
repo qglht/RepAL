@@ -262,6 +262,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                                 device,
                             )
                             computed_pairs.add(pair)
+    return
 
 
 if __name__ == "__main__":

@@ -13,13 +13,13 @@ module load python/miniconda3
 source activate repal3
 
 
-(python -m src.dissimilarity_pairwise_rnnvsmamba --taskset PDM) &
+(python -m src.dissimilarity_pairwise_rnnvsrnn --taskset PDM) &
 
 # PID of the application
 APP_PID=$!
 
 # Log file path
-LOG_FILE=gpu_usage/dissimilarities_rnnvsmamba_PDM_gpu_usage.log
+LOG_FILE=gpu_usage/dissimilarities_rnnvsrnn_PDM_gpu_usage.log
 
 # Monitor GPU status every 600 seconds (5 minutes) until the application finishes
 while kill -0 $APP_PID 2>/dev/null; do
