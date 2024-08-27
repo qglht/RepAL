@@ -1,4 +1,6 @@
+from math import e
 from pdb import run
+from tabnanny import check
 import warnings
 
 from matplotlib.pylab import f
@@ -527,26 +529,18 @@ def dissimilarity_over_learning(
             models_to_compare = []
 
             # if pretrain in group1 and group2, load checkpoints at os.path.join(f"models/{group}", model_name + f"_pretrain.pth")
-            if "pretrain" in group1 and "pretrain" in group2:
-                path_pretrain_1 = os.path.join(
-                    f"models/{taskset}/{group1}", model_name + f"_pretrain.pth"
+            if "pretrain" in group1:
+                path_pretrain_folder1 = os.path.join(
+                    f"models/{taskset}/{group1}", model_name + f"_pretrain"
                 )
-                path_pretrain_2 = os.path.join(
-                    f"models/{taskset}/{group2}", model_name + f"_pretrain.pth"
+                pretrain_checkpoint_files_1 = find_checkpoints(path_pretrain_folder1)
+                checkpoint_files_1 = pretrain_checkpoint_files_1 + checkpoint_files_1
+            if "pretrain" in group2:
+                path_pretrain_folder2 = os.path.join(
+                    f"models/{taskset}/{group2}", model_name + f"_pretrain"
                 )
-                run_model1_pretrain = main.load_model(
-                    path_pretrain_1,
-                    hp1,
-                    RNNLayer,
-                    device=device,
-                )
-                run_model2_pretrain = main.load_model(
-                    path_pretrain_2,
-                    hp2,
-                    RNNLayer,
-                    device=device,
-                )
-                models_to_compare.extend([(run_model1_pretrain, run_model2_pretrain)])
+                pretrain_checkpoint_files_2 = find_checkpoints(path_pretrain_folder2)
+                checkpoint_files_2 = pretrain_checkpoint_files_2 + checkpoint_files_2
 
             cka_measure = similarity.make("measure.sim_metric.cka-angular-score")
             procrustes_measure = similarity.make(
@@ -561,19 +555,39 @@ def dissimilarity_over_learning(
                     for epoch in index_epochs:
                         run_model1_copy = copy.deepcopy(run_model1)
                         run_model2_copy = copy.deepcopy(run_model2)
-                        checkpoint1 = torch.load(
-                            os.path.join(
-                                path_train_folder1,
-                                checkpoint_files_1[index_epochs.index(epoch)],
-                            ),
-                            map_location=device,
-                        )
+                        try:
+                            checkpoint1 = torch.load(
+                                os.path.join(
+                                    path_train_folder1,
+                                    checkpoint_files_1[index_epochs.index(epoch)],
+                                ),
+                                map_location=device,
+                            )
+                        except:
+                            checkpoint1 = torch.load(
+                                os.path.join(
+                                    path_pretrain_folder1,
+                                    checkpoint_files_1[index_epochs.index(epoch)],
+                                ),
+                                map_location=device,
+                            )
                         run_model1_copy = load_model_jit(run_model1_copy, checkpoint1)
                         accuracy_1 = float(checkpoint1["log"]["perf_min"][-1])
-                        checkpoint2 = torch.load(
-                            os.path.join(path_train_folder2, checkpoint_files_2[epoch]),
-                            map_location=device,
-                        )
+                        try:
+                            checkpoint2 = torch.load(
+                                os.path.join(
+                                    path_train_folder2, checkpoint_files_2[epoch]
+                                ),
+                                map_location=device,
+                            )
+                        except:
+                            checkpoint2 = torch.load(
+                                os.path.join(
+                                    path_pretrain_folder2,
+                                    checkpoint_files_2[epoch],
+                                ),
+                                map_location=device,
+                            )
                         run_model2_copy = load_model_jit(run_model2_copy, checkpoint2)
                         accuracy_2 = float(checkpoint2["log"]["perf_min"][-1])
                         models_to_compare.extend([(run_model1_copy, run_model2_copy)])
@@ -586,19 +600,39 @@ def dissimilarity_over_learning(
                     for epoch in index_epochs:
                         run_model1_copy = copy.deepcopy(run_model1)
                         run_model2_copy = copy.deepcopy(run_model2)
-                        checkpoint1 = torch.load(
-                            os.path.join(path_train_folder1, checkpoint_files_1[epoch]),
-                            map_location=device,
-                        )
+                        try:
+                            checkpoint1 = torch.load(
+                                os.path.join(
+                                    path_train_folder1, checkpoint_files_1[epoch]
+                                ),
+                                map_location=device,
+                            )
+                        except:
+                            checkpoint1 = torch.load(
+                                os.path.join(
+                                    path_pretrain_folder1,
+                                    checkpoint_files_1[epoch],
+                                ),
+                                map_location=device,
+                            )
                         run_model1_copy = load_model_jit(run_model1_copy, checkpoint1)
                         accuracy_1 = float(checkpoint1["log"]["perf_min"][-1])
-                        checkpoint2 = torch.load(
-                            os.path.join(
-                                path_train_folder2,
-                                checkpoint_files_2[index_epochs.index(epoch)],
-                            ),
-                            map_location=device,
-                        )
+                        try:
+                            checkpoint2 = torch.load(
+                                os.path.join(
+                                    path_train_folder2,
+                                    checkpoint_files_2[index_epochs.index(epoch)],
+                                ),
+                                map_location=device,
+                            )
+                        except:
+                            checkpoint2 = torch.load(
+                                os.path.join(
+                                    path_pretrain_folder2,
+                                    checkpoint_files_2[index_epochs.index(epoch)],
+                                ),
+                                map_location=device,
+                            )
                         run_model2_copy = load_model_jit(run_model2_copy, checkpoint2)
                         accuracy_2 = float(checkpoint2["log"]["perf_min"][-1])
                         models_to_compare.extend([(run_model1_copy, run_model2_copy)])
@@ -700,26 +734,18 @@ def dissimilarity_over_learning_mamba(
             models_to_compare = []
 
             # if pretrain in group1 and group2, load checkpoints at os.path.join(f"models/{group}", model_name + f"_pretrain.pth")
-            if "pretrain" in group1 and "pretrain" in group2:
-                path_pretrain_1 = os.path.join(
-                    f"models/mamba/{taskset}/{group1}", model_name + f"_pretrain.pth"
+            if "pretrain" in group1:
+                path_pretrain_folder1 = os.path.join(
+                    f"models/mamba/{taskset}/{group1}", model_name + f"_pretrain"
                 )
-                path_pretrain_2 = os.path.join(
-                    f"models/mamba/{taskset}/{group2}", model_name + f"_pretrain.pth"
+                pretrain_checkpoint_files_1 = find_checkpoints(path_pretrain_folder1)
+                checkpoint_files_1 = pretrain_checkpoint_files_1 + checkpoint_files_1
+            if "pretrain" in group2:
+                path_pretrain_folder2 = os.path.join(
+                    f"models/mamba/{taskset}/{group2}", model_name + f"_pretrain"
                 )
-                run_model1_pretrain = main.load_model_mamba(
-                    path_pretrain_1,
-                    hp1,
-                    lm_config1,
-                    device=device,
-                )
-                run_model2_pretrain = main.load_model_mamba(
-                    path_pretrain_2,
-                    hp2,
-                    lm_config2,
-                    device=device,
-                )
-                models_to_compare.extend([(run_model1_pretrain, run_model2_pretrain)])
+                pretrain_checkpoint_files_2 = find_checkpoints(path_pretrain_folder2)
+                checkpoint_files_2 = pretrain_checkpoint_files_2 + checkpoint_files_2
 
             cka_measure = similarity.make("measure.sim_metric.cka-angular-score")
             procrustes_measure = similarity.make(
@@ -734,19 +760,39 @@ def dissimilarity_over_learning_mamba(
                     for epoch in index_epochs:
                         run_model1_copy = copy.deepcopy(run_model1)
                         run_model2_copy = copy.deepcopy(run_model2)
-                        checkpoint1 = torch.load(
-                            os.path.join(
-                                path_train_folder1,
-                                checkpoint_files_1[index_epochs.index(epoch)],
-                            ),
-                            map_location=device,
-                        )
+                        try:
+                            checkpoint1 = torch.load(
+                                os.path.join(
+                                    path_train_folder1,
+                                    checkpoint_files_1[index_epochs.index(epoch)],
+                                ),
+                                map_location=device,
+                            )
+                        except:
+                            checkpoint1 = torch.load(
+                                os.path.join(
+                                    path_pretrain_folder1,
+                                    checkpoint_files_1[index_epochs.index(epoch)],
+                                ),
+                                map_location=device,
+                            )
                         run_model1_copy = load_model_jit(run_model1_copy, checkpoint1)
                         accuracy_1 = float(checkpoint1["log"]["perf_min"][-1])
-                        checkpoint2 = torch.load(
-                            os.path.join(path_train_folder2, checkpoint_files_2[epoch]),
-                            map_location=device,
-                        )
+                        try:
+                            checkpoint2 = torch.load(
+                                os.path.join(
+                                    path_train_folder2, checkpoint_files_2[epoch]
+                                ),
+                                map_location=device,
+                            )
+                        except:
+                            checkpoint2 = torch.load(
+                                os.path.join(
+                                    path_pretrain_folder2,
+                                    checkpoint_files_2[epoch],
+                                ),
+                                map_location=device,
+                            )
                         run_model2_copy = load_model_jit(run_model2_copy, checkpoint2)
                         accuracy_2 = float(checkpoint2["log"]["perf_min"][-1])
                         models_to_compare.extend([(run_model1_copy, run_model2_copy)])
@@ -759,19 +805,39 @@ def dissimilarity_over_learning_mamba(
                     for epoch in index_epochs:
                         run_model1_copy = copy.deepcopy(run_model1)
                         run_model2_copy = copy.deepcopy(run_model2)
-                        checkpoint1 = torch.load(
-                            os.path.join(path_train_folder1, checkpoint_files_1[epoch]),
-                            map_location=device,
-                        )
+                        try:
+                            checkpoint1 = torch.load(
+                                os.path.join(
+                                    path_train_folder1, checkpoint_files_1[epoch]
+                                ),
+                                map_location=device,
+                            )
+                        except:
+                            checkpoint1 = torch.load(
+                                os.path.join(
+                                    path_pretrain_folder1,
+                                    checkpoint_files_1[epoch],
+                                ),
+                                map_location=device,
+                            )
                         run_model1_copy = load_model_jit(run_model1_copy, checkpoint1)
                         accuracy_1 = float(checkpoint1["log"]["perf_min"][-1])
-                        checkpoint2 = torch.load(
-                            os.path.join(
-                                path_train_folder2,
-                                checkpoint_files_2[index_epochs.index(epoch)],
-                            ),
-                            map_location=device,
-                        )
+                        try:
+                            checkpoint2 = torch.load(
+                                os.path.join(
+                                    path_train_folder2,
+                                    checkpoint_files_2[index_epochs.index(epoch)],
+                                ),
+                                map_location=device,
+                            )
+                        except:
+                            checkpoint2 = torch.load(
+                                os.path.join(
+                                    path_pretrain_folder2,
+                                    checkpoint_files_2[index_epochs.index(epoch)],
+                                ),
+                                map_location=device,
+                            )
                         run_model2_copy = load_model_jit(run_model2_copy, checkpoint2)
                         accuracy_2 = float(checkpoint2["log"]["perf_min"][-1])
                         models_to_compare.extend([(run_model1_copy, run_model2_copy)])
