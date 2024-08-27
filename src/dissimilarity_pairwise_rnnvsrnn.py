@@ -230,7 +230,7 @@ def dissimilarity(args: argparse.Namespace) -> None:
                                             pair = tuple(sorted((model1, model2)))
                                             if pair not in computed_pairs:
                                                 print(
-                                                    f"Compute dissimilarities for {mode1} and {model2}"
+                                                    f"Compute dissimilarities for {model1} and {model2}"
                                                 )
                                                 measure_dissimilarities(
                                                     model1,
