@@ -18,30 +18,29 @@ os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
 if __name__ == "__main__":
     # pipeline("GoNogo", "untrained", "leaky_gru", "leaky_relu", 128, 0.001, 128, "cpu")
-    get_dynamics_rnn(
-        "leaky_gru",
-        "leaky_relu",
-        128,
-        0.01,
-        128,
-        "leaky_gru_leaky_relu_128_0.01_128_train.pth",
-        "master",
-        "PDM",
-        device="cpu",
-        n_components=20,
-    )
-    # pipeline_mamba("PDM", "master", 16, 1, 1, True, 0.01, 16, "cpu")
-    # get_dynamics_mamba(
-    #     16,
-    #     1,
+    # get_dynamics_rnn(
+    #     "leaky_gru",
+    #     "leaky_relu",
+    #     128,
     #     0.01,
-    #     16,
-    #     "mamba_16_1_0.01_16_train.pth",
+    #     128,
+    #     "leaky_gru_leaky_relu_128_0.01_128_train.pth",
     #     "master",
     #     "PDM",
-    #     "cpu",
-    #     n_components=3,
+    #     device="cpu",
     # )
+    # )
+    # pipeline_mamba("PDM", "master", 16, 1, 1, True, 0.01, 16, "cpu")
+    get_dynamics_mamba(
+        16,
+        1,
+        0.01,
+        128,
+        "mamba_16_1_0.01_128_train.pth",
+        "master",
+        "PDM",
+        "cpu",
+    )
     # get_dynamics_rnn(
     #     "leaky_gru",
     #     "relu",

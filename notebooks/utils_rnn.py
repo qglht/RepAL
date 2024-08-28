@@ -316,11 +316,11 @@ def find_group_pairs_master(config, taskset):
     # remove the (master, master) pair
     pairs = [pair for pair in pairs if pair[0] != pair[1]]
     # remove the pair containign unfrozen and the one containing master_frozen
-    pairs = [
-        pair
-        for pair in pairs
-        if pair[0] != "pretrain_unfrozen" and pair[1] != "pretrain_unfrozen"
-    ]
+    # pairs = [
+    #     pair
+    #     for pair in pairs
+    #     if pair[0] != "pretrain_unfrozen" and pair[1] != "pretrain_unfrozen"
+    # ]
     pairs = [
         pair for pair in pairs if pair[0] != "untrained" and pair[1] != "untrained"
     ]
@@ -396,7 +396,7 @@ def get_dissimilarities_groups(taskset):
     for group_training in groups_training:
         path = f"../data/dissimilarities_over_learning/{taskset}/{group_training}"
         measures = ["cka", "dsa", "procrustes", "accuracy_1", "accuracy_2"]
-        sampling = [0, 25, 50, 75, 100]
+        sampling = [i * 10 for i in range(11)]
         dissimilarities = {measure: [] for measure in measures}
 
         for measure in measures:
@@ -421,11 +421,11 @@ def get_dissimilarities_groups(taskset):
                             sampling[i + 1] / 100 * (dissimilarity.shape[0])
                         )
                         dissimilarities_interpolated[measure][i + 1].append(
-                            np.median(dissimilarity[index_start:index_end])
+                            np.mean(dissimilarity[index_start:index_end])
                         )
         for measure in measures:
             for group in range(len(sampling)):
-                dissimilarities_interpolated[measure][group] = np.nanmedian(
+                dissimilarities_interpolated[measure][group] = np.nanmean(
                     dissimilarities_interpolated[measure][group]
                 )
         dissimilarities_groups[group_training] = dissimilarities_interpolated
@@ -457,7 +457,7 @@ def get_dissimilarities_shared_task_shared_curriculum(
             y_new = []
             for i in range(len(x_values)):
                 y_new.append(
-                    np.nanmedian([diss[1][i] for diss in diss_cc[measure][shared]])
+                    np.nanmean([diss[1][i] for diss in diss_cc[measure][shared]])
                 )
             diss_cc[measure][shared] = [x_new, y_new]
     return diss_cc

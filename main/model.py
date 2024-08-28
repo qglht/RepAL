@@ -5,7 +5,7 @@ from torch import nn, jit
 import numpy as np
 import copy
 from mambapy.mamba_lm import MambaLM, MambaLMConfig
-from mambapy.mamba import Mamba, MambaConfig, RMSNorm
+from mambapy.mamba import ResidualBlock, MambaConfig, RMSNorm
 import ipdb
 
 
@@ -92,6 +92,45 @@ class Run_Model(nn.Module):  # (jit.ScriptModule):
         torch.save(self.model.state_dict(), path)
 
 
+class Mamba(nn.Module):
+    def __init__(self, config: MambaConfig):
+        super().__init__()
+
+        self.config = config
+
+        self.layers = nn.ModuleList(
+            [ResidualBlock(config) for _ in range(config.n_layers)]
+        )
+
+    def forward(self, x, stop_at_layer=None):
+        # x : (B, L, D)
+
+        # y : (B, L, D)
+
+        for i, layer in enumerate(self.layers):
+            if stop_at_layer is not None:
+                if i > stop_at_layer:
+                    return x
+                else:
+                    x = layer(x)
+            else:
+                x = layer(x)
+
+        return x
+
+    def step(self, x, caches):
+        # x : (B, L, D)
+        # caches : [cache(layer) for all layers], cache : (h, inputs)
+
+        # y : (B, L, D)
+        # caches : [cache(layer) for all layers], cache : (h, inputs)
+
+        for i, layer in enumerate(self.layers):
+            x, caches[i] = layer.step(x, caches[i])
+
+        return x, caches
+
+
 class MambaSupervGym(MambaLM):
     def __init__(self, hp, lm_config, device):
         super().__init__(lm_config)
@@ -156,6 +195,17 @@ class MambaSupervGym(MambaLM):
             labels,
         )
 
+    def forward_up_to(self, tokens, layer):
+        # tokens : (B, L)
+        # layer (1->n_layers): will stop the forward pass just after this layer
+
+        # x : (B, L, D) activations after {layer}
+
+        x = self.embedding(tokens)
+        x = self.mamba(x, stop_at_layer=layer)
+
+        return x
+
     def get_activations(self, token):
         """Function for one time step at a time: to do it for all time steps, loop for first dimension
 
@@ -173,36 +223,40 @@ class MambaSupervGym(MambaLM):
 
         # loop over first dimension of token
         # create cache for each layer
-        cache_init = [
-            (
-                None,
-                torch.zeros(
-                    (
-                        token.shape[0],
-                        int(self.lm_config.d_model * self.lm_config.expand_factor),
-                        self.hp["n_input"],
-                    )
-                ).to(self.device),
-            )
-            for _ in range(self.lm_config.n_layers)
-        ]
-        caches_list = []
-        caches = cache_init
-        for i in range(token.shape[1]):
-            # TODO : check change in cache over caches
-            x = self.embedding(token[:, i, :])
-            x, caches = self.mamba.step(x, caches)
-            caches_list.append(copy.deepcopy(caches))
-        # concatenate all the caches
+        # cache_init = [
+        #     (
+        #         None,
+        #         torch.zeros(
+        #             (
+        #                 token.shape[0],
+        #                 int(self.lm_config.d_model * self.lm_config.expand_factor),
+        #                 self.hp["n_input"],
+        #             )
+        #         ).to(self.device),
+        #     )
+        #     for _ in range(self.lm_config.n_layers)
+        # ]
+        # caches_list = []
+        # caches = cache_init
+        # for i in range(token.shape[1]):
+        #     # TODO : check change in cache over caches
+        #     x = self.embedding(token[:, i, :])
+        #     x, caches = self.mamba.step(x, caches)
+        #     caches_list.append(copy.deepcopy(caches))
+        # # concatenate all the caches
 
-        caches_hidden = torch.stack(
-            [caches_list[i][0][0] for i in range(len(caches_list))], dim=0
-        )
-        hidden = caches_hidden.reshape(
-            caches_hidden.shape[0],
-            caches_hidden.shape[1],
-            caches_hidden.shape[2] * caches_hidden.shape[3],
-        )
+        # caches_hidden = torch.stack(
+        #     [caches_list[i][0][0] for i in range(len(caches_list))], dim=0
+        # )
+        # hidden = caches_hidden.reshape(
+        #     caches_hidden.shape[0],
+        #     caches_hidden.shape[1],
+        #     caches_hidden.shape[2] * caches_hidden.shape[3],
+        # )
+        # return hidden
+        hidden = self.forward_up_to(token, 1)
+        # switch first and second dimensions
+        hidden = hidden.permute(1, 0, 2)
         return hidden
 
     def save(self, path):

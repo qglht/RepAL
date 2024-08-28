@@ -164,42 +164,38 @@ def compute_pca(h, n_components=3):
 
 def compute_common_pca(h_list, n_components=3):
     # here h is a list of dictionaries, each containing activations for a different rule
-    print(f"len(h_list): {len(h_list)}")
     h_list = [h if torch.is_tensor(h) else torch.tensor(h) for h in h_list]
     # print the shapes of the tensors in h_list
     for i, h in enumerate(h_list):
-        print(f"h_list[{i}].shape: {h.shape}")
 
     # equalize n_neurons
 
-    # Define the target number of neurons (minimum n_neurons)
-    min_neurons = min(h_list[0].shape[2], h_list[1].shape[2])
-    max_neurons = max(h_list[0].shape[2], h_list[1].shape[2])
+    # test if more than 2 shapes:
 
-    if min_neurons < max_neurons:
-        # index to reduce
-        index_to_reduce = 0 if h_list[0].shape[2] > min_neurons else 1
-        # find the h_list with the max number of neurons
-        h_to_reduce = h_list[index_to_reduce]
+    if h_list[0].dim() == 3:
+        if len(h_list) > 1 and h_list[0].shape[2] != h_list[1].shape[2]:
+            # Define the target number of neurons (minimum n_neurons)
+            min_neurons = min(h_list[0].shape[2], h_list[1].shape[2])
 
-        # Flatten the first two dimensions (n_time and n_batch) for PCA
-        flattened_h1 = h_to_reduce.reshape(-1, h_to_reduce.shape[2])
+            # index to reduce
+            index_to_reduce = 0 if h_list[0].shape[2] > min_neurons else 1
+            # find the h_list with the max number of neurons
+            h_to_reduce = h_list[index_to_reduce]
 
-        # Apply PCA to reduce h_list[1] to min_neurons
-        pca = PCA(n_components=min_neurons)
-        reduced_h1 = pca.fit_transform(flattened_h1)
+            # Flatten the first two dimensions (n_time and n_batch) for PCA
+            flattened_h1 = h_to_reduce.reshape(-1, h_to_reduce.shape[2])
 
-        # Reshape back to original n_time and n_batch dimensions
-        reduced_h1 = torch.tensor(reduced_h1).reshape(
-            h_to_reduce.shape[0], h_to_reduce.shape[1], min_neurons
-        )
+            # Apply PCA to reduce h_list[1] to min_neurons
+            pca = PCA(n_components=min_neurons)
+            reduced_h1 = pca.fit_transform(flattened_h1)
 
-        # Replace the original h_list[1] with the reduced version
-        h_list[index_to_reduce] = reduced_h1
+            # Reshape back to original n_time and n_batch dimensions
+            reduced_h1 = torch.tensor(reduced_h1).reshape(
+                h_to_reduce.shape[0], h_to_reduce.shape[1], min_neurons
+            )
 
-        # # print the shapes of the tensors in h_list transformed
-        for i, h in enumerate(h_list):
-            print(f"h_list[{i}].shape after Transformation: {h.shape}")
+            # Replace the original h_list[1] with the reduced version
+            h_list[index_to_reduce] = reduced_h1
 
     data = torch.cat(h_list, dim=1)
 
@@ -233,7 +229,6 @@ def compute_common_pca(h_list, n_components=3):
     pca_h_list = []
     start = 0
     for i in range(len(h_list)):
-        print(f"i: {i}")
         end = start + h_list[i].shape[1]
         curve = data_trans[:, start:end, :].cpu()
         curve = curve.detach().numpy()
