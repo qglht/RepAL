@@ -316,11 +316,11 @@ def find_group_pairs_master(config, taskset):
     # remove the (master, master) pair
     pairs = [pair for pair in pairs if pair[0] != pair[1]]
     # remove the pair containign unfrozen and the one containing master_frozen
-    # pairs = [
-    #     pair
-    #     for pair in pairs
-    #     if pair[0] != "pretrain_unfrozen" and pair[1] != "pretrain_unfrozen"
-    # ]
+    pairs = [
+        pair
+        for pair in pairs
+        if pair[0] != "pretrain_unfrozen" and pair[1] != "pretrain_unfrozen"
+    ]
     pairs = [
         pair for pair in pairs if pair[0] != "untrained" and pair[1] != "untrained"
     ]
@@ -384,7 +384,7 @@ def dissimilarities_per_percentage_of_shared_task(group_pairs, df):
     return dissimilarities_per_shared_task
 
 
-def get_dissimilarities_groups(taskset):
+def get_dissimilarities_groups(taskset, models_trained_per_group):
     # take all the folder names under data/dissimilarities_over_learning/{taskset}
     groups_training = os.listdir(f"../data/dissimilarities_over_learning/{taskset}")
     groups_training = [
@@ -396,21 +396,33 @@ def get_dissimilarities_groups(taskset):
     for group_training in groups_training:
         path = f"../data/dissimilarities_over_learning/{taskset}/{group_training}"
         measures = ["cka", "dsa", "procrustes", "accuracy_1", "accuracy_2"]
-        sampling = [i * 10 for i in range(11)]
+        sampling = [i * 5 for i in range(21)]
         dissimilarities = {measure: [] for measure in measures}
 
         for measure in measures:
             path_measure = os.path.join(path, measure)
             files = os.listdir(path_measure)
             for file in files:
-                file_path = os.path.join(path_measure, file)
-                if file_path.endswith(".npz"):
-                    with np.load(file_path) as data:
-                        dissimilarities[measure].append(data["arr_0"])
+                model_name = file.replace(".npz", "")
+                if group_training in models_trained_per_group:
+                    if model_name in models_trained_per_group[group_training]:
+                        file_path = os.path.join(path_measure, file)
+                        if file_path.endswith(".npz"):
+                            with np.load(file_path) as data:
+                                dissimilarities[measure].append(data["arr_0"])
+                    else:
+                        print(model_name)
+                else:
+                    file_path = os.path.join(path_measure, file)
+                    if file_path.endswith(".npz"):
+                        with np.load(file_path) as data:
+                            dissimilarities[measure].append(data["arr_0"])
         dissimilarities_interpolated = {
             measure: {group: [] for group in range(len(sampling))}
             for measure in measures
         }
+
+        # average to have the sampling
         for measure in measures:
             for dissimilarity in dissimilarities[measure]:
                 if dissimilarity.shape[0] > 4:
@@ -421,12 +433,16 @@ def get_dissimilarities_groups(taskset):
                             sampling[i + 1] / 100 * (dissimilarity.shape[0])
                         )
                         dissimilarities_interpolated[measure][i + 1].append(
-                            np.mean(dissimilarity[index_start:index_end])
+                            np.median(dissimilarity[index_start:index_end])
                         )
+
+        # average over the groups
         for measure in measures:
             for group in range(len(sampling)):
-                dissimilarities_interpolated[measure][group] = np.nanmean(
-                    dissimilarities_interpolated[measure][group]
+                dissimilarities_interpolated[measure][group] = (
+                    np.nanmean(dissimilarities_interpolated[measure][group]),
+                    np.nanstd(dissimilarities_interpolated[measure][group])
+                    / np.sqrt(len(dissimilarities_interpolated[measure][group])),
                 )
         dissimilarities_groups[group_training] = dissimilarities_interpolated
     return dissimilarities_groups, groups_training
@@ -446,11 +462,23 @@ def get_dissimilarities_shared_task_shared_curriculum(
                 name_2 = pair[1] + "_" + pair[0]
                 if name_1 in dissimilarities_groups:
                     diss_cc[measure][shared].append(
-                        [x_values, dissimilarities_groups[name_1][measure]]
+                        [
+                            x_values,
+                            [
+                                dissimilarities_groups[name_1][measure][x][0]
+                                for x in range(len(x_values))
+                            ],
+                        ]
                     )
                 elif name_2 in dissimilarities_groups:
                     diss_cc[measure][shared].append(
-                        [x_values, dissimilarities_groups[name_2][measure]]
+                        [
+                            x_values,
+                            [
+                                dissimilarities_groups[name_2][measure][x][0]
+                                for x in range(len(x_values))
+                            ],
+                        ]
                     )
             # once all the pairs are added, we can interpolate the values
             x_new = x_values

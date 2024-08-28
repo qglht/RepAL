@@ -165,8 +165,6 @@ def compute_pca(h, n_components=3):
 def compute_common_pca(h_list, n_components=3):
     # here h is a list of dictionaries, each containing activations for a different rule
     h_list = [h if torch.is_tensor(h) else torch.tensor(h) for h in h_list]
-    # print the shapes of the tensors in h_list
-    for i, h in enumerate(h_list):
 
     # equalize n_neurons
 
@@ -196,6 +194,10 @@ def compute_common_pca(h_list, n_components=3):
 
             # Replace the original h_list[1] with the reduced version
             h_list[index_to_reduce] = reduced_h1
+
+            # # print the shapes of the tensors in h_list transformed
+            for i, h in enumerate(h_list):
+                print(f"h_list[{i}].shape after Transformation: {h.shape}")
 
     data = torch.cat(h_list, dim=1)
 
