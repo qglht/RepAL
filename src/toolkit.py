@@ -534,13 +534,13 @@ def dissimilarity_over_learning(
                     f"models/{taskset}/{group1}", model_name + f"_pretrain"
                 )
                 pretrain_checkpoint_files_1 = find_checkpoints(path_pretrain_folder1)
-                checkpoint_files_1 = pretrain_checkpoint_files_1 + checkpoint_files_1
+                checkpoint_files_1 = pretrain_checkpoint_files_1 if "unfrozen" in group1 else pretrain_checkpoint_files_1 + checkpoint_files_1
             if "pretrain" in group2:
                 path_pretrain_folder2 = os.path.join(
                     f"models/{taskset}/{group2}", model_name + f"_pretrain"
                 )
                 pretrain_checkpoint_files_2 = find_checkpoints(path_pretrain_folder2)
-                checkpoint_files_2 = pretrain_checkpoint_files_2 + checkpoint_files_2
+                checkpoint_files_2 = pretrain_checkpoint_files_2 if "unfrozen" in group2 else pretrain_checkpoint_files_2 + checkpoint_files_2
 
             cka_measure = similarity.make("measure.sim_metric.cka-angular-score")
             procrustes_measure = similarity.make(
