@@ -316,11 +316,11 @@ def find_group_pairs_master(config, taskset):
     # remove the (master, master) pair
     pairs = [pair for pair in pairs if pair[0] != pair[1]]
     # remove the pair containign unfrozen and the one containing master_frozen
-    pairs = [
-        pair
-        for pair in pairs
-        if pair[0] != "pretrain_unfrozen" and pair[1] != "pretrain_unfrozen"
-    ]
+    # pairs = [
+    #     pair
+    #     for pair in pairs
+    #     if pair[0] != "pretrain_unfrozen" and pair[1] != "pretrain_unfrozen"
+    # ]
     pairs = [
         pair for pair in pairs if pair[0] != "untrained" and pair[1] != "untrained"
     ]
