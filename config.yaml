@@ -172,7 +172,7 @@ GoNogo:
         frozen: True
 dsa:
   n_delays: 33
-  delay_interval: 3
+  delay_interval: 6
   rank: 100
   device: cuda
 simulations:

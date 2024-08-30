@@ -527,31 +527,28 @@ def dissimilarity_over_learning(
 
             # group models and establish correspondancy between epochs
             models_to_compare = []
-            pretrain1 = False
-            pretrain2 = False
+
             # if pretrain in group1 and group2, load checkpoints at os.path.join(f"models/{group}", model_name + f"_pretrain.pth")
-            if "pretrain" in group1:
-                path_pretrain_folder1 = os.path.join(
-                    f"models/{taskset}/{group1}", model_name + f"_pretrain"
+            if "pretrain" in group1 and "pretrain" in group2:
+                path_pretrain_1 = os.path.join(
+                    f"models/{taskset}/{group1}", model_name + f"_pretrain.pth"
                 )
-                pretrain_checkpoint_files_1 = find_checkpoints(path_pretrain_folder1)
-                checkpoint_files_1 = (
-                    pretrain_checkpoint_files_1 + checkpoint_files_1
-                    if "unfrozen" in group1
-                    else pretrain_checkpoint_files_1
+                path_pretrain_2 = os.path.join(
+                    f"models/{taskset}/{group2}", model_name + f"_pretrain.pth"
                 )
-                pretrain1 = True if "frozen" in group1 else False
-            if "pretrain" in group2:
-                path_pretrain_folder2 = os.path.join(
-                    f"models/{taskset}/{group2}", model_name + f"_pretrain"
+                run_model1_pretrain = main.load_model(
+                    path_pretrain_1,
+                    hp1,
+                    RNNLayer,
+                    device=device,
                 )
-                pretrain_checkpoint_files_2 = find_checkpoints(path_pretrain_folder2)
-                checkpoint_files_2 = (
-                    pretrain_checkpoint_files_2 + checkpoint_files_2
-                    if "unfrozen" in group2
-                    else pretrain_checkpoint_files_2
+                run_model2_pretrain = main.load_model(
+                    path_pretrain_2,
+                    hp2,
+                    RNNLayer,
+                    device=device,
                 )
-                pretrain2 = True if "frozen" in group2 else False
+                models_to_compare.extend([(run_model1_pretrain, run_model2_pretrain)])
 
             cka_measure = similarity.make("measure.sim_metric.cka-angular-score")
             procrustes_measure = similarity.make(
@@ -566,63 +563,25 @@ def dissimilarity_over_learning(
                     for epoch in index_epochs:
                         run_model1_copy = copy.deepcopy(run_model1)
                         run_model2_copy = copy.deepcopy(run_model2)
-                        if pretrain1:
-                            checkpoint1 = torch.load(
-                                os.path.join(
-                                    path_pretrain_folder1,
-                                    checkpoint_files_1[index_epochs.index(epoch)],
-                                ),
-                                map_location=device,
-                            )
-                        else:
-                            try:
-                                checkpoint1 = torch.load(
-                                    os.path.join(
-                                        path_pretrain_folder1,
-                                        checkpoint_files_1[index_epochs.index(epoch)],
-                                    ),
-                                    map_location=device,
-                                )
-                            except:
-                                checkpoint1 = torch.load(
-                                    os.path.join(
-                                        path_train_folder1,
-                                        checkpoint_files_1[index_epochs.index(epoch)],
-                                    ),
-                                    map_location=device,
-                                )
+                        checkpoint1 = torch.load(
+                            os.path.join(
+                                path_train_folder1,
+                                checkpoint_files_1[index_epochs.index(epoch)],
+                            ),
+                            map_location=device,
+                        )
                         run_model1_copy = load_model_jit(run_model1_copy, checkpoint1)
                         accuracy_1 = float(checkpoint1["log"]["perf_min"][-1])
-                        if pretrain2:
-                            checkpoint2 = torch.load(
-                                os.path.join(
-                                    path_pretrain_folder2,
-                                    checkpoint_files_2[epoch],
-                                ),
-                                map_location=device,
-                            )
-                        else:
-                            try:
-                                checkpoint2 = torch.load(
-                                    os.path.join(
-                                        path_pretrain_folder2,
-                                        checkpoint_files_2[epoch],
-                                    ),
-                                    map_location=device,
-                                )
-                            except:
-                                checkpoint2 = torch.load(
-                                    os.path.join(
-                                        path_train_folder2,
-                                        checkpoint_files_2[epoch],
-                                    ),
-                                    map_location=device,
-                                )
+                        checkpoint2 = torch.load(
+                            os.path.join(path_train_folder2, checkpoint_files_2[epoch]),
+                            map_location=device,
+                        )
                         run_model2_copy = load_model_jit(run_model2_copy, checkpoint2)
                         accuracy_2 = float(checkpoint2["log"]["perf_min"][-1])
                         models_to_compare.extend([(run_model1_copy, run_model2_copy)])
                         dissimilarities_over_learning["accuracy_1"].append(accuracy_1)
                         dissimilarities_over_learning["accuracy_2"].append(accuracy_2)
+
                 else:
                     index_epochs = corresponding_training_time(
                         len(checkpoint_files_2), len(checkpoint_files_1)
@@ -630,58 +589,19 @@ def dissimilarity_over_learning(
                     for epoch in index_epochs:
                         run_model1_copy = copy.deepcopy(run_model1)
                         run_model2_copy = copy.deepcopy(run_model2)
-                        if pretrain1:
-                            checkpoint1 = torch.load(
-                                os.path.join(
-                                    path_pretrain_folder1,
-                                    checkpoint_files_1[epoch],
-                                ),
-                                map_location=device,
-                            )
-                        else:
-                            try:
-                                checkpoint1 = torch.load(
-                                    os.path.join(
-                                        path_pretrain_folder1,
-                                        checkpoint_files_1[epoch],
-                                    ),
-                                    map_location=device,
-                                )
-                            except:
-                                checkpoint1 = torch.load(
-                                    os.path.join(
-                                        path_train_folder1, checkpoint_files_1[epoch]
-                                    ),
-                                    map_location=device,
-                                )
+                        checkpoint1 = torch.load(
+                            os.path.join(path_train_folder1, checkpoint_files_1[epoch]),
+                            map_location=device,
+                        )
                         run_model1_copy = load_model_jit(run_model1_copy, checkpoint1)
                         accuracy_1 = float(checkpoint1["log"]["perf_min"][-1])
-                        if pretrain2:
-                            checkpoint2 = torch.load(
-                                os.path.join(
-                                    path_pretrain_folder2,
-                                    checkpoint_files_2[index_epochs.index(epoch)],
-                                ),
-                                map_location=device,
-                            )
-                        else:
-                            try:
-                                checkpoint2 = torch.load(
-                                    os.path.join(
-                                        path_pretrain_folder2,
-                                        checkpoint_files_2[index_epochs.index(epoch)],
-                                    ),
-                                    map_location=device,
-                                )
-
-                            except:
-                                checkpoint2 = torch.load(
-                                    os.path.join(
-                                        path_train_folder2,
-                                        checkpoint_files_2[index_epochs.index(epoch)],
-                                    ),
-                                    map_location=device,
-                                )
+                        checkpoint2 = torch.load(
+                            os.path.join(
+                                path_train_folder2,
+                                checkpoint_files_2[index_epochs.index(epoch)],
+                            ),
+                            map_location=device,
+                        )
                         run_model2_copy = load_model_jit(run_model2_copy, checkpoint2)
                         accuracy_2 = float(checkpoint2["log"]["perf_min"][-1])
                         models_to_compare.extend([(run_model1_copy, run_model2_copy)])
@@ -783,23 +703,32 @@ def dissimilarity_over_learning_mamba(
             models_to_compare = []
 
             # if pretrain in group1 and group2, load checkpoints at os.path.join(f"models/{group}", model_name + f"_pretrain.pth")
-            if "pretrain" in group1:
-                path_pretrain_folder1 = os.path.join(
-                    f"models/mamba/{taskset}/{group1}", model_name + f"_pretrain"
+            if "pretrain" in group1 and "pretrain" in group2:
+                path_pretrain_1 = os.path.join(
+                    f"models/mamba/{taskset}/{group1}", model_name + f"_pretrain.pth"
                 )
-                pretrain_checkpoint_files_1 = find_checkpoints(path_pretrain_folder1)
-                checkpoint_files_1 = pretrain_checkpoint_files_1 + checkpoint_files_1
-            if "pretrain" in group2:
-                path_pretrain_folder2 = os.path.join(
-                    f"models/mamba/{taskset}/{group2}", model_name + f"_pretrain"
+                path_pretrain_2 = os.path.join(
+                    f"models/mamba/{taskset}/{group2}", model_name + f"_pretrain.pth"
                 )
-                pretrain_checkpoint_files_2 = find_checkpoints(path_pretrain_folder2)
-                checkpoint_files_2 = pretrain_checkpoint_files_2 + checkpoint_files_2
+                run_model1_pretrain = main.load_model_mamba(
+                    path_pretrain_1,
+                    hp1,
+                    lm_config1,
+                    device=device,
+                )
+                run_model2_pretrain = main.load_model_mamba(
+                    path_pretrain_2,
+                    hp2,
+                    lm_config2,
+                    device=device,
+                )
+                models_to_compare.extend([(run_model1_pretrain, run_model2_pretrain)])
 
             cka_measure = similarity.make("measure.sim_metric.cka-angular-score")
             procrustes_measure = similarity.make(
                 "measure.netrep.procrustes-angular-score"
             )
+
             if checkpoint_files_1 and checkpoint_files_2:
                 # get the models to compare
                 if len(checkpoint_files_1) < len(checkpoint_files_2):
@@ -809,142 +738,100 @@ def dissimilarity_over_learning_mamba(
                     for epoch in index_epochs:
                         run_model1_copy = copy.deepcopy(run_model1)
                         run_model2_copy = copy.deepcopy(run_model2)
-                        try:
-                            checkpoint1 = torch.load(
-                                os.path.join(
-                                    path_train_folder1,
-                                    checkpoint_files_1[index_epochs.index(epoch)],
-                                ),
-                                map_location=device,
-                            )
-                        except:
-                            checkpoint1 = torch.load(
-                                os.path.join(
-                                    path_pretrain_folder1,
-                                    checkpoint_files_1[index_epochs.index(epoch)],
-                                ),
-                                map_location=device,
-                            )
-                        run_model1_copy = load_model_jit(run_model1_copy, checkpoint1)
-                        accuracy_1 = float(checkpoint1["log"]["perf_min"][-1])
-                        try:
-                            checkpoint2 = torch.load(
-                                os.path.join(
-                                    path_train_folder2, checkpoint_files_2[epoch]
-                                ),
-                                map_location=device,
-                            )
-                        except:
-                            checkpoint2 = torch.load(
-                                os.path.join(
-                                    path_pretrain_folder2,
-                                    checkpoint_files_2[epoch],
-                                ),
-                                map_location=device,
-                            )
-                        run_model2_copy = load_model_jit(run_model2_copy, checkpoint2)
-                        accuracy_2 = float(checkpoint2["log"]["perf_min"][-1])
-                        models_to_compare.extend([(run_model1_copy, run_model2_copy)])
-                        dissimilarities_over_learning["accuracy_1"].append(accuracy_1)
-                        dissimilarities_over_learning["accuracy_2"].append(accuracy_2)
-                else:
-                    index_epochs = corresponding_training_time(
-                        len(checkpoint_files_2), len(checkpoint_files_1)
-                    )
-                    for epoch in index_epochs:
-                        run_model1_copy = copy.deepcopy(run_model1)
-                        run_model2_copy = copy.deepcopy(run_model2)
-                        try:
-                            checkpoint1 = torch.load(
-                                os.path.join(
-                                    path_train_folder1, checkpoint_files_1[epoch]
-                                ),
-                                map_location=device,
-                            )
-                        except:
-                            checkpoint1 = torch.load(
-                                os.path.join(
-                                    path_pretrain_folder1,
-                                    checkpoint_files_1[epoch],
-                                ),
-                                map_location=device,
-                            )
-                        run_model1_copy = load_model_jit(run_model1_copy, checkpoint1)
-                        accuracy_1 = float(checkpoint1["log"]["perf_min"][-1])
-                        try:
-                            checkpoint2 = torch.load(
-                                os.path.join(
-                                    path_train_folder2,
-                                    checkpoint_files_2[index_epochs.index(epoch)],
-                                ),
-                                map_location=device,
-                            )
-                        except:
-                            checkpoint2 = torch.load(
-                                os.path.join(
-                                    path_pretrain_folder2,
-                                    checkpoint_files_2[index_epochs.index(epoch)],
-                                ),
-                                map_location=device,
-                            )
-                        run_model2_copy = load_model_jit(run_model2_copy, checkpoint2)
-                        accuracy_2 = float(checkpoint2["log"]["perf_min"][-1])
-                        models_to_compare.extend([(run_model1_copy, run_model2_copy)])
-                        dissimilarities_over_learning["accuracy_1"].append(accuracy_1)
-                        dissimilarities_over_learning["accuracy_2"].append(accuracy_2)
-
-                # compute the curves for models and dissimilarities
-                curves = [
-                    (
-                        get_curves(tuple_model[0], all_rules, rnn=False),
-                        get_curves(tuple_model[1], all_rules, rnn=False),
-                    )
-                    for tuple_model in models_to_compare
-                ]
-
-                # compute common PCA for each checkpoint
-                curves_flattened = [
-                    [copy.deepcopy(curve[0]), copy.deepcopy(curve[1])]
-                    for curve in curves
-                ]
-                curves_reduced_list = []
-                for epoch_index in range(len(index_epochs)):
-                    curves_reduced, _ = main.compute_common_pca(
-                        curves_flattened[epoch_index], n_components=20
-                    )
-                    curves_reduced_list.append(curves_reduced)
-                curves = [
-                    (curves_reduced_list[i][0], curves_reduced_list[i][1])
-                    for i in range(len(curves_reduced_list))
-                ]
-
-                for epoch_index in range(len(index_epochs)):
-                    dissimilarities_over_learning["cka"].append(
-                        1 - cka_measure(curves[epoch_index][0], curves[epoch_index][1])
-                    )
-                    dissimilarities_over_learning["procrustes"].append(
-                        1
-                        - procrustes_measure(
-                            curves[epoch_index][0], curves[epoch_index][1]
+                        checkpoint1 = torch.load(
+                            os.path.join(
+                                path_train_folder1,
+                                checkpoint_files_1[index_epochs.index(epoch)],
+                            ),
+                            map_location=device,
                         )
-                    )
-                    dsa_comp = DSA.DSA(
-                        curves[epoch_index][0],
-                        curves[epoch_index][1],
-                        n_delays=config["dsa"]["n_delays"],
-                        rank=config["dsa"]["rank"],
-                        delay_interval=config["dsa"]["delay_interval"],
-                        verbose=True,
-                        iters=1000,
-                        lr=1e-2,
-                        device=device,
-                    )
-                    dissimilarities_over_learning["dsa"].append(dsa_comp.fit_score())
+                        run_model1_copy = load_model_jit(run_model1_copy, checkpoint1)
+                        accuracy_1 = float(checkpoint1["log"]["perf_min"][-1])
+                        checkpoint2 = torch.load(
+                            os.path.join(path_train_folder2, checkpoint_files_2[epoch]),
+                            map_location=device,
+                        )
+                        run_model2_copy = load_model_jit(run_model2_copy, checkpoint2)
+                        accuracy_2 = float(checkpoint2["log"]["perf_min"][-1])
+                        models_to_compare.extend([(run_model1_copy, run_model2_copy)])
+                        dissimilarities_over_learning["accuracy_1"].append(accuracy_1)
+                        dissimilarities_over_learning["accuracy_2"].append(accuracy_2)
 
-            for key, value in dissimilarities_over_learning.items():
-                dissimilarities_over_learning[key] = np.array(value)
+            else:
+                index_epochs = corresponding_training_time(
+                    len(checkpoint_files_2), len(checkpoint_files_1)
+                )
+                for epoch in index_epochs:
+                    run_model1_copy = copy.deepcopy(run_model1)
+                    run_model2_copy = copy.deepcopy(run_model2)
+                    checkpoint1 = torch.load(
+                        os.path.join(path_train_folder1, checkpoint_files_1[epoch]),
+                        map_location=device,
+                    )
+                    run_model1_copy = load_model_jit(run_model1_copy, checkpoint1)
+                    accuracy_1 = float(checkpoint1["log"]["perf_min"][-1])
+                    checkpoint2 = torch.load(
+                        os.path.join(
+                            path_train_folder2,
+                            checkpoint_files_2[index_epochs.index(epoch)],
+                        ),
+                        map_location=device,
+                    )
+                    run_model2_copy = load_model_jit(run_model2_copy, checkpoint2)
+                    accuracy_2 = float(checkpoint2["log"]["perf_min"][-1])
+                    models_to_compare.extend([(run_model1_copy, run_model2_copy)])
+                    dissimilarities_over_learning["accuracy_1"].append(accuracy_1)
+                    dissimilarities_over_learning["accuracy_2"].append(accuracy_2)
 
-        return dissimilarities_over_learning
+            # compute the curves for models and dissimilarities
+            curves = [
+                (
+                    get_curves(tuple_model[0], all_rules, rnn=False),
+                    get_curves(tuple_model[1], all_rules, rnn=False),
+                )
+                for tuple_model in models_to_compare
+            ]
+
+            # compute common PCA for each checkpoint
+            curves_flattened = [
+                [copy.deepcopy(curve[0]), copy.deepcopy(curve[1])] for curve in curves
+            ]
+            curves_reduced_list = []
+            for epoch_index in range(len(index_epochs)):
+                curves_reduced, _ = main.compute_common_pca(
+                    curves_flattened[epoch_index], n_components=20
+                )
+                curves_reduced_list.append(curves_reduced)
+            curves = [
+                (curves_reduced_list[i][0], curves_reduced_list[i][1])
+                for i in range(len(curves_reduced_list))
+            ]
+
+            for epoch_index in range(len(index_epochs)):
+                dissimilarities_over_learning["cka"].append(
+                    1 - cka_measure(curves[epoch_index][0], curves[epoch_index][1])
+                )
+                dissimilarities_over_learning["procrustes"].append(
+                    1
+                    - procrustes_measure(curves[epoch_index][0], curves[epoch_index][1])
+                )
+                dsa_comp = DSA.DSA(
+                    curves[epoch_index][0],
+                    curves[epoch_index][1],
+                    n_delays=config["dsa"]["n_delays"],
+                    rank=config["dsa"]["rank"],
+                    delay_interval=config["dsa"]["delay_interval"],
+                    verbose=True,
+                    iters=1000,
+                    lr=1e-2,
+                    device=device,
+                )
+                dissimilarities_over_learning["dsa"].append(dsa_comp.fit_score())
+
+        for key, value in dissimilarities_over_learning.items():
+            dissimilarities_over_learning[key] = np.array(value)
+
+    return dissimilarities_over_learning
 
 
 def dissimilarity_within_learning(

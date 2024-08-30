@@ -216,13 +216,13 @@ class MambaSupervGym(MambaLM):
         Returns:
             _type_: _description_
         """
-        # token : (B)
-        # caches : [cache(layer) for all layers], cache : (h, inputs)
-        # logits : (B, vocab_size)
-        # caches : [cache(layer) for all layers], cache : (h, inputs)
+        # # token : (B)
+        # # caches : [cache(layer) for all layers], cache : (h, inputs)
+        # # logits : (B, vocab_size)
+        # # caches : [cache(layer) for all layers], cache : (h, inputs)
 
-        # loop over first dimension of token
-        # create cache for each layer
+        # # loop over first dimension of token
+        # # create cache for each layer
         # cache_init = [
         #     (
         #         None,

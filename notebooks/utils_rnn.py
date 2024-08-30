@@ -360,9 +360,9 @@ def find_group_pairs_master(config, taskset):
 
 def dissimilarities_per_percentage_of_shared_task(group_pairs, df):
     dissimilarities_per_shared_task = {
-        "dsa": {perc: [] for perc in group_pairs.keys()},
-        "cka": {perc: [] for perc in group_pairs.keys()},
-        "procrustes": {perc: [] for perc in group_pairs.keys()},
+        "dsa": {perc: {} for perc in group_pairs.keys()},
+        "cka": {perc: {} for perc in group_pairs.keys()},
+        "procrustes": {perc: {} for perc in group_pairs.keys()},
     }
     for shared_tasks, pairs in group_pairs.items():
         for pair in pairs:
@@ -375,12 +375,24 @@ def dissimilarities_per_percentage_of_shared_task(group_pairs, df):
             # if pair == ("pretrain_frozen", "pretrain_unfrozen"):
             #     print(data_pair)
             for measure in measures:
-                data_pair_mesure = data_pair[data_pair["measure"] == measure][
-                    "dissimilarity"
-                ].tolist()
-                dissimilarities_per_shared_task[measure][shared_tasks].extend(
-                    data_pair_mesure
-                )
+                data_pair_measure = data_pair[data_pair["measure"] == measure]
+                for i, row in data_pair_measure.iterrows():
+                    model = (
+                        row["model_type"]
+                        + "_"
+                        + row["activation"]
+                        + "_"
+                        + str(row["hidden_size"])
+                        + "_"
+                        + str(row["lr"])
+                        + "_"
+                        + str(row["batch_size"])
+                    )
+                    print(row["dissimilarity"])
+                    dissimilarities_per_shared_task[measure][shared_tasks][model] = []
+                    dissimilarities_per_shared_task[measure][shared_tasks][
+                        model
+                    ].append(row["dissimilarity"])
     return dissimilarities_per_shared_task
 
 

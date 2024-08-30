@@ -83,8 +83,6 @@ def measure_dissimilarities(
                     [curve_i, curve_j], n_components=20
                 )
                 print(f"Computing dissimilarities between {groups[i]} and {groups[j]}")
-                curve_i = curves_pca[0].mean(axis=1)
-                curve_j = curves_pca[1].mean(axis=1)
                 dis_cka[i, j] = 1 - cka_measure(
                     curve_i,
                     curve_j,
