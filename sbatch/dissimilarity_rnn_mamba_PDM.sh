@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --time=24:00:00
-#SBATCH --job-name=mamba_dissimilarities_PDM_job
-#SBATCH --gres=gpu:8
+#SBATCH --job-name=RNN_VS_Mamba_dissimilarities_PDM_job
+#SBATCH --gres=gpu:1
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=oxfd2547@ox.ac.uk
 
@@ -19,7 +19,7 @@ source activate repal3
 APP_PID=$!
 
 # Log file path
-LOG_FILE=gpu_usage/dissimilarities_PDM_gpu_usage.log
+LOG_FILE=gpu_usage/dissimilarities_rnnvsmamba_PDM_gpu_usage.log
 
 # Monitor GPU status every 600 seconds (5 minutes) until the application finishes
 while kill -0 $APP_PID 2>/dev/null; do

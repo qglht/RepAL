@@ -82,11 +82,14 @@ def measure_dissimilarities(
                 curve_i = curves[curves_names.index(groups[i])]
                 curve_j = curves[curves_names.index(groups[j])]
                 # compute PCA on common basis for 2 groups
-                curves_pca, _ = main.compute_common_pca(
-                    [curve_i, curve_j], n_components=20
-                )
-                curve_i = curves_pca[0]
-                curve_j = curves_pca[1]
+                try:
+                    curves_pca, _ = main.compute_common_pca(
+                        [curve_i, curve_j], n_components=20
+                    )
+                except:
+                    curves_pca, _ = main.compute_common_pca(
+                        [curve_i, curve_j], n_components=5
+                    )
                 dis_cka[i, j] = 1 - cka_measure(
                     curve_i,
                     curve_j,

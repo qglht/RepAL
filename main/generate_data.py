@@ -87,3 +87,48 @@ def generate_data(env, hp, mode, seq_len=400, num_pregenerated=100000):
 
     with open(f"data/{env}_{mode}.pkl", "wb") as f:
         pickle.dump(dataset, f)
+
+
+def generate_data_vis(env, hp, mode, seq_len=400, num_pregenerated=100000):
+    env_instance = get_class_instance(env, config=hp)
+    print(env_instance)
+    if mode == "test":
+        timing = env_instance.timing
+        print(timing)
+        seq_len = int(sum([v for k, v in timing.items()]) / hp["dt"])
+    dataset = ngym.Dataset(env_instance, batch_size=32, seq_len=seq_len)
+    inputs_list = []
+    targets_list = []
+
+    for _ in range(num_pregenerated // 32):
+        input_sample, target_sample = dataset()
+        inputs_list.append(input_sample)
+        targets_list.append(target_sample)
+
+    # Handling the remaining samples
+    remaining_samples = num_pregenerated % 32
+    if remaining_samples > 0:
+        input_sample, target_sample = dataset()
+        inputs_list.append(input_sample[:, :remaining_samples])
+        targets_list.append(target_sample[:, :remaining_samples])
+    inputs = np.concatenate(inputs_list, axis=1)
+    targets = np.concatenate(targets_list, axis=1)
+
+    # Swap axes after gathering all samples
+    inputs, targets = swap_axes(inputs, targets)
+
+    # Create masks
+    masks = create_mask(inputs)
+
+    # Generate feed data
+    inputs, targets = gen_feed_data(inputs, targets, env, hp)
+
+    # Convert inputs, targets, masks to torch tensors
+    inputs, targets, masks = (
+        torch.tensor(inputs).to(torch.float32),
+        torch.tensor(targets).to(torch.float32),
+        torch.tensor(masks).to(torch.float32),
+    )
+    dataset = {"inputs": inputs, "targets": targets, "masks": masks}
+
+    return dataset

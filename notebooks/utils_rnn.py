@@ -1,5 +1,6 @@
 import sys
 import os
+from turtle import st
 
 from networkx import group_closeness_centrality
 
@@ -22,6 +23,28 @@ import ast
 import DSA
 import copy
 
+color_mapping = {
+    "master": "#4D4D4D",  # Soft shade of black (charcoal gray)
+    "untrained": "#E57373",  # Soft shade of red (light red)
+    "master_frozen": "#FFB74D",  # Soft shade of orange (light orange)
+    "pretrain_partial": "#81C784",  # Soft shade of light green (pale green)
+    "pretrain_basic_frozen": "#81C784",  # Muted green (dark green)
+    "pretrain_frozen": "#2E7D32",  # Shade of dark green (forest green)
+    "pretrain_unfrozen": "#1565C0",  # Shade of dark blue (navy blue)
+}
+
+color_mapping_metrics = {
+    "dsa": "#66BB6A",  # Nice green (medium green)
+    "cka": "#42A5F5",  # Light shade of blue (sky blue)
+    "procrustes": "#1E88E5",  # Darker shade of blue (medium blue)
+}
+
+
+color_mapping_tasks = {
+    "Delay": "#1F77B4",  # Medium blue
+    "Delay Anti": "#FF7F0E",  # Bright orange
+}
+
 groups = [
     "untrained",
     "master_frozen",
@@ -36,6 +59,213 @@ groups = [
 ]
 
 measures = ["cka", "dsa", "procrustes"]
+
+
+def visualize_groups():
+
+    # Define the data with abbreviated task names
+    data = {
+        "Group": [
+            "master",
+            "pretrain_frozen",
+            "pretrain_unfrozen",
+            "pretrain_basic_frozen",
+            "pretrain_anti_frozen",
+            "pretrain_delay_frozen",
+            "pretrain_basic_anti_frozen",
+            "pretrain_basic_delay_frozen",
+            "master_frozen",
+            "untrained",
+        ],
+        "Pretrain Ruleset": [
+            "[]",
+            "anti, pro, delay",
+            "anti, pro, delay",
+            "pro",
+            "anti",
+            "delay",
+            "pro, anti",
+            "pro, delay",
+            "[]",
+            "[]",
+        ],
+        "Train Ruleset": [
+            "master",
+            "master",
+            "master",
+            "master",
+            "master",
+            "master",
+            "master",
+            "master",
+            "master",
+            "[]",
+        ],
+        "Frozen": [
+            "Unfrozen",
+            "Frozen",
+            "Unfrozen",
+            "Frozen",
+            "Frozen",
+            "Frozen",
+            "Frozen",
+            "Frozen",
+            "Frozen",
+            "Frozen",
+        ],
+    }
+
+    # Create a DataFrame
+    df = pd.DataFrame(data)
+
+    # Create a plot
+    fig, ax = plt.subplots(figsize=(14, 8))  # Larger figure size
+
+    # Hide axes
+    ax.xaxis.set_visible(False)
+    ax.yaxis.set_visible(False)
+    ax.set_frame_on(False)
+
+    # Define colors for each group
+    colors = plt.cm.get_cmap("Set3", len(df))
+
+    # Create a table
+    table = plt.table(
+        cellText=df.values, colLabels=df.columns, cellLoc="center", loc="center"
+    )
+
+    # Apply color to rows
+    for i, key in enumerate(df.index):
+        color = colors(i)
+        for j in range(len(df.columns)):
+            table[(i + 1, j)].set_facecolor(color)
+            table[(i + 1, j)].set_edgecolor("black")
+
+    # Apply styling to table
+    table.auto_set_font_size(False)
+    table.set_fontsize(12)
+    table.scale(1.2, 1.2)
+    plt.title("Group Configurations", fontsize=16)
+
+    # Show the plot
+    plt.show()
+
+
+def visualize_reduced_plots(color_mapping):
+    # Define the data with abbreviated task names
+    data = {
+        "Group": [
+            "master",
+            "pretrain_frozen",
+            "pretrain_unfrozen",
+            "pretrain_basic_frozen",
+            "pretrain_anti_frozen",
+            "pretrain_delay_frozen",
+            "pretrain_basic_anti_frozen",
+            "pretrain_basic_delay_frozen",
+            "master_frozen",
+            "untrained",
+        ],
+        "Pretrain Ruleset": [
+            "[]",
+            "anti, pro, delay",
+            "anti, pro, delay",
+            "pro",
+            "anti",
+            "delay",
+            "pro, anti",
+            "pro, delay",
+            "[]",
+            "[]",
+        ],
+        "Train Ruleset": [
+            "master",
+            "master",
+            "master",
+            "master",
+            "master",
+            "master",
+            "master",
+            "master",
+            "master",
+            "[]",
+        ],
+        "Frozen": [
+            "Unfrozen",
+            "Frozen",
+            "Unfrozen",
+            "Frozen",
+            "Frozen",
+            "Frozen",
+            "Frozen",
+            "Frozen",
+            "Frozen",
+            "Frozen",
+        ],
+    }
+
+    # Create a DataFrame
+    df = pd.DataFrame(data)
+
+    # Map "pretrain" to "pretrain_partial" except for specific cases
+    df["Group"] = df["Group"].replace(
+        {
+            "pretrain_basic_frozen": "pretrain_partial",
+            "pretrain_anti_frozen": "pretrain_partial",
+            "pretrain_delay_frozen": "pretrain_partial",
+            "pretrain_basic_anti_frozen": "pretrain_partial",
+            "pretrain_basic_delay_frozen": "pretrain_partial",
+        }
+    )
+
+    # Combine all "pretrain_partial" rows into a single row
+    pretrain_partial_data = df[df["Group"] == "pretrain_partial"]
+    combined_pretrain_partial = {
+        "Group": "pretrain_partial",
+        "Pretrain Ruleset": "1 or 2 of anti, pro, delay",
+        "Train Ruleset": ", ".join(pretrain_partial_data["Train Ruleset"].unique()),
+        "Frozen": ", ".join(pretrain_partial_data["Frozen"].unique()),
+    }
+
+    # Create a new DataFrame with the combined row
+    df_combined = df[df["Group"] != "pretrain_partial"]
+    df_combined = pd.concat(
+        [df_combined, pd.DataFrame([combined_pretrain_partial])], ignore_index=True
+    )
+
+    # Plot the table (optional, for visualization purposes)
+    fig, ax = plt.subplots(figsize=(14, 8))  # Larger figure size
+
+    # Hide axes
+    ax.xaxis.set_visible(False)
+    ax.yaxis.set_visible(False)
+    ax.set_frame_on(False)
+
+    # Create a table
+    table = plt.table(
+        cellText=df_combined.values,
+        colLabels=df_combined.columns,
+        cellLoc="center",
+        loc="center",
+    )
+
+    # Apply color to rows
+    for i, group in enumerate(df_combined["Group"]):
+        color = color_mapping.get(
+            group, "gray"
+        )  # Default to gray if group not in color_mapping
+        for j in range(len(df_combined.columns)):
+            table[(i + 1, j)].set_facecolor(color)
+            table[(i + 1, j)].set_edgecolor("black")
+
+    # Apply styling to table
+    table.auto_set_font_size(False)
+    table.set_fontsize(12)
+    table.scale(1.2, 1.2)
+    plt.title("Group Configurations", fontsize=16)
+
+    # Show the plot
+    plt.show()
 
 
 def parse_model_info(model_name):
@@ -81,6 +311,66 @@ def remove_nan(array):
 
 def remove_nan_list(lists):
     return [remove_nan(arr) for arr in lists]
+
+
+def get_dynamics_rnn(
+    rnn_type, activation, hidden_size, lr, model, group, device, taskset
+):
+    # Load configuration and set hyperparameters
+    config = load_config("../config.yaml")
+    ruleset = config[taskset]["rules_analysis"][-1]
+    all_rules = config[taskset]["rules_analysis"]
+
+    hp = {
+        "rnn_type": rnn_type,
+        "activation": activation,
+        "n_rnn": hidden_size,
+        "learning_rate": lr,
+        "l2_h": 0.00001,
+        "l2_weight": 0.00001,
+        "mode": "test",
+    }
+    hp, _, _ = main.set_hyperparameters(
+        model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=ruleset
+    )
+    run_model = main.load_model(
+        f"../models/{taskset}/{group}/{model}",
+        hp,
+        RNNLayer,
+        device=device,
+    )
+    h = main.representation(run_model, all_rules, rnn=True)
+    return h
+
+
+def get_dynamics_rnn_task(
+    rnn_type, activation, hidden_size, lr, model, group, device, task, taskset
+):
+    # Load configuration and set hyperparameters
+    config = load_config("../config.yaml")
+    ruleset = config[taskset]["rules_analysis"][-1]
+    all_rules = config[taskset]["rules_analysis"]
+
+    hp = {
+        "rnn_type": rnn_type,
+        "activation": activation,
+        "n_rnn": hidden_size,
+        "learning_rate": lr,
+        "l2_h": 0.00001,
+        "l2_weight": 0.00001,
+        "mode": "test",
+    }
+    hp, _, _ = main.set_hyperparameters(
+        model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=ruleset
+    )
+    run_model = main.load_model(
+        f"../models/{taskset}/{group}/{model}",
+        hp,
+        RNNLayer,
+        device=device,
+    )
+    h = main.representation_task(run_model, all_rules, task, rnn=True)
+    return h
 
 
 def get_dataframe(path, taskset):
@@ -136,6 +426,46 @@ def get_dataframe(path, taskset):
     return pd.DataFrame(df)
 
 
+def select_df(df):
+    groups_trained = [
+        "master",
+    ]
+    # Condition for group1: if group1 is in critical_groups, then accuracy_1 should be 1
+    condition1 = ~df["group1"].isin(groups_trained) | (df["accuracy_1"] == 1)
+
+    # Condition for group2: if group2 is in critical_groups, then accuracy_2 should be 1
+    condition2 = ~df["group2"].isin(groups_trained) | (df["accuracy_2"] == 1)
+
+    # Condition for activation to not be "leaky_relu"
+    condition3 = df["activation"] != "leaky_relu"
+
+    # Filter DataFrame based on the combined conditions
+    df_selected = df[condition1 & condition2 & condition3]
+
+    models_trained_per_group = {group + "_master": [] for group in groups_trained}
+    for group in groups_trained:
+        df_selected_group = df_selected[
+            (df_selected["group1"] == group) | (df_selected["group2"] == group)
+        ]
+        for row, data in df_selected_group.iterrows():
+            model = (
+                data["model_type"]
+                + "_"
+                + data["activation"]
+                + "_"
+                + str(data["hidden_size"])
+                + "_"
+                + str(data["lr"])
+                + "_"
+                + str(data["batch_size"])
+            )
+            models_trained_per_group[group + "_master"].append(model)
+    for group in models_trained_per_group:
+        models_trained_per_group[group] = list(set(models_trained_per_group[group]))
+
+    return df_selected, models_trained_per_group
+
+
 # Define the mapping for group2
 def map_group(group):
     if group in [
@@ -147,6 +477,25 @@ def map_group(group):
     ]:
         return "pretrain_partial"
     return group
+
+
+def t_standart_error_dissimilarity(df, group, measure):
+    # get data
+    data_group = df[
+        (df["group1"] == group)
+        & (df["group2"] == "master")
+        & (df["measure"] == measure)  # or the opposite
+        | (
+            (df["group1"] == "master")
+            & (df["group2"] == group)
+            & (df["measure"] == measure)
+        )
+    ]["dissimilarity"]
+    mean_dissimilarities = data_group.mean()
+    n = len(data_group)
+    standard_error = data_group.std() / np.sqrt(n)
+
+    return mean_dissimilarities, standard_error
 
 
 def t_test_dissimilarity(df, group1, group2, measure):
@@ -183,7 +532,6 @@ def t_test_all_pairs(dg, measure):
     df = dg.copy()
     df["group2"] = df["group2"].apply(map_group)
     df["group1"] = df["group1"].apply(map_group)
-    print(df["group2"].unique())
     groups = [
         "untrained",
         "master_frozen",
@@ -207,6 +555,36 @@ def t_test_all_pairs(dg, measure):
             "pairs": groups_pairs,
             "p_value": p_values,
             "adjusted_p_value": adjusted_p_values,
+        }
+    )
+    return t_test_results_df
+
+
+# function to compute standard error intervals for all groups
+def t_standart_error_dissimilarity_all_groups(dg, measure):
+    # map groups
+    df = dg.copy()
+    df["group2"] = df["group2"].apply(map_group)
+    df["group1"] = df["group1"].apply(map_group)
+    groups = [
+        "untrained",
+        "master_frozen",
+        "pretrain_partial",
+        "pretrain_frozen",
+        "pretrain_unfrozen",
+    ]
+    mean_dissimilarities = []
+    standard_errors = []
+    for group in groups:
+        mean_diss, std_error = t_standart_error_dissimilarity(df, group, measure)
+        mean_dissimilarities.append(mean_diss)
+        standard_errors.append(std_error)
+    # store results in a dataframe
+    t_test_results_df = pd.DataFrame(
+        {
+            "group": groups,
+            "mean_dissimilarities": mean_dissimilarities,
+            "standard_errors": standard_errors,
         }
     )
     return t_test_results_df
@@ -309,9 +687,9 @@ def find_group_pairs_master(config, taskset):
 
 def dissimilarities_per_percentage_of_shared_task(group_pairs, df):
     dissimilarities_per_shared_task = {
-        "dsa": {perc: [] for perc in group_pairs.keys()},
-        "cka": {perc: [] for perc in group_pairs.keys()},
-        "procrustes": {perc: [] for perc in group_pairs.keys()},
+        "dsa": {perc: {} for perc in group_pairs.keys()},
+        "cka": {perc: {} for perc in group_pairs.keys()},
+        "procrustes": {perc: {} for perc in group_pairs.keys()},
     }
     for shared_tasks, pairs in group_pairs.items():
         for pair in pairs:
@@ -322,18 +700,28 @@ def dissimilarities_per_percentage_of_shared_task(group_pairs, df):
                 | ((df["group1"] == group2) & (df["group2"] == group1))
             ]
             # if pair == ("pretrain_frozen", "pretrain_unfrozen"):
-            #     print(data_pair)
             for measure in measures:
-                data_pair_mesure = data_pair[data_pair["measure"] == measure][
-                    "dissimilarity"
-                ].tolist()
-                dissimilarities_per_shared_task[measure][shared_tasks].extend(
-                    data_pair_mesure
-                )
+                data_pair_measure = data_pair[data_pair["measure"] == measure]
+                for i, row in data_pair_measure.iterrows():
+                    model = (
+                        row["model_type"]
+                        + "_"
+                        + row["activation"]
+                        + "_"
+                        + str(row["hidden_size"])
+                        + "_"
+                        + str(row["lr"])
+                        + "_"
+                        + str(row["batch_size"])
+                    )
+                    dissimilarities_per_shared_task[measure][shared_tasks][model] = []
+                    dissimilarities_per_shared_task[measure][shared_tasks][
+                        model
+                    ].append(row["dissimilarity"])
     return dissimilarities_per_shared_task
 
 
-def get_dissimilarities_groups(taskset):
+def get_dissimilarities_groups(taskset, models_trained_per_group):
     # take all the folder names under data/dissimilarities_over_learning/{taskset}
     groups_training = os.listdir(f"../data/dissimilarities_over_learning/{taskset}")
     groups_training = [
@@ -345,21 +733,31 @@ def get_dissimilarities_groups(taskset):
     for group_training in groups_training:
         path = f"../data/dissimilarities_over_learning/{taskset}/{group_training}"
         measures = ["cka", "dsa", "procrustes", "accuracy_1", "accuracy_2"]
-        sampling = [0, 25, 50, 75, 100]
+        sampling = [i * 20 for i in range(6)]
         dissimilarities = {measure: [] for measure in measures}
 
         for measure in measures:
             path_measure = os.path.join(path, measure)
             files = os.listdir(path_measure)
             for file in files:
-                file_path = os.path.join(path_measure, file)
-                if file_path.endswith(".npz"):
-                    with np.load(file_path) as data:
-                        dissimilarities[measure].append(data["arr_0"])
+                model_name = file.replace(".npz", "")
+                if group_training in models_trained_per_group:
+                    if model_name in models_trained_per_group[group_training]:
+                        file_path = os.path.join(path_measure, file)
+                        if file_path.endswith(".npz"):
+                            with np.load(file_path) as data:
+                                dissimilarities[measure].append(data["arr_0"])
+                else:
+                    file_path = os.path.join(path_measure, file)
+                    if file_path.endswith(".npz"):
+                        with np.load(file_path) as data:
+                            dissimilarities[measure].append(data["arr_0"])
         dissimilarities_interpolated = {
             measure: {group: [] for group in range(len(sampling))}
             for measure in measures
         }
+
+        # average to have the sampling
         for measure in measures:
             for dissimilarity in dissimilarities[measure]:
                 if dissimilarity.shape[0] > 4:
@@ -372,10 +770,15 @@ def get_dissimilarities_groups(taskset):
                         dissimilarities_interpolated[measure][i + 1].append(
                             np.median(dissimilarity[index_start:index_end])
                         )
+
+        # average over the groups
         for measure in measures:
             for group in range(len(sampling)):
-                dissimilarities_interpolated[measure][group] = np.mean(
-                    dissimilarities_interpolated[measure][group]
+                dissimilarities_interpolated[measure][group] = (
+                    np.nanmean(dissimilarities_interpolated[measure][group]),
+                    np.nanstd(dissimilarities_interpolated[measure][group])
+                    / np.sqrt(len(dissimilarities_interpolated[measure][group])),
+                    dissimilarities_interpolated[measure][group],
                 )
         dissimilarities_groups[group_training] = dissimilarities_interpolated
     return dissimilarities_groups, groups_training
@@ -395,18 +798,30 @@ def get_dissimilarities_shared_task_shared_curriculum(
                 name_2 = pair[1] + "_" + pair[0]
                 if name_1 in dissimilarities_groups:
                     diss_cc[measure][shared].append(
-                        [x_values, dissimilarities_groups[name_1][measure]]
+                        [
+                            x_values,
+                            [
+                                dissimilarities_groups[name_1][measure][x][0]
+                                for x in range(len(x_values))
+                            ],
+                        ]
                     )
                 elif name_2 in dissimilarities_groups:
                     diss_cc[measure][shared].append(
-                        [x_values, dissimilarities_groups[name_2][measure]]
+                        [
+                            x_values,
+                            [
+                                dissimilarities_groups[name_2][measure][x][0]
+                                for x in range(len(x_values))
+                            ],
+                        ]
                     )
             # once all the pairs are added, we can interpolate the values
             x_new = x_values
             y_new = []
             for i in range(len(x_values)):
                 y_new.append(
-                    np.nanmedian([diss[1][i] for diss in diss_cc[measure][shared]])
+                    np.nanmean([diss[1][i] for diss in diss_cc[measure][shared]])
                 )
             diss_cc[measure][shared] = [x_new, y_new]
     return diss_cc

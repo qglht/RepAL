@@ -22,16 +22,43 @@ warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprec
 os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
 
-# Semaphore to control the number of concurrent processes
-def worker(task):
-    try:
-        measure_dissimilarities(*task)
-    except Exception as e:
-        print(f"Error in worker: {e}")
+def find_accuracy_model(name, device):
+    # Find the latest checkpoint file
+    print(f"Finding accuracy for {name}")
+    checkpoint_dir = name
+    checkpoint_files = [
+        f
+        for f in os.listdir(checkpoint_dir)
+        if f.startswith("epoch_") and f.endswith("_checkpoint.pth")
+    ]
+
+    if checkpoint_files:
+        checkpoint_files.sort(key=lambda x: int(x.split("_")[1]))
+        print(f"Checkpoint files : {checkpoint_files}")
+        if len(checkpoint_files) < 50:
+            return float(1)
+        else:
+            last_checkpoint = checkpoint_files[-1]
+            # Load the checkpoint file
+            checkpoint = torch.load(
+                os.path.join(checkpoint_dir, last_checkpoint), map_location=device
+            )
+
+            return float(checkpoint["log"]["perf_min"][-1])
+    else:  # return torch nan
+        return float(-1)
 
 
 def measure_dissimilarities(
-    model_rnn, model_dict_rnn, model_mamba, model_dict_mamba, groups, taskset, device
+    model_rnn,
+    model_dict_rnn,
+    accuracies_dict_rnn,
+    model_mamba,
+    model_dict_mamba,
+    accuracies_dict_mamba,
+    groups,
+    taskset,
+    device,
 ):
 
     curves_names_rnn = list(model_dict_rnn.keys())
@@ -41,6 +68,17 @@ def measure_dissimilarities(
     dis_cka = np.zeros((len(groups), len(groups)))
     dis_procrustes = np.zeros((len(groups), len(groups)))
     dis_dsa = np.zeros((len(groups), len(groups)))
+    accuracies_array_rnn = np.zeros((len(groups), 1))
+    accuracies_array_mamba = np.zeros((len(groups), 1))
+
+    # getting accuracies
+    for i in range(len(groups)):
+        if groups[i] in accuracies_dict_rnn:
+            accuracies_array_rnn[i] = accuracies_dict_rnn[groups[i]]
+        if groups[i] in accuracies_dict_mamba:
+            accuracies_array_mamba[i] = accuracies_dict_mamba[groups[i]]
+
+    # dissimilarities to compute : master against everything /
     for i in range(len(groups)):
         for j in range(len(groups)):
             if groups[i] in curves_names_rnn and groups[j] in curves_names_mamba:
@@ -75,9 +113,11 @@ def measure_dissimilarities(
         "cka": dis_cka,
         "procrustes": dis_procrustes,
         "dsa": dis_dsa,
+        "accuracy_rnn": accuracies_array_rnn,
+        "accuracy_mamba": accuracies_array_mamba,
     }
     base_dir = f"data/dissimilarities_mamba_rnn/{taskset}"
-    measures = ["cka", "procrustes", "dsa"]
+    measures = ["cka", "procrustes", "dsa", "accuracy_rnn", "accuracy_mamba"]
     print(f"Saving dissimilarities for {model_rnn} and {model_mamba}")
     for measure in measures:
         dir_path = os.path.join(base_dir, measure)
@@ -91,20 +131,10 @@ def measure_dissimilarities(
         np.savez_compressed(npz_filepath, dissimilarities_model[measure])
         print(f"Dissimilarities saved in {npz_filepath}")
 
-    del dis_cka, dis_procrustes, dis_dsa
-    del curves_rnn, curves_mamba, curves_pca
-    del curves_names_rnn, curves_names_mamba
-    del model_dict_rnn, model_dict_mamba
-    del dissimilarities_model
-    # Clear GPU memory after each model processing
-    torch.cuda.empty_cache()
-    gc.collect()
     return
 
 
 def dissimilarity(args: argparse.Namespace) -> None:
-    multiprocessing.set_start_method("fork", force=True)
-    # set to spawn otherwise it will raise an error
     groups = [
         "untrained",
         "master_frozen",
@@ -123,116 +153,116 @@ def dissimilarity(args: argparse.Namespace) -> None:
         if num_gpus > 0
         else [torch.device("cpu")]
     )
+    for measure in ["cka", "procrustes", "dsa", "accuracy_rnn", "accuracy_mamba"]:
+        os.makedirs(
+            f"data/dissimilarities_mamba_rnn/{args.taskset}/{measure}", exist_ok=True
+        )
 
     print(f"Computing dynamics for all models")
     curves_rnn = {}
-    for rnn_type in config["rnn"]["parameters"]["rnn_type"]:
-        for activation in config["rnn"]["parameters"]["activations"]:
-            for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
-                for lr in config["rnn"]["parameters"]["learning_rate"]:
-                    for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
-                        model = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}_train.pth"
-                        curves_rnn[model] = {}
-                        for group in groups:
-                            # check if the model is already trained
-                            if os.path.exists(f"models/{args.taskset}/{group}/{model}"):
-                                curves_rnn[model][group] = get_dynamics_rnn(
-                                    rnn_type,
-                                    activation,
-                                    hidden_size,
-                                    lr,
-                                    batch_size,
-                                    model,
-                                    group,
-                                    args.taskset,
-                                    devices[0],
-                                )
-                                # Clear GPU memory after each model processing
-                                if torch.cuda.is_available():
-                                    torch.cuda.empty_cache()
-
-    curves_mamba = {}
-    for d_model in config["mamba"]["parameters"]["d_model"]:
-        for n_layers in config["mamba"]["parameters"]["n_layers"]:
-            for learning_rate in config["mamba"]["parameters"]["learning_rate"]:
-                for batch_size in config["mamba"]["parameters"]["batch_size_train"]:
-                    model = f"mamba_{d_model}_{n_layers}_{learning_rate}_{batch_size}_train.pth"
-                    curves_mamba[model] = {}
-                    for group in groups:
-                        # check if the model is already trained
-                        if os.path.exists(
-                            f"models/mamba/{args.taskset}/{group}/{model}"
-                        ):
-                            curves_mamba[model][group] = get_dynamics_mamba(
-                                d_model,
-                                n_layers,
-                                learning_rate,
-                                batch_size,
-                                model,
-                                group,
-                                args.taskset,
+    accuracies_rnn = {}
+    rnn_type = "leaky_rnn"
+    activation = "relu"
+    for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
+        for lr in config["rnn"]["parameters"]["learning_rate"]:
+            for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
+                model = (
+                    f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}_train.pth"
+                )
+                model_folder = model.replace(".pth", "")
+                curves_rnn[model] = {}
+                accuracies_rnn[model] = {}
+                for group in groups:
+                    # check if the model is already trained
+                    if os.path.exists(f"models/{args.taskset}/{group}/{model}"):
+                        curves_rnn[model][group] = get_dynamics_rnn(
+                            rnn_type,
+                            activation,
+                            hidden_size,
+                            lr,
+                            batch_size,
+                            model,
+                            group,
+                            args.taskset,
+                            devices[0],
+                        )
+                        accuracies_rnn[model][group] = (
+                            find_accuracy_model(
+                                f"models/{args.taskset}/{group}/{model_folder}",
                                 devices[0],
                             )
-                            # Clear GPU memory after each model processing
-                            if torch.cuda.is_available():
-                                torch.cuda.empty_cache()
+                            if group != "untrained"
+                            else float(-1)
+                        )
+
+    curves_mamba = {}
+    accuracies_mamba = {}
+    d_model = 8
+    n_layers = 1
+    for learning_rate in config["mamba"]["parameters"]["learning_rate"]:
+        for batch_size in config["mamba"]["parameters"]["batch_size_train"]:
+            model = f"mamba_{d_model}_{n_layers}_{learning_rate}_{batch_size}_train.pth"
+            model_folder = model.replace(".pth", "")
+            curves_mamba[model] = {}
+            accuracies_mamba[model] = {}
+            for group in groups:
+                # check if the model is already trained
+                if os.path.exists(f"models/mamba/{args.taskset}/{group}/{model}"):
+                    curves_mamba[model][group] = get_dynamics_mamba(
+                        d_model,
+                        n_layers,
+                        learning_rate,
+                        batch_size,
+                        model,
+                        group,
+                        args.taskset,
+                        devices[0],
+                    )
+                    accuracies_mamba[model][group] = (
+                        find_accuracy_model(
+                            f"models/mamba/{args.taskset}/{group}/{model_folder}",
+                            devices[0],
+                        )
+                        if group != "untrained"
+                        else float(-1)
+                    )
 
     sys.stdout.flush()
     print(f"Computing dissimilarities for all models")
     computed_pairs = set()
-    for rnn_type in config["rnn"]["parameters"]["rnn_type"]:
-        for activation in config["rnn"]["parameters"]["activations"]:
-            for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
-                for lr in config["rnn"]["parameters"]["learning_rate"]:
-                    for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
-                        model_rnn = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}_train.pth"
-                        tasks = []
-                        i = 0
-                        for d_model in config["mamba"]["parameters"]["d_model"]:
-                            for n_layers in config["mamba"]["parameters"]["n_layers"]:
-                                for learning_rate in config["mamba"]["parameters"][
-                                    "learning_rate"
-                                ]:
-                                    for batch_size in config["mamba"]["parameters"][
-                                        "batch_size_train"
-                                    ]:
-                                        model_mamba = f"mamba_{d_model}_{n_layers}_{learning_rate}_{batch_size}_train.pth"
-                                        # check if (model_rnn, model_mamba) is already computed
-                                        pair = tuple(sorted((model_rnn, model_mamba)))
-                                        if pair not in computed_pairs:
-                                            print(
-                                                f"Compute dissimilarities for {model_rnn} and {model_mamba}"
-                                            )
-                                            device = devices[i % len(devices)]
-                                            tasks.append(
-                                                (
-                                                    model_rnn,
-                                                    curves_rnn[model_rnn],
-                                                    model_mamba,
-                                                    curves_mamba[model_mamba],
-                                                    groups,
-                                                    args.taskset,
-                                                    device,
-                                                )
-                                            )
-                                            i += 1
-                                            computed_pairs.add(pair)
-
-                        print(f"Number of tasks: {len(tasks)}")
-
-                        # Create a process for each task and pass the semaphore
-                        processes = [
-                            multiprocessing.Process(target=worker, args=(task,))
-                            for task in tasks
-                        ]
-
-                        # Start all processes
-                        for process in processes:
-                            process.start()
-
-                        # Wait for all processes to finish
-                        for process in processes:
-                            process.join()
+    rnn_type = "leaky_rnn"
+    activation = "relu"
+    for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
+        for lr in config["rnn"]["parameters"]["learning_rate"]:
+            for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
+                model_rnn = (
+                    f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}_train.pth"
+                )
+                d_model = 8
+                n_layers = 1
+                for learning_rate in config["mamba"]["parameters"]["learning_rate"]:
+                    for batch_size in config["mamba"]["parameters"]["batch_size_train"]:
+                        model_mamba = f"mamba_{d_model}_{n_layers}_{learning_rate}_{batch_size}_train.pth"
+                        # check if (model_rnn, model_mamba) is already computed
+                        pair = tuple(sorted((model_rnn, model_mamba)))
+                        if pair not in computed_pairs:
+                            print(
+                                f"Compute dissimilarities for {model_rnn} and {model_mamba}"
+                            )
+                            device = devices[0]
+                            measure_dissimilarities(
+                                model_rnn,
+                                curves_rnn[model_rnn],
+                                accuracies_rnn[model_rnn],
+                                model_mamba,
+                                curves_mamba[model_mamba],
+                                accuracies_mamba[model_mamba],
+                                groups,
+                                args.taskset,
+                                device,
+                            )
+                            computed_pairs.add(pair)
+    return
 
 
 if __name__ == "__main__":

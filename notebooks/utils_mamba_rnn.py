@@ -20,8 +20,13 @@ import copy
 
 groups = [
     "untrained",
+    "master_frozen",
     "master",
+    "pretrain_basic_frozen",
+    "pretrain_anti_frozen",
+    "pretrain_delay_frozen",
     "pretrain_basic_anti_frozen",
+    "pretrain_basic_delay_frozen",
     "pretrain_frozen",
     "pretrain_unfrozen",
 ]

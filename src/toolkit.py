@@ -1,4 +1,6 @@
+from math import e
 from pdb import run
+from tabnanny import check
 import warnings
 
 from matplotlib.pylab import f
@@ -579,6 +581,7 @@ def dissimilarity_over_learning(
                         models_to_compare.extend([(run_model1_copy, run_model2_copy)])
                         dissimilarities_over_learning["accuracy_1"].append(accuracy_1)
                         dissimilarities_over_learning["accuracy_2"].append(accuracy_2)
+
                 else:
                     index_epochs = corresponding_training_time(
                         len(checkpoint_files_2), len(checkpoint_files_1)
@@ -725,6 +728,7 @@ def dissimilarity_over_learning_mamba(
             procrustes_measure = similarity.make(
                 "measure.netrep.procrustes-angular-score"
             )
+
             if checkpoint_files_1 and checkpoint_files_2:
                 # get the models to compare
                 if len(checkpoint_files_1) < len(checkpoint_files_2):
@@ -752,84 +756,82 @@ def dissimilarity_over_learning_mamba(
                         models_to_compare.extend([(run_model1_copy, run_model2_copy)])
                         dissimilarities_over_learning["accuracy_1"].append(accuracy_1)
                         dissimilarities_over_learning["accuracy_2"].append(accuracy_2)
-                else:
-                    index_epochs = corresponding_training_time(
-                        len(checkpoint_files_2), len(checkpoint_files_1)
-                    )
-                    for epoch in index_epochs:
-                        run_model1_copy = copy.deepcopy(run_model1)
-                        run_model2_copy = copy.deepcopy(run_model2)
-                        checkpoint1 = torch.load(
-                            os.path.join(path_train_folder1, checkpoint_files_1[epoch]),
-                            map_location=device,
-                        )
-                        run_model1_copy = load_model_jit(run_model1_copy, checkpoint1)
-                        accuracy_1 = float(checkpoint1["log"]["perf_min"][-1])
-                        checkpoint2 = torch.load(
-                            os.path.join(
-                                path_train_folder2,
-                                checkpoint_files_2[index_epochs.index(epoch)],
-                            ),
-                            map_location=device,
-                        )
-                        run_model2_copy = load_model_jit(run_model2_copy, checkpoint2)
-                        accuracy_2 = float(checkpoint2["log"]["perf_min"][-1])
-                        models_to_compare.extend([(run_model1_copy, run_model2_copy)])
-                        dissimilarities_over_learning["accuracy_1"].append(accuracy_1)
-                        dissimilarities_over_learning["accuracy_2"].append(accuracy_2)
 
-                # compute the curves for models and dissimilarities
-                curves = [
-                    (
-                        get_curves(tuple_model[0], all_rules, rnn=False),
-                        get_curves(tuple_model[1], all_rules, rnn=False),
+            else:
+                index_epochs = corresponding_training_time(
+                    len(checkpoint_files_2), len(checkpoint_files_1)
+                )
+                for epoch in index_epochs:
+                    run_model1_copy = copy.deepcopy(run_model1)
+                    run_model2_copy = copy.deepcopy(run_model2)
+                    checkpoint1 = torch.load(
+                        os.path.join(path_train_folder1, checkpoint_files_1[epoch]),
+                        map_location=device,
                     )
-                    for tuple_model in models_to_compare
-                ]
+                    run_model1_copy = load_model_jit(run_model1_copy, checkpoint1)
+                    accuracy_1 = float(checkpoint1["log"]["perf_min"][-1])
+                    checkpoint2 = torch.load(
+                        os.path.join(
+                            path_train_folder2,
+                            checkpoint_files_2[index_epochs.index(epoch)],
+                        ),
+                        map_location=device,
+                    )
+                    run_model2_copy = load_model_jit(run_model2_copy, checkpoint2)
+                    accuracy_2 = float(checkpoint2["log"]["perf_min"][-1])
+                    models_to_compare.extend([(run_model1_copy, run_model2_copy)])
+                    dissimilarities_over_learning["accuracy_1"].append(accuracy_1)
+                    dissimilarities_over_learning["accuracy_2"].append(accuracy_2)
 
-                # compute common PCA for each checkpoint
-                curves_flattened = [
-                    [copy.deepcopy(curve[0]), copy.deepcopy(curve[1])]
-                    for curve in curves
-                ]
-                curves_reduced_list = []
-                for epoch_index in range(len(index_epochs)):
-                    curves_reduced, _ = main.compute_common_pca(
-                        curves_flattened[epoch_index], n_components=20
-                    )
-                    curves_reduced_list.append(curves_reduced)
-                curves = [
-                    (curves_reduced_list[i][0], curves_reduced_list[i][1])
-                    for i in range(len(curves_reduced_list))
-                ]
+            # compute the curves for models and dissimilarities
+            curves = [
+                (
+                    get_curves(tuple_model[0], all_rules, rnn=False),
+                    get_curves(tuple_model[1], all_rules, rnn=False),
+                )
+                for tuple_model in models_to_compare
+            ]
 
-                for epoch_index in range(len(index_epochs)):
-                    dissimilarities_over_learning["cka"].append(
-                        1 - cka_measure(curves[epoch_index][0], curves[epoch_index][1])
-                    )
-                    dissimilarities_over_learning["procrustes"].append(
-                        1
-                        - procrustes_measure(
-                            curves[epoch_index][0], curves[epoch_index][1]
-                        )
-                    )
-                    dsa_comp = DSA.DSA(
-                        curves[epoch_index][0],
-                        curves[epoch_index][1],
-                        n_delays=config["dsa"]["n_delays"],
-                        rank=config["dsa"]["rank"],
-                        delay_interval=config["dsa"]["delay_interval"],
-                        verbose=True,
-                        iters=1000,
-                        lr=1e-2,
-                        device=device,
-                    )
-                    dissimilarities_over_learning["dsa"].append(dsa_comp.fit_score())
+            # compute common PCA for each checkpoint
+            curves_flattened = [
+                [copy.deepcopy(curve[0]), copy.deepcopy(curve[1])] for curve in curves
+            ]
+            curves_reduced_list = []
+            for epoch_index in range(len(index_epochs)):
+                curves_reduced, _ = main.compute_common_pca(
+                    curves_flattened[epoch_index], n_components=20
+                )
+                curves_reduced_list.append(curves_reduced)
+            curves = [
+                (curves_reduced_list[i][0], curves_reduced_list[i][1])
+                for i in range(len(curves_reduced_list))
+            ]
 
-            for key, value in dissimilarities_over_learning.items():
-                dissimilarities_over_learning[key] = np.array(value)
+            for epoch_index in range(len(index_epochs)):
+                dissimilarities_over_learning["cka"].append(
+                    1 - cka_measure(curves[epoch_index][0], curves[epoch_index][1])
+                )
+                dissimilarities_over_learning["procrustes"].append(
+                    1
+                    - procrustes_measure(curves[epoch_index][0], curves[epoch_index][1])
+                )
+                dsa_comp = DSA.DSA(
+                    curves[epoch_index][0],
+                    curves[epoch_index][1],
+                    n_delays=config["dsa"]["n_delays"],
+                    rank=config["dsa"]["rank"],
+                    delay_interval=config["dsa"]["delay_interval"],
+                    verbose=True,
+                    iters=1000,
+                    lr=1e-2,
+                    device=device,
+                )
+                dissimilarities_over_learning["dsa"].append(dsa_comp.fit_score())
 
-        return dissimilarities_over_learning
+        for key, value in dissimilarities_over_learning.items():
+            dissimilarities_over_learning[key] = np.array(value)
+
+    return dissimilarities_over_learning
 
 
 def dissimilarity_within_learning(

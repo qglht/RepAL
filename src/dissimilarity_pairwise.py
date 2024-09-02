@@ -83,8 +83,6 @@ def measure_dissimilarities(
                     [curve_i, curve_j], n_components=20
                 )
                 print(f"Computing dissimilarities between {groups[i]} and {groups[j]}")
-                curve_i = curves_pca[0]
-                curve_j = curves_pca[1]
                 dis_cka[i, j] = 1 - cka_measure(
                     curve_i,
                     curve_j,
@@ -96,11 +94,9 @@ def measure_dissimilarities(
                 dsa_computation = DSA.DSA(
                     curve_i,
                     curve_j,
-                    # n_delays=config["dsa"]["n_delays"],
-                    n_delays=50,
+                    n_delays=config["dsa"]["n_delays"],
                     rank=config["dsa"]["rank"],
-                    # delay_interval=config["dsa"]["delay_interval"],
-                    delay_interval=3,
+                    delay_interval=config["dsa"]["delay_interval"],
                     verbose=True,
                     iters=1000,
                     lr=1e-2,
