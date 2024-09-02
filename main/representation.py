@@ -129,6 +129,77 @@ def representation(model, rules, rnn=True, rnn_vs_mamba=False):
     return activations_stimulus
 
 
+def representation_task(model, rules, task, rnn=True, rnn_vs_mamba=False):
+    hp = model.hp
+    rules = [rules] if isinstance(rules, str) else (rules or hp["rules"])
+    activations = OrderedDict()
+
+    # Batch-loading optimizations:
+    with torch.no_grad():
+        for rule in rules:
+            env = get_class_instance(rule, config=hp)
+            timing = env.timing
+            seq_length = int(sum(timing.values()) / hp["dt"])
+            if not rnn_vs_mamba:
+                dataloader = get_dataloader(
+                    env=rule,
+                    batch_size=hp["batch_size_train"],
+                    num_workers=0,
+                    shuffle=False,
+                    mode="test",
+                )[
+                    "test"
+                ]  # Directly access the test dataloader
+            else:
+                # For RNN vs MAMBA comparison, use a smaller batch size and the same bs
+                dataloader = get_dataloader(
+                    env=rule,
+                    batch_size=64,
+                    num_workers=0,
+                    shuffle=False,
+                    mode="test",
+                )["test"]
+
+            for inputs, labels, mask in dataloader:
+                if rnn:
+                    inputs, labels, mask = (
+                        inputs.permute(1, 0, 2),
+                        labels.permute(1, 0),
+                        mask.permute(1, 0),
+                    )
+                inputs = inputs.to(model.device, non_blocking=True)
+                labels = labels.to(model.device, non_blocking=True).flatten().long()
+                mask = mask.to(model.device, non_blocking=True).flatten().long()
+
+                if rnn:
+                    _, _, _, h, _ = model(inputs, labels, mask)
+                else:
+
+                    h = model.get_activations(inputs)
+
+                # move to cpu
+                h = h.cpu()
+
+                h_byepoch = get_indexes(hp["dt"], timing, seq_length, h, rule)
+                for key, value in h_byepoch.items():
+                    activations.setdefault(key, []).append(
+                        value
+                    )  # Accumulate in a list
+
+            del dataloader
+            torch.cuda.empty_cache()  # If using GPU
+
+    # Merge accumulated activations:
+    for key, values in activations.items():
+        activations[key] = torch.cat(
+            values, dim=1
+        )  # Concatenate the tensors along the batch dimension
+    # only return activations for which key[1] == 'stimulus'
+    activations_stimulus = None
+    activations_stimulus = activations[(task, "decision")]
+    return activations_stimulus
+
+
 def compute_pca(h, n_components=3):
     h = {k: v for k, v in h.items() if k[1] == "stimulus"}
     try:
@@ -244,5 +315,111 @@ def compute_common_pca(h_list, n_components=3):
     #     i_end = i_start + val.shape[0]
     #     h_trans[key] = data_trans[i_start:i_end, :, :]
     #     i_start = i_end
+
+    return pca_h_list, explained_variance_ratio
+
+
+import torch
+import copy
+from sklearn.decomposition import PCA
+from sklearn.impute import SimpleImputer
+
+
+import torch
+import copy
+from sklearn.decomposition import PCA
+from sklearn.impute import SimpleImputer
+
+
+def compute_pca_projection_on_last(h_list, n_components=3):
+    # Ensure all elements in h_list are tensors
+    h_list = [h if torch.is_tensor(h) else torch.tensor(h) for h in h_list]
+
+    # Equalize the number of neurons if necessary
+    if h_list[0].dim() == 3:
+        if len(h_list) > 1 and h_list[0].shape[2] != h_list[1].shape[2]:
+            # Define the target number of neurons (minimum n_neurons)
+            min_neurons = min(h_list[0].shape[2], h_list[1].shape[2])
+
+            # Index to reduce
+            index_to_reduce = 0 if h_list[0].shape[2] > min_neurons else 1
+            # Find the h_list with the max number of neurons
+            h_to_reduce = h_list[index_to_reduce]
+
+            # Flatten the first two dimensions (n_time and n_batch) for PCA
+            flattened_h1 = h_to_reduce.reshape(-1, h_to_reduce.shape[2])
+
+            # Apply PCA to reduce h_list[1] to min_neurons
+            pca = PCA(n_components=min_neurons)
+            reduced_h1 = pca.fit_transform(flattened_h1)
+
+            # Reshape back to original n_time and n_batch dimensions
+            reduced_h1 = torch.tensor(reduced_h1).reshape(
+                h_to_reduce.shape[0], h_to_reduce.shape[1], min_neurons
+            )
+
+            # Replace the original h_list[1] with the reduced version
+            h_list[index_to_reduce] = reduced_h1
+
+            # Print the shapes of the tensors in h_list transformed
+            for i, h in enumerate(h_list):
+                print(f"h_list[{i}].shape after Transformation: {h.shape}")
+
+    # Use the last array in the list for PCA
+    last_h = h_list[-1]
+
+    # Flatten the first two dimensions (n_time and n_batch) for PCA
+    data_2d = last_h.reshape(-1, last_h.shape[2])
+
+    # Convert to numpy array for PCA
+    data_2d_np = data_2d.cpu().numpy()
+
+    # Handle NaN values by imputing with the mean of the column
+    imputer = SimpleImputer(strategy="mean")
+    data_2d_np = imputer.fit_transform(data_2d_np)
+
+    # Mean center and standardize the data
+    mean_activations = data_2d_np.mean(axis=0)
+    std_activations = data_2d_np.std(axis=0)
+
+    # Avoid division by zero by setting any std deviations that are zero to 1
+    std_activations[std_activations == 0] = 1.0
+
+    # Standardize the data
+    data_2d_np = (data_2d_np - mean_activations) / std_activations
+
+    # Perform PCA on the standardized data of the last array
+    pca = PCA(n_components=n_components)
+    pca.fit(data_2d_np)
+
+    # Transform all arrays in the list to the PCA space of the last array
+    pca_h_list = []
+    for h in h_list:
+        # Flatten the first two dimensions (n_time and n_batch) for PCA projection
+        h_2d = h.reshape(-1, h.shape[2])
+
+        # Convert to numpy array
+        h_2d_np = h_2d.cpu().numpy()
+
+        # Handle NaN values by imputing with the mean of the column
+        h_2d_np = imputer.transform(h_2d_np)
+
+        # Standardize the data using the mean and std of the last array
+        h_2d_np = (h_2d_np - mean_activations) / std_activations
+
+        # Project onto the PCA components of the last array
+        h_trans_2d_np = pca.transform(h_2d_np)
+
+        # Convert the transformed data back to a PyTorch tensor on the original device
+        h_trans_2d = torch.tensor(h_trans_2d_np)
+
+        # Reshape back to original dimensions with n_components
+        h_trans = h_trans_2d.reshape(h.shape[0], h.shape[1], n_components)
+
+        # Add the transformed array to the list
+        pca_h_list.append(copy.deepcopy(h_trans.cpu().numpy()))
+
+    # Compute explained variance ratio using PCA
+    explained_variance_ratio = pca.explained_variance_ratio_.sum()
 
     return pca_h_list, explained_variance_ratio
