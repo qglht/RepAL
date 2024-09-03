@@ -176,7 +176,7 @@ dsa:
   rank: 100
   device: cuda
 simulations:
-  dt: 0.01 # 20 ms
+  dt: 0.02 # 20 ms
   num_steps: 200
   num_samples: 200
   lorenz_parameters: {

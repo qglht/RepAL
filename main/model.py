@@ -223,41 +223,41 @@ class MambaSupervGym(MambaLM):
 
         # # loop over first dimension of token
         # # create cache for each layer
-        # cache_init = [
-        #     (
-        #         None,
-        #         torch.zeros(
-        #             (
-        #                 token.shape[0],
-        #                 int(self.lm_config.d_model * self.lm_config.expand_factor),
-        #                 self.hp["n_input"],
-        #             )
-        #         ).to(self.device),
-        #     )
-        #     for _ in range(self.lm_config.n_layers)
-        # ]
-        # caches_list = []
-        # caches = cache_init
-        # for i in range(token.shape[1]):
-        #     # TODO : check change in cache over caches
-        #     x = self.embedding(token[:, i, :])
-        #     x, caches = self.mamba.step(x, caches)
-        #     caches_list.append(copy.deepcopy(caches))
-        # # concatenate all the caches
+        cache_init = [
+            (
+                None,
+                torch.zeros(
+                    (
+                        token.shape[0],
+                        int(self.lm_config.d_model * self.lm_config.expand_factor),
+                        self.hp["n_input"],
+                    )
+                ).to(self.device),
+            )
+            for _ in range(self.lm_config.n_layers)
+        ]
+        caches_list = []
+        caches = cache_init
+        for i in range(token.shape[1]):
+            # TODO : check change in cache over caches
+            x = self.embedding(token[:, i, :])
+            x, caches = self.mamba.step(x, caches)
+            caches_list.append(copy.deepcopy(caches))
+        # concatenate all the caches
 
-        # caches_hidden = torch.stack(
-        #     [caches_list[i][0][0] for i in range(len(caches_list))], dim=0
-        # )
-        # hidden = caches_hidden.reshape(
-        #     caches_hidden.shape[0],
-        #     caches_hidden.shape[1],
-        #     caches_hidden.shape[2] * caches_hidden.shape[3],
-        # )
-        # return hidden
-        hidden = self.forward_up_to(token, 1)
-        # switch first and second dimensions
-        hidden = hidden.permute(1, 0, 2)
+        caches_hidden = torch.stack(
+            [caches_list[i][0][0] for i in range(len(caches_list))], dim=0
+        )
+        hidden = caches_hidden.reshape(
+            caches_hidden.shape[0],
+            caches_hidden.shape[1],
+            caches_hidden.shape[2] * caches_hidden.shape[3],
+        )
         return hidden
+        # hidden = self.forward_up_to(token, 1)
+        # # switch first and second dimensions
+        # hidden = hidden.permute(1, 0, 2)
+        # return hidden
 
     def save(self, path):
         # Check if model is wrapped by DataParallel and save accordingly
