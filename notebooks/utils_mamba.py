@@ -15,7 +15,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy import interpolate
 import main
-from main import RNNLayer
+from mambapy.mamba_lm import MambaLM, MambaLMConfig
+from mambapy.mamba import Mamba, MambaConfig, RMSNorm
 import ast
 import DSA
 import copy
@@ -32,6 +33,28 @@ groups = [
     "pretrain_frozen",
     "pretrain_unfrozen",
 ]
+
+color_mapping = {
+    "master": "#4D4D4D",  # Soft shade of black (charcoal gray)
+    "untrained": "#E57373",  # Soft shade of red (light red)
+    "master_frozen": "#FFB74D",  # Soft shade of orange (light orange)
+    "pretrain_partial": "#81C784",  # Soft shade of light green (pale green)
+    "pretrain_basic_frozen": "#81C784",  # Muted green (dark green)
+    "pretrain_frozen": "#2E7D32",  # Shade of dark green (forest green)
+    "pretrain_unfrozen": "#1565C0",  # Shade of dark blue (navy blue)
+}
+
+color_mapping_metrics = {
+    "dsa": "#66BB6A",  # Nice green (medium green)
+    "cka": "#42A5F5",  # Light shade of blue (sky blue)
+    "procrustes": "#1E88E5",  # Darker shade of blue (medium blue)
+}
+
+
+color_mapping_tasks = {
+    "Delay": "#1F77B4",  # Medium blue
+    "Delay Anti": "#FF7F0E",  # Bright orange
+}
 
 measures = ["cka", "dsa", "procrustes"]
 
@@ -72,6 +95,48 @@ def remove_nan(array):
 
 def remove_nan_list(lists):
     return [remove_nan(arr) for arr in lists]
+
+
+def get_dynamics_mamba(
+    d_model,
+    n_layers,
+    learning_rate,
+    batch_size,
+    model,
+    group,
+    taskset,
+    device,
+):
+    # Load configuration and set hyperparameters
+    config = load_config("../config.yaml")
+    ruleset = config[taskset]["rules_analysis"][-1]
+    all_rules = config[taskset]["rules_analysis"]
+
+    hp = {
+        "num_epochs": 50,
+        "batch_size_train": batch_size,
+        "learning_rate": learning_rate,
+        "l2_weight": 0.0001,
+        "mode": "test",
+    }
+    hp, _, _ = main.set_hyperparameters(
+        model_dir="debug", hp=hp, ruleset=all_rules, rule_trains=ruleset
+    )
+    config = MambaLMConfig(
+        d_model=d_model,
+        n_layers=n_layers,
+        vocab_size=hp["n_input"],
+        pad_vocab_size_multiple=1,  # https://github.com/alxndrTL/mamba.py/blob/main/mamba_lm.py#L27
+        pscan=True,
+    )
+    run_model = main.load_model_mamba(
+        f"../models/mamba/{taskset}/{group}/{model}",
+        hp,
+        config,
+        device=device,
+    )
+    h = main.representation(run_model, all_rules, rnn=False)
+    return h
 
 
 def get_dataframe(path, taskset):

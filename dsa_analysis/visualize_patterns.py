@@ -115,6 +115,7 @@ def visualize_same_plot(model: List[np.ndarray], titles: List[str], palette):
     ax.set_xlim([x_min - buffer, x_max + buffer])
     ax.set_ylim([y_min - buffer, y_max + buffer])
     ax.set_zlim([z_min - buffer, z_max + buffer])
+    ax.grid(False)
 
     # Show legend with titles
     plt.legend()

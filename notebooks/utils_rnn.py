@@ -24,14 +24,15 @@ import DSA
 import copy
 
 color_mapping = {
-    "master": "#4D4D4D",  # Soft shade of black (charcoal gray)
-    "untrained": "#E57373",  # Soft shade of red (light red)
-    "master_frozen": "#FFB74D",  # Soft shade of orange (light orange)
-    "pretrain_partial": "#81C784",  # Soft shade of light green (pale green)
-    "pretrain_basic_frozen": "#81C784",  # Muted green (dark green)
-    "pretrain_frozen": "#2E7D32",  # Shade of dark green (forest green)
-    "pretrain_unfrozen": "#1565C0",  # Shade of dark blue (navy blue)
+    "master": "#ED6A5A",  # Bittersweet (reddish-orange)
+    "untrained": "#E5B25D",  # Hunyadi yellow (mustard-yellow)
+    "master_frozen": "#9BC1BC",  # Ash gray (muted teal)
+    "pretrain_partial": "#696D7D",  # Payne's gray (blue-gray)
+    "pretrain_basic_frozen": "#696D7D",  # Payne's gray (blue-gray)
+    "pretrain_frozen": "#4C1E4F",  # Palatinate (deep purple)
+    "pretrain_unfrozen": "#8FBC8F",  # Palatinate (deep purple)
 }
+
 
 color_mapping_metrics = {
     "dsa": "#66BB6A",  # Nice green (medium green)
