@@ -35,10 +35,11 @@ color_mapping = {
 
 
 color_mapping_metrics = {
-    "dsa": "#66BB6A",  # Nice green (medium green)
-    "cka": "#42A5F5",  # Light shade of blue (sky blue)
-    "procrustes": "#1E88E5",  # Darker shade of blue (medium blue)
+    "dsa": "#EF233C",  # Nice green (medium green)
+    "cka": "#8D99AE",  # Light shade of blue (sky blue)
+    "procrustes": "#2B2F42",  # Darker shade of blue (medium blue)
 }
+# ["#8D99AE", "#2B2F42", "#EF233C"]  # Greys for CKA and Procrustes, Red for DSA
 
 
 color_mapping_tasks = {
@@ -428,20 +429,18 @@ def get_dataframe(path, taskset):
 
 
 def select_df(df):
-    groups_trained = [
-        "master",
-    ]
+    groups_trained = ["master", "pretrain_frozen", "pretrain_unfrozen"]
     # Condition for group1: if group1 is in critical_groups, then accuracy_1 should be 1
-    condition1 = ~df["group1"].isin(groups_trained) | (df["accuracy_1"] == 1)
+    condition1 = df["group1"].isin(groups_trained) & (df["accuracy_1"] == 1)
 
     # Condition for group2: if group2 is in critical_groups, then accuracy_2 should be 1
-    condition2 = ~df["group2"].isin(groups_trained) | (df["accuracy_2"] == 1)
+    condition2 = df["group2"].isin(groups_trained) & (df["accuracy_2"] == 1)
 
     # Condition for activation to not be "leaky_relu"
-    condition3 = df["activation"] != "leaky_relu"
 
     # Filter DataFrame based on the combined conditions
-    df_selected = df[condition1 & condition2 & condition3]
+    df_selected = df[condition1 | condition2]
+    # df_selected = df
 
     models_trained_per_group = {group + "_master": [] for group in groups_trained}
     for group in groups_trained:
@@ -522,9 +521,9 @@ def t_test_dissimilarity(df, group1, group2, measure):
         )
     ]["dissimilarity"]
     # perform t-test
-    t_stat, p_val = stats.ttest_ind(data_group1, data_group2)
-    # stat, p_value = mannwhitneyu(data_group1, data_group2)
-    return t_stat, p_val
+    # t_stat, p_val = stats.ttest_ind(data_group1, data_group2)
+    stat, p_value = mannwhitneyu(data_group1, data_group2)
+    return stat, p_value
 
 
 # function to perform t-test on all pairs of groups for a given measure
