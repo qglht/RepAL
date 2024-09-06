@@ -39,7 +39,7 @@ def train(args: argparse.Namespace) -> None:
     print(f"Number of devices: {num_gpus}")
 
     # create a folder for each group in config['groups'] under model folder
-    model_dir = f"models/{args.taskset}/{args.group}"
+    model_dir = f"models_big/{args.taskset}/{args.group}"
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
 
@@ -48,22 +48,24 @@ def train(args: argparse.Namespace) -> None:
             for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
                 for lr in config["rnn"]["parameters"]["learning_rate"]:
                     for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
-                        device = devices[
-                            i % len(devices)
-                        ]  # Cycle through available devices
-                        tasks.append(
-                            (
-                                args.taskset,
-                                args.group,
-                                rnn_type,
-                                activation,
-                                hidden_size,
-                                lr,
-                                batch_size,
-                                device,
+                        for init_type in config["rnn"]["parameters"]["init_type"]:
+                            device = devices[
+                                i % len(devices)
+                            ]  # Cycle through available devices
+                            tasks.append(
+                                (
+                                    args.taskset,
+                                    args.group,
+                                    rnn_type,
+                                    activation,
+                                    hidden_size,
+                                    lr,
+                                    batch_size,
+                                    init_type,
+                                    device,
+                                )
                             )
-                        )
-                        i += 1
+                            i += 1
 
     # Create a process for each task
     processes = [multiprocessing.Process(target=worker, args=(task,)) for task in tasks]

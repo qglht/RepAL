@@ -151,6 +151,8 @@ def get_default_hp(ruleset: List[str]):
         "n_rnn": 256,
         # number of input units
         "ruleset": ruleset,
+        # init_type
+        "init_type": "kaiming",
         # name to save
         "save_name": "test",
         # learning rate

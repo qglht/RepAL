@@ -17,6 +17,13 @@ rnn:
     batch_size_train:
       - 64
       - 128
+    init_type:
+      - kaiming
+      - xavier
+      - orthogonal
+      - diag
+      - randortho
+      - randgauss
     freeze:
       - True
       - False

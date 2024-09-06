@@ -27,10 +27,20 @@ color_mapping = {
     "master": "#ED6A5A",  # Bittersweet (reddish-orange)
     "untrained": "#E5B25D",  # Hunyadi yellow (mustard-yellow)
     "master_frozen": "#9BC1BC",  # Ash gray (muted teal)
-    "pretrain_partial": "#696D7D",  # Payne's gray (blue-gray)
+    "pretrain_partial": "#8FBC8F",  # Payne's gray (blue-gray)
     "pretrain_basic_frozen": "#696D7D",  # Payne's gray (blue-gray)
     "pretrain_frozen": "#4C1E4F",  # Palatinate (deep purple)
-    "pretrain_unfrozen": "#8FBC8F",  # Palatinate (deep purple)
+    "pretrain_unfrozen": "#696D7D",  # Palatinate (deep purple)
+}
+
+group_mapping_names = {
+    "master": "Master",
+    "untrained": "Untrained",
+    "master_frozen": "Master & Frozen",
+    "pretrain_partial": "Partial Pretraining",
+    "pretrain_basic_frozen": "Pretrain Basic Frozen",
+    "pretrain_frozen": "Full Pretraining",
+    "pretrain_unfrozen": "Full Pretraining & Unfrozen",
 }
 
 
@@ -429,17 +439,22 @@ def get_dataframe(path, taskset):
 
 
 def select_df(df):
-    groups_trained = ["master", "pretrain_frozen", "pretrain_unfrozen"]
+    groups_trained = ["master"]
     # Condition for group1: if group1 is in critical_groups, then accuracy_1 should be 1
-    condition1 = df["group1"].isin(groups_trained) & (df["accuracy_1"] == 1)
+    condition1 = ~df["group1"].isin(groups_trained) | (df["accuracy_1"] == 1)
 
     # Condition for group2: if group2 is in critical_groups, then accuracy_2 should be 1
-    condition2 = df["group2"].isin(groups_trained) & (df["accuracy_2"] == 1)
+    condition2 = ~df["group2"].isin(groups_trained) | (df["accuracy_2"] == 1)
 
-    # Condition for activation to not be "leaky_relu"
+    # # Condition for activation to not be "leaky_relu"
+    condition3 = df["activation"] != "leaky_relu"
+
+    condition4 = df["activation"] != "tanh"
+
+    # condition3 = df["model_type"] != "leaky_rnn"
 
     # Filter DataFrame based on the combined conditions
-    df_selected = df[condition1 | condition2]
+    df_selected = df[condition1 & condition2]
     # df_selected = df
 
     models_trained_per_group = {group + "_master": [] for group in groups_trained}
@@ -521,9 +536,10 @@ def t_test_dissimilarity(df, group1, group2, measure):
         )
     ]["dissimilarity"]
     # perform t-test
-    # t_stat, p_val = stats.ttest_ind(data_group1, data_group2)
-    stat, p_value = mannwhitneyu(data_group1, data_group2)
-    return stat, p_value
+    t_stat, p_val = stats.ttest_ind(data_group1, data_group2)
+    # stat, p_value = mannwhitneyu(data_group1, data_group2)
+    return t_stat, p_val
+    # return stat, p_value
 
 
 # function to perform t-test on all pairs of groups for a given measure

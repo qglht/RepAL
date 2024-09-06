@@ -12,11 +12,12 @@ import ipdb
 class Model(nn.Module):
     def __init__(self, hp, RNNLayer):
         super().__init__()
-        n_input, n_rnn, n_output, decay = (
+        n_input, n_rnn, n_output, decay, init_type = (
             hp["n_input"],
             hp["n_rnn"],
             hp["n_output"],
             hp["decay"],
+            hp["init_type"],
         )
 
         if (
@@ -33,7 +34,9 @@ class Model(nn.Module):
             raise NotImplementedError
 
         self.n_rnn = n_rnn
-        self.rnn = RNNLayer(hp["rnn_type"], n_input, n_rnn, nonlinearity, decay)
+        self.rnn = RNNLayer(
+            hp["rnn_type"], n_input, n_rnn, nonlinearity, decay, init_type
+        )
         self.readout = nn.Linear(n_rnn, n_output, bias=False)
 
     def forward(self, x):
