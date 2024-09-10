@@ -28,7 +28,11 @@ color_mapping = {
     "untrained": "#E5B25D",  # Hunyadi yellow (mustard-yellow)
     "master_frozen": "#9BC1BC",  # Ash gray (muted teal)
     "pretrain_partial": "#8FBC8F",  # Payne's gray (blue-gray)
-    "pretrain_basic_frozen": "#696D7D",  # Payne's gray (blue-gray)
+    "pretrain_basic_frozen": "#8FBC8F",  # Payne's gray (blue-gray)
+    "pretrain_anti_frozen": "#8FBC8F",  # Palatinate (deep purple)
+    "pretrain_delay_frozen": "#8FBC8F",  # Darker shade of blue (medium blue)
+    "pretrain_basic_anti_frozen": "#8FBC8F",  # Darker shade of blue (medium blue)
+    "pretrain_basic_delay_frozen": "#8FBC8F",  # Darker shade of blue (medium blue
     "pretrain_frozen": "#4C1E4F",  # Palatinate (deep purple)
     "pretrain_unfrozen": "#696D7D",  # Palatinate (deep purple)
 }
@@ -41,11 +45,15 @@ group_mapping_names = {
     "pretrain_basic_frozen": "Pretrain Basic Frozen",
     "pretrain_frozen": "Full Pretraining",
     "pretrain_unfrozen": "Full Pretraining & Unfrozen",
+    "pretrain_anti_frozen": "Pretrain Anti Frozen",
+    "pretrain_delay_frozen": "Pretrain Delay Frozen",
+    "pretrain_basic_anti_frozen": "Pretrain Basic Anti Frozen",
+    "pretrain_basic_delay_frozen": "Pretrain Basic Delay Frozen",
 }
 
 
 color_mapping_metrics = {
-    "dsa": "#EF233C",  # Nice green (medium green)
+    "dsa": "#7B1E3C",  # Nice green (medium green)
     "cka": "#8D99AE",  # Light shade of blue (sky blue)
     "procrustes": "#2B2F42",  # Darker shade of blue (medium blue)
 }
@@ -454,7 +462,7 @@ def select_df(df):
     # condition3 = df["model_type"] != "leaky_rnn"
 
     # Filter DataFrame based on the combined conditions
-    df_selected = df[condition1 & condition2]
+    df_selected = df[condition1 & condition2 & condition3 & condition4]
     # df_selected = df
 
     models_trained_per_group = {group + "_master": [] for group in groups_trained}
@@ -817,7 +825,7 @@ def get_dissimilarities_shared_task_shared_curriculum(
                         [
                             x_values,
                             [
-                                dissimilarities_groups[name_1][measure][x][0]
+                                dissimilarities_groups[name_1][measure][x][2]
                                 for x in range(len(x_values))
                             ],
                         ]
@@ -827,7 +835,7 @@ def get_dissimilarities_shared_task_shared_curriculum(
                         [
                             x_values,
                             [
-                                dissimilarities_groups[name_2][measure][x][0]
+                                dissimilarities_groups[name_2][measure][x][2]
                                 for x in range(len(x_values))
                             ],
                         ]
@@ -835,9 +843,34 @@ def get_dissimilarities_shared_task_shared_curriculum(
             # once all the pairs are added, we can interpolate the values
             x_new = x_values
             y_new = []
+            y_new_std = []
             for i in range(len(x_values)):
                 y_new.append(
-                    np.nanmean([diss[1][i] for diss in diss_cc[measure][shared]])
+                    np.nanmean(
+                        [
+                            diss_item
+                            for diss in diss_cc[measure][shared]
+                            for diss_item in diss[1][i]
+                        ]
+                    )
                 )
-            diss_cc[measure][shared] = [x_new, y_new]
+                y_new_std.append(
+                    np.nanstd(
+                        [
+                            diss_item
+                            for diss in diss_cc[measure][shared]
+                            for diss_item in diss[1][i]
+                        ]
+                    )
+                    / np.sqrt(
+                        len(
+                            [
+                                diss_item
+                                for diss in diss_cc[measure][shared]
+                                for diss_item in diss[1][i]
+                            ]
+                        )
+                    )
+                )
+            diss_cc[measure][shared] = [x_new, y_new, y_new_std]
     return diss_cc

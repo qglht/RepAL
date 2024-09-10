@@ -13,12 +13,17 @@ warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprec
 # Set environment variable to ignore Gym deprecation warnings
 os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
+# Semaphore to limit the number of concurrent processes
+MAX_CONCURRENT_TASKS = 32
+semaphore = multiprocessing.Semaphore(MAX_CONCURRENT_TASKS)
+
 
 def worker(task):
-    try:
-        pipeline(*task)
-    except Exception as e:
-        print(f"Error in worker: {e}")
+    with semaphore:
+        try:
+            pipeline(*task)
+        except Exception as e:
+            print(f"Error in worker: {e}")
 
 
 def train(args: argparse.Namespace) -> None:
