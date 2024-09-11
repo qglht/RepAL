@@ -14,11 +14,11 @@ def visualize(model: List[np.ndarray], title: str):
     """
     # Define a custom colormap that transitions from blue to red
     cmap = get_cmap(
-        "coolwarm"
+        "darkgreen"
     )  # 'coolwarm' is a built-in colormap that transitions from blue to red
 
     for i in range(len(model)):
-        fig = plt.figure()
+        fig = plt.figure(dpi=500)
         ax = fig.add_subplot(projection="3d")
         xyzs = model[i]
 
@@ -38,6 +38,34 @@ def visualize(model: List[np.ndarray], title: str):
         ax.set_ylabel("Y Axis")
         ax.set_zlabel("Z Axis")
         ax.set_title(title)
+
+        plt.show()
+
+
+def visualize_simple(model: List[np.ndarray], color):
+    """Visualize a simulation with shape described below
+
+    Args:
+        model (List[np.ndarray]): list of models to plot, of shape time_steps, 3
+        title (str): title of the plot
+    """
+    for i in range(len(model)):
+        fig = plt.figure()
+        ax = fig.add_subplot(projection="3d")
+        xyzs = model[i]
+
+        # Loop over the trajectory segments and plot each in black
+        for j in range(len(xyzs) - 1):
+            start = xyzs[j]
+            end = xyzs[j + 1]
+            color = color
+            ax.plot(
+                *zip(start, end), color=color, lw=2
+            )  # 'k' is the color code for black
+
+        # Turn off the grid and axis labels
+        ax.grid(False)
+        ax.axis("off")
 
         plt.show()
 

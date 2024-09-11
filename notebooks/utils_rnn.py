@@ -646,7 +646,7 @@ def find_group_pairs(config, taskset):
             shared_tasks = int(
                 100
                 * len(set(group1_tasks).intersection(set(group2_tasks)))
-                / max(len(group1_tasks), len(group2_tasks))
+                / len(set(group1_tasks).union(set(group2_tasks)))
             )
         try:
             group_pairs[shared_tasks].append(pair)
