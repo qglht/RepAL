@@ -101,6 +101,12 @@ PDM:
       train:
         ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
         frozen: True
+    pretrain_anti_delay_frozen:
+      pretrain:
+        ruleset: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT]
+      train:
+        ruleset: [AntiPerceptualDecisionMakingDelayResponseT]
+        frozen: True
     master_frozen:
       pretrain:
         ruleset: []
