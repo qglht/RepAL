@@ -3,6 +3,7 @@ from .visualize_patterns import (
     visualize,
     visualize_simple,
     visualize_same_plot,
+    visualize_separate_plots,
     plot_with_gridspec,
 )
 from .combine import combine_2_motifs, combine_simulations

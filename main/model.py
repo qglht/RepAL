@@ -10,6 +10,19 @@ import ipdb
 
 
 class Model(nn.Module):
+    """
+    Model class for the RNN model
+
+    Args:
+    hp (dict): The hyperparameters
+    RNNLayer (nn.Module): The RNN layer
+
+    Attributes:
+    n_rnn (int): The number of RNN units
+    rnn (nn.Module): The RNN layer
+    readout (nn.Linear): The readout layer
+    """
+
     def __init__(self, hp, RNNLayer):
         super().__init__()
         n_input, n_rnn, n_output, decay, init_type = (
@@ -49,6 +62,21 @@ class Model(nn.Module):
 
 
 class Run_Model(nn.Module):  # (jit.ScriptModule):
+    """
+    Model class for the RNN model
+
+    Args:
+    hp (dict): The hyperparameters
+    RNNLayer (nn.Module): The RNN layer
+    device (torch.device): The device to run the model on
+
+    Attributes:
+    hp (dict): The hyperparameters
+    model (Model): The RNN model
+    device (torch.device): The device to run the model on
+    loss_fnc (nn.Module): The loss function
+    """
+
     def __init__(self, hp, RNNLayer, device):
         super().__init__()
         self.hp = hp
@@ -96,6 +124,23 @@ class Run_Model(nn.Module):  # (jit.ScriptModule):
 
 
 class Mamba(nn.Module):
+    """
+    Mamba class for the Mamba model
+
+    Args:
+    config (MambaConfig): The configuration for the Mamba model
+
+    Attributes:
+    config (MambaConfig): The configuration for the Mamba model
+    layers (nn.ModuleList): The list of residual blocks
+
+    Methods:
+    forward: Forward pass through the
+    model
+    step: Forward pass for one time step
+
+    """
+
     def __init__(self, config: MambaConfig):
         super().__init__()
 
@@ -135,6 +180,36 @@ class Mamba(nn.Module):
 
 
 class MambaSupervGym(MambaLM):
+    """
+    MambaSupervGym class for the Mamba model
+
+    Args:
+    hp (dict): The hyperparameters
+    lm_config (MambaLMConfig): The configuration for the Mamba model
+    device (torch.device): The device to run the model on
+
+    Attributes:
+    lm_config (MambaLMConfig): The configuration for the Mamba model
+    device (torch.device): The device to run the model on
+    config (MambaLMConfig): The configuration for the Mamba model
+    hp (dict): The hyperparameters
+    embedding (nn.Linear): The embedding layer
+    mamba (Mamba): The Mamba model
+    norm_f (RMSNorm): The normalization layer
+    lm_head (nn.Linear): The linear layer
+    loss_fnc (nn.Module): The loss function
+
+    Methods:
+    calculate_loss: Calculate the loss
+    forward: Forward pass through the
+    model
+    forward_up_to: Forward pass up to a
+    certain layer
+    get_activations: Get the activations
+    save: Save the model
+
+    """
+
     def __init__(self, hp, lm_config, device):
         super().__init__(lm_config)
         self.lm_config = lm_config
@@ -154,12 +229,8 @@ class MambaSupervGym(MambaLM):
         self.loss_fnc = nn.CrossEntropyLoss(reduction="none").to(self.device)
 
     def calculate_loss(self, output, mask, labels):
-        # Use mask to calculate loss of crossentropyloss
-        # ipdb.set_trace()
-        # predicted_classes = torch.argmax(output, dim=1)
         loss = self.loss_fnc(output, labels)
         loss = loss.mean()
-        # loss = (loss * mask).sum() / mask.sum()
         loss_reg = 0
         for param in self.parameters():
             loss_reg += (
@@ -242,11 +313,9 @@ class MambaSupervGym(MambaLM):
         caches_list = []
         caches = cache_init
         for i in range(token.shape[1]):
-            # TODO : check change in cache over caches
             x = self.embedding(token[:, i, :])
             x, caches = self.mamba.step(x, caches)
             caches_list.append(copy.deepcopy(caches))
-        # concatenate all the caches
 
         caches_hidden = torch.stack(
             [caches_list[i][0][0] for i in range(len(caches_list))], dim=0
@@ -257,13 +326,8 @@ class MambaSupervGym(MambaLM):
             caches_hidden.shape[2] * caches_hidden.shape[3],
         )
         return hidden
-        # hidden = self.forward_up_to(token, 1)
-        # # switch first and second dimensions
-        # hidden = hidden.permute(1, 0, 2)
-        # return hidden
 
     def save(self, path):
-        # Check if model is wrapped by DataParallel and save accordingly
         torch.save(self.state_dict(), path)
 
 

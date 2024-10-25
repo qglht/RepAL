@@ -4,8 +4,8 @@ import main
 import numpy as np
 
 # Define font sizes and styles for the plot
-SIZE_DEFAULT = 10
-SIZE_LARGE = 8
+SIZE_DEFAULT = 18
+SIZE_LARGE = 20
 plt.rc("font", family="Arial")  # controls default font
 plt.rc("font", weight="normal")  # controls default font
 plt.rc("font", size=SIZE_DEFAULT)  # controls default text sizes
@@ -64,10 +64,14 @@ def plot_env(env, n_trials):
 
     # Create figure with subplots for Observations (7) and Response (1), shared x-axis
     fig, axs = plt.subplots(
-        nrows=8, ncols=1, figsize=(4, 6), sharex=True, gridspec_kw={"hspace": 0.7}
+        nrows=8,
+        ncols=1,
+        figsize=(4, 8),
+        dpi=500,
+        sharex=True,
+        gridspec_kw={"hspace": 0.7},
     )
     env = env.replace("T", " ")
-    fig.suptitle(f"{env}")
 
     time_steps_range = range(num_time_steps * n_trials)
 
@@ -95,16 +99,6 @@ def plot_env(env, n_trials):
         for t in range(num_time_steps, len(time_steps_range), num_time_steps):
             axs[i].axvline(x=t, color="gray", linestyle="--", lw=0.8)
 
-        # Add feature name above the subplot
-        axs[i].text(
-            0,
-            1.1,
-            feature_names[i],
-            ha="left",
-            va="bottom",
-            fontsize=SIZE_LARGE,
-            transform=axs[i].transAxes,
-        )
 
     # Plot Response
     ax_resp = axs[-1]
@@ -118,21 +112,6 @@ def plot_env(env, n_trials):
     for t in range(num_time_steps, len(time_steps_range), num_time_steps):
         ax_resp.axvline(x=t, color="gray", linestyle="--", lw=0.8)
 
-    # Add Response label above the x-axis
-    ax_resp.text(
-        0,
-        1.1,
-        "Response",
-        ha="left",
-        va="bottom",
-        fontsize=SIZE_LARGE,
-        transform=ax_resp.transAxes,
-    )
-
-    # Add Time steps title below the x-axis
-    # fig.text(1, 0.02, "Time (ms)", ha="right", va="center", fontsize=SIZE_LARGE)
-
-    # Re-enable the y-axis with labels
     for ax in axs:
         ax.spines["right"].set_visible(False)
         ax.spines["top"].set_visible(False)

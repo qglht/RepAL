@@ -59,9 +59,7 @@ def combine_2_motifs(motifA, motifB, mixing_level=0):
     """
     new_motif = np.empty((motifA.shape[0], motifA.shape[1]))
     for i in range(motifB.shape[0]):
-        new_motif[i] = (1 - mixing_level) * motifB[i] + mixing_level * (
-            motifA[i] - motifA[0]
-        )
+        new_motif[i] = motifB[i] + mixing_level * (motifA[i] - motifA[0])
     return new_motif
 
 

@@ -1,22 +1,27 @@
 from collections import OrderedDict
-from tracemalloc import start
-import numpy as np
 from sklearn.decomposition import PCA
-import matplotlib.pyplot as plt
-import ipdb
 from sklearn.impute import SimpleImputer
 import torch
 from torch import Value, linalg as LA
 from main import get_dataloader, get_class_instance
 import copy
 
-# import PCA
-from sklearn.decomposition import PCA
-
-#### Not modified for neurogym yet!!
-
 
 def get_indexes(dt, timing, seq_length, h, rule):
+    """
+    Get the indexes of epochs for the given timing, sequence length, and activations
+
+    Args:
+    dt (float): The time step
+    timing (dict): The timing dictionary
+    seq_length (int): The sequence length
+    h (torch.Tensor): The activations
+    rule (str): The rule
+
+    Returns:
+    OrderedDict: The activations by epoch
+    """
+
     h_byepoch = OrderedDict()
     indexes = {key: None for key in timing.keys()}
     timing = {k: int(v / dt) for k, v in timing.items()}
@@ -42,6 +47,19 @@ def get_indexes(dt, timing, seq_length, h, rule):
 
 
 def representation(model, rules, rnn=True, rnn_vs_mamba=False):
+    """
+    Get the representations of the model for the given rules and mode
+
+    Args:
+    model (Model): The model
+    rules (list): The list of rules
+    rnn (bool): Whether to use RNN mode
+    rnn_vs_mamba (bool): Whether to compare RNN and MAMBA
+
+    Returns:
+    torch.Tensor: The activations
+
+    """
     hp = model.hp
     rules = [rules] if isinstance(rules, str) else (rules or hp["rules"])
     activations = OrderedDict()
@@ -115,17 +133,6 @@ def representation(model, rules, rnn=True, rnn_vs_mamba=False):
     except KeyError:
         activations_stimulus = activations[("AntiGoNogoDelayResponseT", "stimulus")]
 
-    # # Center and standardize the activations
-    # flattened_activations = activations_stimulus.reshape(
-    #     -1, activations_stimulus.shape[-1]
-    # )
-    # mean_activations = torch.mean(flattened_activations, dim=0)
-    # std_activations = torch.std(flattened_activations, dim=0)
-
-    # # Handle potential division by zero
-    # std_activations[std_activations == 0] = 1.0
-
-    # activations_stimulus = (activations_stimulus - mean_activations) / std_activations
     return activations_stimulus
 
 
@@ -196,7 +203,7 @@ def representation_task(model, rules, task, rnn=True, rnn_vs_mamba=False):
         )  # Concatenate the tensors along the batch dimension
     # only return activations for which key[1] == 'stimulus'
     activations_stimulus = None
-    activations_stimulus = activations[(task, "decision")]
+    activations_stimulus = activations[(task, "stimulus")]
     return activations_stimulus
 
 
@@ -207,8 +214,6 @@ def compute_pca(h, n_components=3):
     except KeyError:
         h = h[("AntiGoNogoDelayResponseT", "stimulus")]
     data = h
-    # ipdb.set_trace()
-    # data = torch.cat(list(h.values()), dim=0)
     data_2d = data.reshape(-1, data.shape[-1])
 
     # Using PCA directly for dimensionality reduction:
@@ -221,14 +226,6 @@ def compute_pca(h, n_components=3):
     explained_variance_ratio = pca.explained_variance_ratio_.sum()
 
     data_trans = data_trans_2d.reshape(data.shape[0], data.shape[1], n_components)
-
-    # # Package back to dictionary
-    # h_trans = OrderedDict()
-    # i_start = 0
-    # for key, val in h.items():
-    #     i_end = i_start + val.shape[0]
-    #     h_trans[key] = data_trans[i_start:i_end, :, :]
-    #     i_start = i_end
 
     return data_trans, explained_variance_ratio
 
@@ -309,26 +306,7 @@ def compute_common_pca(h_list, n_components=3):
         pca_h_list.append(curve_reduced)
         start = end
 
-    # h_trans = OrderedDict()
-    # i_start = 0
-    # for key, val in h.items():
-    #     i_end = i_start + val.shape[0]
-    #     h_trans[key] = data_trans[i_start:i_end, :, :]
-    #     i_start = i_end
-
     return pca_h_list, explained_variance_ratio
-
-
-import torch
-import copy
-from sklearn.decomposition import PCA
-from sklearn.impute import SimpleImputer
-
-
-import torch
-import copy
-from sklearn.decomposition import PCA
-from sklearn.impute import SimpleImputer
 
 
 def compute_pca_projection_on_last(h_list, n_components=3):

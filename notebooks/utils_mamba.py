@@ -21,6 +21,48 @@ import ast
 import DSA
 import copy
 
+color_mapping = {
+    "master": "#ED6A5A",  # Bittersweet (reddish-orange)
+    "untrained": "#E5B25D",  # Hunyadi yellow (mustard-yellow)
+    "master_frozen": "#9BC1BC",  # Ash gray (muted teal)
+    "pretrain_partial": "#8FBC8F",  # Payne's gray (blue-gray)
+    "pretrain_basic_frozen": "#8FBC8F",  # Payne's gray (blue-gray)
+    "pretrain_anti_frozen": "#8FBC8F",  # Palatinate (deep purple)
+    "pretrain_delay_frozen": "#8FBC8F",  # Darker shade of blue (medium blue)
+    "pretrain_basic_anti_frozen": "#8FBC8F",  # Darker shade of blue (medium blue)
+    "pretrain_basic_delay_frozen": "#8FBC8F",  # Darker shade of blue (medium blue
+    "pretrain_frozen": "#4C1E4F",  # Palatinate (deep purple)
+    "pretrain_unfrozen": "#696D7D",  # Palatinate (deep purple)
+}
+
+group_mapping_names = {
+    "master": "Master",
+    "untrained": "Untrained",
+    "master_frozen": "Master & Frozen",
+    "pretrain_partial": "Partial Pretraining",
+    "pretrain_basic_frozen": "Pretrain Basic Frozen",
+    "pretrain_frozen": "Full Pretraining",
+    "pretrain_unfrozen": "Full Pretraining & Unfrozen",
+    "pretrain_anti_frozen": "Pretrain Anti Frozen",
+    "pretrain_delay_frozen": "Pretrain Delay Frozen",
+    "pretrain_basic_anti_frozen": "Pretrain Basic Anti Frozen",
+    "pretrain_basic_delay_frozen": "Pretrain Basic Delay Frozen",
+}
+
+
+color_mapping_metrics = {
+    "dsa": "#7B1E3C",  # Nice green (medium green)
+    "cka": "#8D99AE",  # Light shade of blue (sky blue)
+    "procrustes": "#2B2F42",  # Darker shade of blue (medium blue)
+}
+# ["#8D99AE", "#2B2F42", "#EF233C"]  # Greys for CKA and Procrustes, Red for DSA
+
+
+color_mapping_tasks = {
+    "Delay": "#1F77B4",  # Medium blue
+    "Delay Anti": "#FF7F0E",  # Bright orange
+}
+
 groups = [
     "untrained",
     "master_frozen",
@@ -33,28 +75,6 @@ groups = [
     "pretrain_frozen",
     "pretrain_unfrozen",
 ]
-
-color_mapping = {
-    "master": "#4D4D4D",  # Soft shade of black (charcoal gray)
-    "untrained": "#E57373",  # Soft shade of red (light red)
-    "master_frozen": "#FFB74D",  # Soft shade of orange (light orange)
-    "pretrain_partial": "#81C784",  # Soft shade of light green (pale green)
-    "pretrain_basic_frozen": "#81C784",  # Muted green (dark green)
-    "pretrain_frozen": "#2E7D32",  # Shade of dark green (forest green)
-    "pretrain_unfrozen": "#1565C0",  # Shade of dark blue (navy blue)
-}
-
-color_mapping_metrics = {
-    "dsa": "#66BB6A",  # Nice green (medium green)
-    "cka": "#42A5F5",  # Light shade of blue (sky blue)
-    "procrustes": "#1E88E5",  # Darker shade of blue (medium blue)
-}
-
-
-color_mapping_tasks = {
-    "Delay": "#1F77B4",  # Medium blue
-    "Delay Anti": "#FF7F0E",  # Bright orange
-}
 
 measures = ["cka", "dsa", "procrustes"]
 
@@ -185,6 +205,40 @@ def get_dataframe(path, taskset):
                             df["accuracy_1"].append(array_accuracy[i][0])
                             df["accuracy_2"].append(array_accuracy[j][0])
     return pd.DataFrame(df)
+
+
+def select_df(df):
+    groups_trained = ["master"]
+    # Condition for group1: if group1 is in critical_groups, then accuracy_1 should be 1
+    condition1 = ~df["group1"].isin(groups_trained) | (df["accuracy_1"] == 1)
+
+    # Condition for group2: if group2 is in critical_groups, then accuracy_2 should be 1
+    condition2 = ~df["group2"].isin(groups_trained) | (df["accuracy_2"] == 1)
+
+    # Filter DataFrame based on the combined conditions
+    df_selected = df[condition1 & condition2]
+    # df_selected = df
+
+    models_trained_per_group = {group + "_master": [] for group in groups_trained}
+    for group in groups_trained:
+        df_selected_group = df_selected[
+            (df_selected["group1"] == group) | (df_selected["group2"] == group)
+        ]
+        for row, data in df_selected_group.iterrows():
+            model = (
+                str(data["d_model"])
+                + "_"
+                + str(data["n_layers"])
+                + "_"
+                + str(data["learning_rate"])
+                + "_"
+                + str(data["batch_size"])
+            )
+            models_trained_per_group[group + "_master"].append(model)
+    for group in models_trained_per_group:
+        models_trained_per_group[group] = list(set(models_trained_per_group[group]))
+
+    return df_selected, models_trained_per_group
 
 
 # Define the mapping for group2
@@ -345,7 +399,7 @@ def find_group_pairs(config, taskset):
             shared_tasks = int(
                 100
                 * len(set(group1_tasks).intersection(set(group2_tasks)))
-                / max(len(group1_tasks), len(group2_tasks))
+                / len(set(group1_tasks).union(set(group2_tasks)))
             )
         try:
             group_pairs[shared_tasks].append(pair)
@@ -433,35 +487,48 @@ def dissimilarities_per_percentage_of_shared_task(group_pairs, df):
     return dissimilarities_per_shared_task
 
 
-def get_dissimilarities_groups(taskset):
+def get_dissimilarities_groups(taskset, models_trained_per_group):
     # take all the folder names under data/dissimilarities_over_learning/{taskset}
     groups_training = os.listdir(
         f"../data/dissimilarities_over_learning/mamba/{taskset}"
     )
-    groups_training = [group for group in groups_training if group != ".DS_Store"]
+    groups_training = [
+        group for group in groups_training if group != ".DS_Store" and "master" in group
+    ]
+    # groups_training = [group for group in groups_training if "master" in group]
     dissimilarities_groups = {group: None for group in groups_training}
 
     for group_training in groups_training:
         path = f"../data/dissimilarities_over_learning/mamba/{taskset}/{group_training}"
         measures = ["cka", "dsa", "procrustes", "accuracy_1", "accuracy_2"]
-        sampling = [0, 25, 50, 75, 100]
+        sampling = [i * 20 for i in range(6)]
         dissimilarities = {measure: [] for measure in measures}
 
         for measure in measures:
             path_measure = os.path.join(path, measure)
             files = os.listdir(path_measure)
             for file in files:
-                file_path = os.path.join(path_measure, file)
-                if file_path.endswith(".npz"):
-                    with np.load(file_path) as data:
-                        dissimilarities[measure].append(data["arr_0"])
+                model_name = file.replace(".npz", "")
+                if group_training in models_trained_per_group:
+                    if model_name in models_trained_per_group[group_training]:
+                        file_path = os.path.join(path_measure, file)
+                        if file_path.endswith(".npz"):
+                            with np.load(file_path) as data:
+                                dissimilarities[measure].append(data["arr_0"])
+                else:
+                    file_path = os.path.join(path_measure, file)
+                    if file_path.endswith(".npz"):
+                        with np.load(file_path) as data:
+                            dissimilarities[measure].append(data["arr_0"])
         dissimilarities_interpolated = {
             measure: {group: [] for group in range(len(sampling))}
             for measure in measures
         }
+
+        # average to have the sampling
         for measure in measures:
             for dissimilarity in dissimilarities[measure]:
-                if dissimilarity.shape[0] > 2:
+                if dissimilarity.shape[0] > 4:
                     dissimilarities_interpolated[measure][0].append(dissimilarity[0])
                     for i in range(len(sampling) - 1):
                         index_start = int(sampling[i] / 100 * (dissimilarity.shape[0]))
@@ -469,12 +536,17 @@ def get_dissimilarities_groups(taskset):
                             sampling[i + 1] / 100 * (dissimilarity.shape[0])
                         )
                         dissimilarities_interpolated[measure][i + 1].append(
-                            np.nanmedian(dissimilarity[index_start:index_end])
+                            np.median(dissimilarity[index_start:index_end])
                         )
+
+        # average over the groups
         for measure in measures:
             for group in range(len(sampling)):
-                dissimilarities_interpolated[measure][group] = np.nanmedian(
-                    dissimilarities_interpolated[measure][group]
+                dissimilarities_interpolated[measure][group] = (
+                    np.nanmean(dissimilarities_interpolated[measure][group]),
+                    np.nanstd(dissimilarities_interpolated[measure][group])
+                    / np.sqrt(len(dissimilarities_interpolated[measure][group])),
+                    dissimilarities_interpolated[measure][group],
                 )
         dissimilarities_groups[group_training] = dissimilarities_interpolated
     return dissimilarities_groups, groups_training
@@ -494,18 +566,55 @@ def get_dissimilarities_shared_task_shared_curriculum(
                 name_2 = pair[1] + "_" + pair[0]
                 if name_1 in dissimilarities_groups:
                     diss_cc[measure][shared].append(
-                        [x_values, dissimilarities_groups[name_1][measure]]
+                        [
+                            x_values,
+                            [
+                                dissimilarities_groups[name_1][measure][x][2]
+                                for x in range(len(x_values))
+                            ],
+                        ]
                     )
                 elif name_2 in dissimilarities_groups:
                     diss_cc[measure][shared].append(
-                        [x_values, dissimilarities_groups[name_2][measure]]
+                        [
+                            x_values,
+                            [
+                                dissimilarities_groups[name_2][measure][x][2]
+                                for x in range(len(x_values))
+                            ],
+                        ]
                     )
             # once all the pairs are added, we can interpolate the values
             x_new = x_values
             y_new = []
+            y_new_std = []
             for i in range(len(x_values)):
                 y_new.append(
-                    np.nanmedian([diss[1][i] for diss in diss_cc[measure][shared]])
+                    np.nanmean(
+                        [
+                            diss_item
+                            for diss in diss_cc[measure][shared]
+                            for diss_item in diss[1][i]
+                        ]
+                    )
                 )
-            diss_cc[measure][shared] = [x_new, y_new]
+                y_new_std.append(
+                    np.nanstd(
+                        [
+                            diss_item
+                            for diss in diss_cc[measure][shared]
+                            for diss_item in diss[1][i]
+                        ]
+                    )
+                    / np.sqrt(
+                        len(
+                            [
+                                diss_item
+                                for diss in diss_cc[measure][shared]
+                                for diss_item in diss[1][i]
+                            ]
+                        )
+                    )
+                )
+            diss_cc[measure][shared] = [x_new, y_new, y_new_std]
     return diss_cc
