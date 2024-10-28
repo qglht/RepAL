@@ -13,6 +13,76 @@ warnings.filterwarnings("ignore", message=".*The `registry.all` method is deprec
 # Set environment variable to ignore Gym deprecation warnings
 os.environ["GYM_IGNORE_DEPRECATION_WARNINGS"] = "1"
 
+# Semaphore to limit the number of concurrent processes
+MAX_CONCURRENT_TASKS = 32
+# semaphore = multiprocessing.Semaphore(MAX_CONCURRENT_TASKS)
+
+
+# def worker(task):
+#     with semaphore:
+#         try:
+#             pipeline(*task)
+#         except Exception as e:
+#             print(f"Error in worker: {e}")
+
+
+# def train(args: argparse.Namespace) -> None:
+#     # Try different start methods if "fork" is problematic
+#     multiprocessing.set_start_method("spawn", force=True)
+#     config = load_config("config.yaml")
+
+#     # Create a list of all tasks to run
+#     tasks = []
+#     num_gpus = torch.cuda.device_count()  # Get the number of GPUs available
+#     devices = (
+#         [torch.device(f"cuda:{i}") for i in range(num_gpus)]
+#         if num_gpus > 0
+#         else [torch.device("cpu")]
+#     )
+#     i = 0
+#     print(f"Devices used: {devices}")
+#     print(f"Number of devices: {num_gpus}")
+
+#     # create a folder for each group in config['groups'] under model folder
+#     model_dir = f"models_big/{args.taskset}/{args.group}"
+#     if not os.path.exists(model_dir):
+#         os.makedirs(model_dir)
+
+#     for rnn_type in config["rnn"]["parameters"]["rnn_type"]:
+#         for activation in config["rnn"]["parameters"]["activations"]:
+#             for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
+#                 for lr in config["rnn"]["parameters"]["learning_rate"]:
+#                     for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
+#                         for init_type in config["rnn"]["parameters"]["init_type"]:
+#                             device = devices[
+#                                 i % len(devices)
+#                             ]  # Cycle through available devices
+#                             tasks.append(
+#                                 (
+#                                     args.taskset,
+#                                     args.group,
+#                                     rnn_type,
+#                                     activation,
+#                                     hidden_size,
+#                                     lr,
+#                                     batch_size,
+#                                     init_type,
+#                                     device,
+#                                 )
+#                             )
+#                             i += 1
+
+#     # Create a process for each task
+#     processes = [multiprocessing.Process(target=worker, args=(task,)) for task in tasks]
+
+#     # Start all processes
+#     for process in processes:
+#         process.start()
+
+#     # Wait for all processes to finish
+#     for process in processes:
+#         process.join()
+
 
 def worker(task):
     try:
@@ -22,13 +92,11 @@ def worker(task):
 
 
 def train(args: argparse.Namespace) -> None:
-    # Try different start methods if "fork" is problematic
     multiprocessing.set_start_method("spawn", force=True)
     config = load_config("config.yaml")
 
-    # Create a list of all tasks to run
     tasks = []
-    num_gpus = torch.cuda.device_count()  # Get the number of GPUs available
+    num_gpus = torch.cuda.device_count()
     devices = (
         [torch.device(f"cuda:{i}") for i in range(num_gpus)]
         if num_gpus > 0
@@ -38,8 +106,7 @@ def train(args: argparse.Namespace) -> None:
     print(f"Devices used: {devices}")
     print(f"Number of devices: {num_gpus}")
 
-    # create a folder for each group in config['groups'] under model folder
-    model_dir = f"models/{args.taskset}/{args.group}"
+    model_dir = f"models_big/{args.taskset}/{args.group}"
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
 
@@ -48,32 +115,39 @@ def train(args: argparse.Namespace) -> None:
             for hidden_size in config["rnn"]["parameters"]["n_rnn"]:
                 for lr in config["rnn"]["parameters"]["learning_rate"]:
                     for batch_size in config["rnn"]["parameters"]["batch_size_train"]:
-                        device = devices[
-                            i % len(devices)
-                        ]  # Cycle through available devices
-                        tasks.append(
-                            (
-                                args.taskset,
-                                args.group,
-                                rnn_type,
-                                activation,
-                                hidden_size,
-                                lr,
-                                batch_size,
-                                device,
+                        for init_type in config["rnn"]["parameters"]["init_type"]:
+                            device = devices[i % len(devices)]
+                            tasks.append(
+                                (
+                                    args.taskset,
+                                    args.group,
+                                    rnn_type,
+                                    activation,
+                                    hidden_size,
+                                    lr,
+                                    batch_size,
+                                    init_type,
+                                    device,
+                                )
                             )
-                        )
-                        i += 1
+                            i += 1
 
-    # Create a process for each task
-    processes = [multiprocessing.Process(target=worker, args=(task,)) for task in tasks]
+    # Limit the number of concurrently running processes manually
+    running_processes = []
 
-    # Start all processes
-    for process in processes:
+    for task in tasks:
+        if len(running_processes) >= MAX_CONCURRENT_TASKS:
+            # Wait for a process to finish before starting a new one
+            for process in running_processes:
+                process.join()
+            running_processes = []
+
+        process = multiprocessing.Process(target=worker, args=(task,))
         process.start()
+        running_processes.append(process)
 
-    # Wait for all processes to finish
-    for process in processes:
+    # Join any remaining processes
+    for process in running_processes:
         process.join()
 
 

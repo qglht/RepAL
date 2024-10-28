@@ -13,16 +13,12 @@ import math
 import torch
 import math
 import numpy as np
-from neurogym import TrialEnv
 from typing import List
-from torch.cuda.amp import autocast, GradScaler
 import torch
 import time
 import numpy as np
 import main
-import ipdb
 import logging
-import ipdb
 
 # Suppress specific Gym warnings
 warnings.filterwarnings("ignore", message=".*Gym version v0.24.1.*")
@@ -151,6 +147,8 @@ def get_default_hp(ruleset: List[str]):
         "n_rnn": 256,
         # number of input units
         "ruleset": ruleset,
+        # init_type
+        "init_type": "kaiming",
         # name to save
         "save_name": "test",
         # learning rate
@@ -237,14 +235,28 @@ def set_hyperparameters(
 
 
 def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=True):
+    """Train the network.
 
+    Args:
+        run_model: model to train
+        optimizer: optimizer
+        hp: dictionary of hyperparameters
+        log: dictionary to store results
+        name: str, training directory
+        freeze: bool, freeze input weights or not
+        retrain: bool, retrain the model or not
+        rnn: bool, whether to use rnn
+
+    Returns:
+        model is stored at model_dir/model.ckpt    : Not implemented
+        training configuration is stored at model_dir/hp.json
+    """
     # set up log
     logging = setup_logging(os.path.join(name, "logs"))
 
     start_epoch = 0
 
     # load checkpoint if there is any
-    # TODO : adapt it to Mamba : How to save the model with the checkpoints?
     if not retrain:
         checkpoint_files = find_checkpoints(name)
         if checkpoint_files:
@@ -256,7 +268,6 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=
             print(f"Resuming training from epoch {start_epoch}")
 
     # freeze input weights or not
-    # TODO : adapt it to Mamba
     if rnn:
         if freeze:
             optim = optimizer(
@@ -287,6 +298,7 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=
         print(f"Epoch {epoch} started")
         epoch_loss = 0.0
         t_start_epoch = time.time()
+        # TODO: Here we train the model on all the rules one after the other: can we train on all rules at the same time and see if it improves the performance?
         for rule in hp["rule_trains"]:
             for inputs, labels, mask in dataloaders[rule]["train"]:
                 if rnn:
@@ -301,9 +313,7 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=
                     mask.to(run_model.device, non_blocking=True).flatten().long(),
                 )
 
-                # autocast for mixed precision training
-                # with autocast():
-                c_lsq, c_reg, logits, _, _ = run_model(inputs, labels, mask)
+                c_lsq, c_reg, _, _, _ = run_model(inputs, labels, mask)
                 loss = c_lsq + c_reg
 
                 if torch.isnan(loss).any():
@@ -354,6 +364,22 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=
 
 
 def do_eval(run_model, log, logging, rule_train, dataloaders, rnn):
+    """
+    Evaluate the model on the test set.
+
+    Args:
+        run_model: model to evaluate
+        log: dictionary to store results
+        logging: logging object
+        rule_train: list of rules to train
+        dataloaders: dictionary of dataloaders
+        rnn: bool, whether to use rnn
+
+    Returns:
+        log: dictionary to store results
+        logging: logging object
+    """
+
     hp = run_model.hp
     device = run_model.device
 
@@ -431,6 +457,17 @@ def do_eval(run_model, log, logging, rule_train, dataloaders, rnn):
 
 
 def accuracy(logits, true_class_indices, mask):
+    """
+    Compute the accuracy of the model predictions weighted by the mask.
+
+    Args:
+        logits: torch.Tensor, shape [(batch, images), classes]
+        true_class_indices: torch.Tensor, shape [batch, images]
+        mask: torch.Tensor, shape [batch, images]
+
+    Returns:
+        weighted_accuracy: float, the weighted accuracy
+    """
     # Reshape logits to shape [(batch * images), classes]
     logits_flat = logits.view(-1, logits.size(-1))
 

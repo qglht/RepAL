@@ -6,6 +6,16 @@ import pickle
 
 
 def get_class_instance(class_name, **kwargs):
+    """
+    Get an instance of the given class with the given keyword arguments
+
+    Args:
+    class_name (str): The name of the class
+    **kwargs: The keyword arguments for the class constructor
+
+    Returns:
+    instance: The instance of the class with the given keyword arguments
+    """
     module = importlib.import_module("main")
     class_ = getattr(module, class_name)
     instance = class_(**kwargs)
@@ -17,6 +27,20 @@ def swap_axes(inputs, targets):
 
 
 def gen_feed_data(inputs, labels, env, hp):
+    """
+    Generate feed data for the given inputs, labels, environment, and hyperparameters
+
+    Args:
+    inputs (np.ndarray): The inputs
+    labels (np.ndarray): The labels
+    env (str): The environment
+    hp (dict): The hyperparameters
+
+    Returns:
+    inputs (np.ndarray): The inputs with the feed data
+    labels (np.ndarray): The labels
+    """
+
     n_samples, n_time = inputs.shape[:2]
 
     new_shape = (n_samples, n_time, hp["rule_start"] + hp["n_rule"])
@@ -30,6 +54,16 @@ def gen_feed_data(inputs, labels, env, hp):
 
 
 def create_mask(inputs):
+    """
+    Create a mask for the given inputs
+
+    Args:
+    inputs (np.ndarray): The inputs
+
+    Returns:
+    mask (np.ndarray): The mask
+    """
+
     n_sample, n_time, _ = inputs.shape
     zero_mask = np.all(inputs == 0, axis=2)
     mask = np.where(zero_mask, 5.0, 1.0).astype(np.float32)
@@ -46,6 +80,18 @@ def create_mask(inputs):
 
 
 def generate_data(env, hp, mode, seq_len=400, num_pregenerated=100000):
+    """
+
+    Args:
+    env (str): The environment
+    hp (dict): The hyperparameters
+    mode (str): The mode
+    seq_len (int): The sequence length
+    num_pregenerated (int): The number of pregenerated samples
+
+    Returns:
+    None
+    """
     env_instance = get_class_instance(env, config=hp)
     if mode == "test":
         timing = env_instance.timing
@@ -90,6 +136,19 @@ def generate_data(env, hp, mode, seq_len=400, num_pregenerated=100000):
 
 
 def generate_data_vis(env, hp, mode, seq_len=400, num_pregenerated=100000):
+    """
+
+    Args:
+    env (str): The environment
+    hp (dict): The hyperparameters
+    mode (str): The mode
+    seq_len (int): The sequence length
+    num_pregenerated (int): The number of pregenerated samples
+
+    Returns:
+    None
+    """
+
     env_instance = get_class_instance(env, config=hp)
     print(env_instance)
     if mode == "test":

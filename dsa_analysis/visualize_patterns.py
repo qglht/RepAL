@@ -1,3 +1,5 @@
+from curses.ascii import SI
+from re import S
 import matplotlib.pyplot as plt
 from typing import List
 import numpy as np
@@ -14,11 +16,11 @@ def visualize(model: List[np.ndarray], title: str):
     """
     # Define a custom colormap that transitions from blue to red
     cmap = get_cmap(
-        "coolwarm"
+        "darkgreen"
     )  # 'coolwarm' is a built-in colormap that transitions from blue to red
 
     for i in range(len(model)):
-        fig = plt.figure()
+        fig = plt.figure(dpi=500)
         ax = fig.add_subplot(projection="3d")
         xyzs = model[i]
 
@@ -38,6 +40,34 @@ def visualize(model: List[np.ndarray], title: str):
         ax.set_ylabel("Y Axis")
         ax.set_zlabel("Z Axis")
         ax.set_title(title)
+
+        plt.show()
+
+
+def visualize_simple(model: List[np.ndarray], color):
+    """Visualize a simulation with shape described below
+
+    Args:
+        model (List[np.ndarray]): list of models to plot, of shape time_steps, 3
+        title (str): title of the plot
+    """
+    for i in range(len(model)):
+        fig = plt.figure(dpi=500)
+        ax = fig.add_subplot(projection="3d")
+        xyzs = model[i]
+
+        # Loop over the trajectory segments and plot each in black
+        for j in range(len(xyzs) - 1):
+            start = xyzs[j]
+            end = xyzs[j + 1]
+            color = color
+            ax.plot(
+                *zip(start, end), color=color, lw=2
+            )  # 'k' is the color code for black
+
+        # Turn off the grid and axis labels
+        ax.grid(False)
+        ax.axis("off")
 
         plt.show()
 
@@ -116,12 +146,190 @@ def visualize_same_plot(model: List[np.ndarray], titles: List[str], palette):
     ax.set_ylim([y_min - buffer, y_max + buffer])
     ax.set_zlim([z_min - buffer, z_max + buffer])
     ax.grid(False)
-
+    ax.axis("off")
     # Show legend with titles
     plt.legend()
 
     # Display the plot
     plt.show()
+
+
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+import numpy as np
+from typing import List
+
+colors = ["#8FBC8F", "#9BC1BC", "#4C1E4F"]
+
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+import numpy as np
+from typing import List
+
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+import numpy as np
+from typing import List
+
+
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+import numpy as np
+from typing import List
+
+# Define font sizes and styles for the plot
+SIZE_DEFAULT = 12
+SIZE_LARGE = 12
+plt.rc("font", family="Arial")  # controls default font
+plt.rc("font", weight="normal")  # controls default font
+plt.rc("font", size=SIZE_DEFAULT)  # controls default text sizes
+plt.rc("axes", titlesize=SIZE_LARGE)  # fontsize of the axes title
+plt.rc("axes", labelsize=SIZE_LARGE)  # fontsize of the x and y labels
+plt.rc("xtick", labelsize=SIZE_DEFAULT)  # fontsize of the tick labels
+plt.rc("ytick", labelsize=SIZE_DEFAULT)  # fontsize of the tick labels
+
+
+import matplotlib.pyplot as plt
+import numpy as np
+import random
+
+import matplotlib.pyplot as plt
+import numpy as np
+import random
+
+
+import matplotlib.pyplot as plt
+import numpy as np
+import random
+from matplotlib import cm
+
+
+from matplotlib.colors import Normalize
+import matplotlib.cm as cm
+
+import matplotlib.lines as mlines
+
+
+def visualize_separate_plots(
+    models: list[np.ndarray], titles: list[str], palette: dict
+):
+    """Visualize each simulation in a separate 3D plot with mean and sample trials.
+
+    Args:
+        models (list[np.ndarray]): list of models to plot, each model is an array of shape (n_time, n_trials, 3)
+        titles (list[str]): list of titles for each trajectory
+        palette (dict): dictionary mapping each title to a specific color
+    """
+    # Use the Viridis colormap for coloring
+    viridis = cm.get_cmap("viridis", 4)
+
+    # Loop through each model and create a separate plot
+    for i in range(len(models)):
+        xyzs = models[i]
+        title = titles[i]
+
+        # Create a new figure for each plot
+        fig = plt.figure(figsize=(8, 6), dpi=500)
+        ax = fig.add_subplot(projection="3d")
+
+        # Compute the mean trajectory across trials
+        mean_trajectory = np.mean(xyzs, axis=1)
+        mean_start_point = mean_trajectory[0, :]  # Starting point of the mean trial
+
+        # Plot 3 randomly sampled trials with Viridis colors
+        n_trials = xyzs.shape[1]
+        sampled_trials = random.sample(range(n_trials), 4)
+        for idx, trial_idx in enumerate(sampled_trials):
+            trial = xyzs[:, trial_idx, :]
+
+            # Translate each trial to share the same starting point as the mean trial
+            translated_trial = trial - trial[0, :] + mean_start_point
+
+            # Plot the entire trial with a single color from the Viridis palette
+            color = viridis(idx / len(sampled_trials))
+            ax.plot(
+                translated_trial[:, 0],
+                translated_trial[:, 1],
+                translated_trial[:, 2],
+                color=color,
+                lw=2.5,
+                alpha=0.5,
+            )
+
+            # Mark the end of the trial with a colorful triangle
+            end_point = translated_trial[-1]
+            ax.scatter(
+                end_point[0],
+                end_point[1],
+                end_point[2],
+                color=color,  # Triangle is the same color as the trial
+                marker="^",
+                alpha=1,
+                s=100,
+            )
+
+        # # Plot the mean trajectory with a thicker line using a stronger viridis color
+        # mean_color = viridis(1)
+        # ax.plot(
+        #     mean_trajectory[:, 0],
+        #     mean_trajectory[:, 1],
+        #     mean_trajectory[:, 2],
+        #     color=mean_color,
+        #     lw=3,  # Thicker line for the mean
+        # )
+
+        # Mark the start of the mean curve with a black cross
+        ax.scatter(
+            mean_start_point[0],
+            mean_start_point[1],
+            mean_start_point[2],
+            color="black",
+            marker="x",
+            s=100,  # Larger marker for the mean
+        )
+
+        # # Mark the end of the mean curve with a colorful triangle
+        # end_point = mean_trajectory[-1]
+        # ax.scatter(
+        #     end_point[0],
+        #     end_point[1],
+        #     end_point[2],
+        #     color=mean_color,
+        #     marker="^",
+        #     s=100,  # Larger marker for the mean
+        # )
+
+        # Draw black axes starting from (0,0,0)
+        max_range = np.max(
+            np.abs(mean_trajectory - mean_start_point)
+        )  # Adjust max_range based on the mean trajectory
+        ax.quiver(0, 0, 0, max_range, 0, 0, color="black", arrow_length_ratio=0.2)
+        ax.quiver(0, 0, 0, 0, -max_range, 0, color="black", arrow_length_ratio=0.2)
+        ax.quiver(0, 0, 0, 0, 0, max_range, color="black", arrow_length_ratio=0.2)
+
+        # Adjust limits
+        buffer = 0.1  # Buffer to add around the end points
+        ax.set_xlim([-max_range - buffer, max_range + buffer])
+        ax.set_ylim([-max_range - buffer, max_range + buffer])
+        ax.set_zlim([-max_range - buffer, max_range + buffer])
+
+        # Hide grid and axis if desired
+        ax.grid(False)
+        ax.axis("off")
+
+        # Create a custom legend for start (cross) and end (triangle)
+        cross = mlines.Line2D(
+            [], [], color="black", marker="x", markersize=10, lw=0, label="Start"
+        )
+        triangle = mlines.Line2D(
+            [], [], color="black", marker="^", markersize=10, lw=0, label="End"
+        )
+
+        # Add the legend with "start" and "end" entries
+        ax.legend(handles=[cross, triangle], loc="upper right")
+
+        # Display the plot
+        plt.show()
 
 
 import matplotlib.pyplot as plt
@@ -221,51 +429,3 @@ def visualize_on_axis(
     ax.legend(fontsize=fontsize)
 
 
-def plot_with_gridspec(
-    model1: List[np.ndarray],
-    titles1: List[str],
-    model2: List[np.ndarray],
-    titles2: List[str],
-    palette1: Dict[str, str],
-    palette2: Dict[str, str],
-    ax_labels: List[str],
-    fig_size: int,
-    fontsize: int,
-    plot1: str,
-    plot2: str,
-):
-    """
-    Plot two sets of models on the same figure using GridSpec with customized font, plot settings, and color palettes.
-
-    Args:
-        model1 (List[np.ndarray]): list of models for the first plot
-        titles1 (List[str]): list of titles for the first plot's trajectories
-        model2 (List[np.ndarray]): list of models for the second plot
-        titles2 (List[str]): list of titles for the second plot's trajectories
-        palette1 (Dict[str, str]): Color palette for the first subplot.
-        palette2 (Dict[str, str]): Color palette for the second subplot.
-        ax_labels (List[str]): List of axis labels.
-        fig_size (int): Size of the figure.
-        fontsize (int): Font size for the axis labels and title.
-    """
-    # Create a new figure with specified size
-    fig = plt.figure(figsize=(fig_size * 2, fig_size))
-
-    # Set up GridSpec layout
-    gs = GridSpec(1, 2, figure=fig)
-
-    # First subplot with palette1
-    ax1 = fig.add_subplot(gs[0, 0], projection="3d")
-    visualize_on_axis(ax1, model1, titles1, palette1, fontsize, ax_labels)
-    ax1.set_title(plot1, fontsize=fontsize)
-
-    # Second subplot with palette2
-    ax2 = fig.add_subplot(gs[0, 1], projection="3d")
-    visualize_on_axis(ax2, model2, titles2, palette2, fontsize, ax_labels)
-    ax2.set_title(plot2, fontsize=fontsize)
-
-    # Adjust layout for better spacing
-    plt.tight_layout()
-
-    # Display the combined plot
-    plt.show()

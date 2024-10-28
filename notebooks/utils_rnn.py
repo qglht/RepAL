@@ -27,18 +27,37 @@ color_mapping = {
     "master": "#ED6A5A",  # Bittersweet (reddish-orange)
     "untrained": "#E5B25D",  # Hunyadi yellow (mustard-yellow)
     "master_frozen": "#9BC1BC",  # Ash gray (muted teal)
-    "pretrain_partial": "#696D7D",  # Payne's gray (blue-gray)
-    "pretrain_basic_frozen": "#696D7D",  # Payne's gray (blue-gray)
+    "pretrain_partial": "#8FBC8F",  # Payne's gray (blue-gray)
+    "pretrain_basic_frozen": "#8FBC8F",  # Payne's gray (blue-gray)
+    "pretrain_anti_frozen": "#8FBC8F",  # Palatinate (deep purple)
+    "pretrain_delay_frozen": "#8FBC8F",  # Darker shade of blue (medium blue)
+    "pretrain_basic_anti_frozen": "#8FBC8F",  # Darker shade of blue (medium blue)
+    "pretrain_basic_delay_frozen": "#8FBC8F",  # Darker shade of blue (medium blue
     "pretrain_frozen": "#4C1E4F",  # Palatinate (deep purple)
-    "pretrain_unfrozen": "#8FBC8F",  # Palatinate (deep purple)
+    "pretrain_unfrozen": "#696D7D",  # Palatinate (deep purple)
+}
+
+group_mapping_names = {
+    "master": "Master",
+    "untrained": "Untrained",
+    "master_frozen": "Master & Frozen",
+    "pretrain_partial": "Partial Pretraining",
+    "pretrain_basic_frozen": "Pretrain Basic Frozen",
+    "pretrain_frozen": "Full Pretraining",
+    "pretrain_unfrozen": "Full Pretraining & Unfrozen",
+    "pretrain_anti_frozen": "Pretrain Anti Frozen",
+    "pretrain_delay_frozen": "Pretrain Delay Frozen",
+    "pretrain_basic_anti_frozen": "Pretrain Basic Anti Frozen",
+    "pretrain_basic_delay_frozen": "Pretrain Basic Delay Frozen",
 }
 
 
 color_mapping_metrics = {
-    "dsa": "#66BB6A",  # Nice green (medium green)
-    "cka": "#42A5F5",  # Light shade of blue (sky blue)
-    "procrustes": "#1E88E5",  # Darker shade of blue (medium blue)
+    "dsa": "#7B1E3C",  # Nice green (medium green)
+    "cka": "#8D99AE",  # Light shade of blue (sky blue)
+    "procrustes": "#2B2F42",  # Darker shade of blue (medium blue)
 }
+# ["#8D99AE", "#2B2F42", "#EF233C"]  # Greys for CKA and Procrustes, Red for DSA
 
 
 color_mapping_tasks = {
@@ -60,213 +79,6 @@ groups = [
 ]
 
 measures = ["cka", "dsa", "procrustes"]
-
-
-def visualize_groups():
-
-    # Define the data with abbreviated task names
-    data = {
-        "Group": [
-            "master",
-            "pretrain_frozen",
-            "pretrain_unfrozen",
-            "pretrain_basic_frozen",
-            "pretrain_anti_frozen",
-            "pretrain_delay_frozen",
-            "pretrain_basic_anti_frozen",
-            "pretrain_basic_delay_frozen",
-            "master_frozen",
-            "untrained",
-        ],
-        "Pretrain Ruleset": [
-            "[]",
-            "anti, pro, delay",
-            "anti, pro, delay",
-            "pro",
-            "anti",
-            "delay",
-            "pro, anti",
-            "pro, delay",
-            "[]",
-            "[]",
-        ],
-        "Train Ruleset": [
-            "master",
-            "master",
-            "master",
-            "master",
-            "master",
-            "master",
-            "master",
-            "master",
-            "master",
-            "[]",
-        ],
-        "Frozen": [
-            "Unfrozen",
-            "Frozen",
-            "Unfrozen",
-            "Frozen",
-            "Frozen",
-            "Frozen",
-            "Frozen",
-            "Frozen",
-            "Frozen",
-            "Frozen",
-        ],
-    }
-
-    # Create a DataFrame
-    df = pd.DataFrame(data)
-
-    # Create a plot
-    fig, ax = plt.subplots(figsize=(14, 8))  # Larger figure size
-
-    # Hide axes
-    ax.xaxis.set_visible(False)
-    ax.yaxis.set_visible(False)
-    ax.set_frame_on(False)
-
-    # Define colors for each group
-    colors = plt.cm.get_cmap("Set3", len(df))
-
-    # Create a table
-    table = plt.table(
-        cellText=df.values, colLabels=df.columns, cellLoc="center", loc="center"
-    )
-
-    # Apply color to rows
-    for i, key in enumerate(df.index):
-        color = colors(i)
-        for j in range(len(df.columns)):
-            table[(i + 1, j)].set_facecolor(color)
-            table[(i + 1, j)].set_edgecolor("black")
-
-    # Apply styling to table
-    table.auto_set_font_size(False)
-    table.set_fontsize(12)
-    table.scale(1.2, 1.2)
-    plt.title("Group Configurations", fontsize=16)
-
-    # Show the plot
-    plt.show()
-
-
-def visualize_reduced_plots(color_mapping):
-    # Define the data with abbreviated task names
-    data = {
-        "Group": [
-            "master",
-            "pretrain_frozen",
-            "pretrain_unfrozen",
-            "pretrain_basic_frozen",
-            "pretrain_anti_frozen",
-            "pretrain_delay_frozen",
-            "pretrain_basic_anti_frozen",
-            "pretrain_basic_delay_frozen",
-            "master_frozen",
-            "untrained",
-        ],
-        "Pretrain Ruleset": [
-            "[]",
-            "anti, pro, delay",
-            "anti, pro, delay",
-            "pro",
-            "anti",
-            "delay",
-            "pro, anti",
-            "pro, delay",
-            "[]",
-            "[]",
-        ],
-        "Train Ruleset": [
-            "master",
-            "master",
-            "master",
-            "master",
-            "master",
-            "master",
-            "master",
-            "master",
-            "master",
-            "[]",
-        ],
-        "Frozen": [
-            "Unfrozen",
-            "Frozen",
-            "Unfrozen",
-            "Frozen",
-            "Frozen",
-            "Frozen",
-            "Frozen",
-            "Frozen",
-            "Frozen",
-            "Frozen",
-        ],
-    }
-
-    # Create a DataFrame
-    df = pd.DataFrame(data)
-
-    # Map "pretrain" to "pretrain_partial" except for specific cases
-    df["Group"] = df["Group"].replace(
-        {
-            "pretrain_basic_frozen": "pretrain_partial",
-            "pretrain_anti_frozen": "pretrain_partial",
-            "pretrain_delay_frozen": "pretrain_partial",
-            "pretrain_basic_anti_frozen": "pretrain_partial",
-            "pretrain_basic_delay_frozen": "pretrain_partial",
-        }
-    )
-
-    # Combine all "pretrain_partial" rows into a single row
-    pretrain_partial_data = df[df["Group"] == "pretrain_partial"]
-    combined_pretrain_partial = {
-        "Group": "pretrain_partial",
-        "Pretrain Ruleset": "1 or 2 of anti, pro, delay",
-        "Train Ruleset": ", ".join(pretrain_partial_data["Train Ruleset"].unique()),
-        "Frozen": ", ".join(pretrain_partial_data["Frozen"].unique()),
-    }
-
-    # Create a new DataFrame with the combined row
-    df_combined = df[df["Group"] != "pretrain_partial"]
-    df_combined = pd.concat(
-        [df_combined, pd.DataFrame([combined_pretrain_partial])], ignore_index=True
-    )
-
-    # Plot the table (optional, for visualization purposes)
-    fig, ax = plt.subplots(figsize=(14, 8))  # Larger figure size
-
-    # Hide axes
-    ax.xaxis.set_visible(False)
-    ax.yaxis.set_visible(False)
-    ax.set_frame_on(False)
-
-    # Create a table
-    table = plt.table(
-        cellText=df_combined.values,
-        colLabels=df_combined.columns,
-        cellLoc="center",
-        loc="center",
-    )
-
-    # Apply color to rows
-    for i, group in enumerate(df_combined["Group"]):
-        color = color_mapping.get(
-            group, "gray"
-        )  # Default to gray if group not in color_mapping
-        for j in range(len(df_combined.columns)):
-            table[(i + 1, j)].set_facecolor(color)
-            table[(i + 1, j)].set_edgecolor("black")
-
-    # Apply styling to table
-    table.auto_set_font_size(False)
-    table.set_fontsize(12)
-    table.scale(1.2, 1.2)
-    plt.title("Group Configurations", fontsize=16)
-
-    # Show the plot
-    plt.show()
 
 
 def parse_model_info(model_name):
@@ -428,20 +240,20 @@ def get_dataframe(path, taskset):
 
 
 def select_df(df):
-    groups_trained = [
-        "master",
-    ]
+    groups_trained = ["master"]
     # Condition for group1: if group1 is in critical_groups, then accuracy_1 should be 1
     condition1 = ~df["group1"].isin(groups_trained) | (df["accuracy_1"] == 1)
 
     # Condition for group2: if group2 is in critical_groups, then accuracy_2 should be 1
     condition2 = ~df["group2"].isin(groups_trained) | (df["accuracy_2"] == 1)
 
-    # Condition for activation to not be "leaky_relu"
+    # # Condition for activation to not be "leaky_relu"
     condition3 = df["activation"] != "leaky_relu"
 
+    condition4 = df["activation"] != "tanh"
+
     # Filter DataFrame based on the combined conditions
-    df_selected = df[condition1 & condition2 & condition3]
+    df_selected = df[condition1 & condition2 & condition3 & condition4]
 
     models_trained_per_group = {group + "_master": [] for group in groups_trained}
     for group in groups_trained:
@@ -525,6 +337,7 @@ def t_test_dissimilarity(df, group1, group2, measure):
     t_stat, p_val = stats.ttest_ind(data_group1, data_group2)
     # stat, p_value = mannwhitneyu(data_group1, data_group2)
     return t_stat, p_val
+    # return stat, p_value
 
 
 # function to perform t-test on all pairs of groups for a given measure
@@ -603,18 +416,8 @@ def find_group_pairs(config, taskset):
     group_pairs = {}
     for pair in pairs:
         group1, group2 = pair
-        group1_tasks = (
-            config[taskset]["groups"][group1]["pretrain"]["ruleset"]
-            # + config[taskset]["groups"][group1]["train"]["ruleset"]
-            # if config[taskset]["groups"][group1]["train"]["frozen"] == False
-            # else config[taskset]["groups"][group1]["pretrain"]["ruleset"]
-        )
-        group2_tasks = (
-            config[taskset]["groups"][group2]["pretrain"]["ruleset"]
-            # + config[taskset]["groups"][group2]["train"]["ruleset"]
-            # if config[taskset]["groups"][group2]["train"]["frozen"] == False
-            # else config[taskset]["groups"][group2]["pretrain"]["ruleset"]
-        )
+        group1_tasks = config[taskset]["groups"][group1]["pretrain"]["ruleset"]
+        group2_tasks = config[taskset]["groups"][group2]["pretrain"]["ruleset"]
         if len(group1_tasks) == 0 and len(group2_tasks) == 0:
             shared_tasks = 100
         elif len(group1_tasks) == 0 or len(group2_tasks) == 0:
@@ -623,7 +426,7 @@ def find_group_pairs(config, taskset):
             shared_tasks = int(
                 100
                 * len(set(group1_tasks).intersection(set(group2_tasks)))
-                / max(len(group1_tasks), len(group2_tasks))
+                / len(set(group1_tasks).union(set(group2_tasks)))
             )
         try:
             group_pairs[shared_tasks].append(pair)
@@ -802,7 +605,7 @@ def get_dissimilarities_shared_task_shared_curriculum(
                         [
                             x_values,
                             [
-                                dissimilarities_groups[name_1][measure][x][0]
+                                dissimilarities_groups[name_1][measure][x][2]
                                 for x in range(len(x_values))
                             ],
                         ]
@@ -812,7 +615,7 @@ def get_dissimilarities_shared_task_shared_curriculum(
                         [
                             x_values,
                             [
-                                dissimilarities_groups[name_2][measure][x][0]
+                                dissimilarities_groups[name_2][measure][x][2]
                                 for x in range(len(x_values))
                             ],
                         ]
@@ -820,9 +623,34 @@ def get_dissimilarities_shared_task_shared_curriculum(
             # once all the pairs are added, we can interpolate the values
             x_new = x_values
             y_new = []
+            y_new_std = []
             for i in range(len(x_values)):
                 y_new.append(
-                    np.nanmean([diss[1][i] for diss in diss_cc[measure][shared]])
+                    np.nanmean(
+                        [
+                            diss_item
+                            for diss in diss_cc[measure][shared]
+                            for diss_item in diss[1][i]
+                        ]
+                    )
                 )
-            diss_cc[measure][shared] = [x_new, y_new]
+                y_new_std.append(
+                    np.nanstd(
+                        [
+                            diss_item
+                            for diss in diss_cc[measure][shared]
+                            for diss_item in diss[1][i]
+                        ]
+                    )
+                    / np.sqrt(
+                        len(
+                            [
+                                diss_item
+                                for diss in diss_cc[measure][shared]
+                                for diss_item in diss[1][i]
+                            ]
+                        )
+                    )
+                )
+            diss_cc[measure][shared] = [x_new, y_new, y_new_std]
     return diss_cc

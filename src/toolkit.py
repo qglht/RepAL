@@ -169,7 +169,9 @@ def normalize_within_unit_volume(tensor):
     return normalized_tensor
 
 
-def pipeline(taskset, group, rnn_type, activation, hidden_size, lr, batch_size, device):
+def pipeline(
+    taskset, group, rnn_type, activation, hidden_size, lr, batch_size, init_type, device
+):
     with load_config("config.yaml") as config:
         rules_pretrain = config[taskset]["groups"][group]["pretrain"]["ruleset"]
         rules_train = config[taskset]["groups"][group]["train"]["ruleset"]
@@ -184,19 +186,22 @@ def pipeline(taskset, group, rnn_type, activation, hidden_size, lr, batch_size, 
             "l2_weight": 0.0001,
             "num_epochs": 50,
             "batch_size_train": batch_size,
+            "init_type": init_type,
         }
-        model_name = f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}"
+        model_name = (
+            f"{rnn_type}_{activation}_{hidden_size}_{lr}_{batch_size}_{init_type}"
+        )
         path_pretrain_folder = os.path.join(
-            f"models/{taskset}/{group}", model_name + f"_pretrain"
+            f"models_big/{taskset}/{group}", model_name + f"_pretrain"
         )
         path_pretrain_model = os.path.join(
-            f"models/{taskset}/{group}", model_name + f"_pretrain.pth"
+            f"models_big/{taskset}/{group}", model_name + f"_pretrain.pth"
         )
         path_train_folder = os.path.join(
-            f"models/{taskset}/{group}", model_name + f"_train"
+            f"models_big/{taskset}/{group}", model_name + f"_train"
         )
         path_train_model = os.path.join(
-            f"models/{taskset}/{group}", model_name + f"_train.pth"
+            f"models_big/{taskset}/{group}", model_name + f"_train.pth"
         )
 
         # Pretraining
