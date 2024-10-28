@@ -6,8 +6,7 @@ import math
 import ipdb
 
 
-class RNNCell_base(nn.Module):  # (nn.Module): jit.ScriptModule
-    #     __constants__ = ['bias']
+class RNNCell_base(nn.Module):
 
     def __init__(
         self, input_size, hidden_size, nonlinearity, bias, init_type="kaiming"

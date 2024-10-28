@@ -16,9 +16,9 @@ Use 3D attractor dynamics to show if RepAL metric is relevant to capture composi
 
 ####  Code Structure
 - dsa_analysis : Folder containing the code to compute the dynamical similarity between the models
-- lorenz_sanity_check.ipynb : Creation of different Lorenz Attractors and similarity analysis between them
+- analysis_lorenz_1.ipynb : Creation of different Lorenz Attractors and similarity analysis between them
 - compositional.ipynb : Creation of compositional motifs and similarity analysis between them
-- dsa_epochs.ipynb : Analysis of the evolution of the similarity between the models during training, simulated by adding noise of different strengths to the motifs
+- analysis_lorenz_2.ipynb : Analysis of the evolution of the similarity between the models during training, simulated by adding noise of different strengths to the motifs
 
 #### How to use
 - select kernel created with poetry
@@ -31,7 +31,7 @@ Use the validated metrics to apply them to a known case of compositional learnin
 
 #### Code Structure
 - main: Folder containing the code to train the models on the neurotasks
-- notebooks/analysis_rnn.ipynb : Analysis of the activity and representation of the models
+- notebooks/analysis_rnn_{x}.ipynb : Analysis of the activity and representation of the models
 - sbatch: Folder containing the scripts to run the training on the cluster
 - config.yaml : Configuration file for the training
 - src: Folder containing the code to train the models and analyze the results
@@ -41,8 +41,25 @@ Use the validated metrics to apply them to a known case of compositional learnin
 - train the models: sbatch sbatch/train.sh
 - compute dissimilarity of computational dynamics of models: sbatch sbatch/dissimilarity.sh
 - compute dissimilarities of learning dynamics of models: sbatch sbatch/dissimilarity_over_learning.sh
-- compute dissimilarities of learning dynamics of models within groups: sbatch sbatch/dissimilarity_within_learning.sh
 - analysis of the results: notebooks/analysis_rnn.ipynb
+
+### 3 : Application to Mamba models trained on neurotasks
+
+Use the validated metrics to apply them to a known case of compositional learning and problem solving 
+
+#### Code Structure
+- main: Folder containing the code to train the models on the neurotasks
+- notebooks/analysis_mamba.ipynb : Analysis of the activity and representation of the models
+- sbatch: Folder containing the scripts to run the training on the cluster
+- config.yaml : Configuration file for the training
+- src: Folder containing the code to train the models and analyze the results
+
+#### How to use (in order of execution)
+- generate the data: sbatch sbatch/generate_data.sh
+- train the models: sbatch sbatch/train.sh
+- compute dissimilarity of computational dynamics of models: sbatch sbatch/dissimilarity_mamba.sh
+- compute dissimilarities of learning dynamics of models: sbatch sbatch/dissimilarity_over_learning_mamaba.sh
+- analysis of the results: notebooks/analysis_mamba.ipynb
 
 ## References
 

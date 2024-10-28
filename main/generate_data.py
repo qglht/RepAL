@@ -5,7 +5,7 @@ import importlib
 import pickle
 
 
-def get_class_instance(class_name, **kwargs)
+def get_class_instance(class_name, **kwargs):
     """
     Get an instance of the given class with the given keyword arguments
 
@@ -56,7 +56,7 @@ def gen_feed_data(inputs, labels, env, hp):
 def create_mask(inputs):
     """
     Create a mask for the given inputs
-    
+
     Args:
     inputs (np.ndarray): The inputs
 
@@ -148,7 +148,7 @@ def generate_data_vis(env, hp, mode, seq_len=400, num_pregenerated=100000):
     Returns:
     None
     """
-    
+
     env_instance = get_class_instance(env, config=hp)
     print(env_instance)
     if mode == "test":

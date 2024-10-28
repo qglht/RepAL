@@ -231,10 +231,20 @@ def compute_pca(h, n_components=3):
 
 
 def compute_common_pca(h_list, n_components=3):
+    """
+    Compute PCA transformation for a list of activations in their common PCA space
+
+    Args:
+    h_list (list): List of activations for different rules
+    n_components (int): Number of components for PCA
+
+    Returns:
+    list: List of activations after PCA transformation
+    float: Explained variance ratio
+
+    """
     # here h is a list of dictionaries, each containing activations for a different rule
     h_list = [h if torch.is_tensor(h) else torch.tensor(h) for h in h_list]
-
-    # equalize n_neurons
 
     # test if more than 2 shapes:
 
@@ -310,6 +320,18 @@ def compute_common_pca(h_list, n_components=3):
 
 
 def compute_pca_projection_on_last(h_list, n_components=3):
+    """
+    Compute PCA transformation for a list of activations projected onto the PCA space of the last array
+
+    Args:
+    h_list (list): List of activations for different rules
+    n_components (int): Number of components for PCA
+
+    Returns:
+    list: List of activations after PCA transformation
+    float: Explained variance ratio
+
+    """
     # Ensure all elements in h_list are tensors
     h_list = [h if torch.is_tensor(h) else torch.tensor(h) for h in h_list]
 

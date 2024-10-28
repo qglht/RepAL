@@ -250,13 +250,10 @@ def select_df(df):
     # # Condition for activation to not be "leaky_relu"
     condition3 = df["activation"] != "leaky_relu"
 
-    condition4 = df["activation"] != "softplus"
-
-    condition5 = df["model_type"] != "leaky_rnn"
+    condition4 = df["activation"] != "tanh"
 
     # Filter DataFrame based on the combined conditions
-    df_selected = df[condition1 & condition2 & condition3 & condition4 & condition5]
-    # df_selected = df
+    df_selected = df[condition1 & condition2 & condition3 & condition4]
 
     models_trained_per_group = {group + "_master": [] for group in groups_trained}
     for group in groups_trained:
@@ -419,18 +416,8 @@ def find_group_pairs(config, taskset):
     group_pairs = {}
     for pair in pairs:
         group1, group2 = pair
-        group1_tasks = (
-            config[taskset]["groups"][group1]["pretrain"]["ruleset"]
-            # + config[taskset]["groups"][group1]["train"]["ruleset"]
-            # if config[taskset]["groups"][group1]["train"]["frozen"] == False
-            # else config[taskset]["groups"][group1]["pretrain"]["ruleset"]
-        )
-        group2_tasks = (
-            config[taskset]["groups"][group2]["pretrain"]["ruleset"]
-            # + config[taskset]["groups"][group2]["train"]["ruleset"]
-            # if config[taskset]["groups"][group2]["train"]["frozen"] == False
-            # else config[taskset]["groups"][group2]["pretrain"]["ruleset"]
-        )
+        group1_tasks = config[taskset]["groups"][group1]["pretrain"]["ruleset"]
+        group2_tasks = config[taskset]["groups"][group2]["pretrain"]["ruleset"]
         if len(group1_tasks) == 0 and len(group2_tasks) == 0:
             shared_tasks = 100
         elif len(group1_tasks) == 0 or len(group2_tasks) == 0:

@@ -14,9 +14,6 @@ plt.rc("axes", labelsize=SIZE_LARGE)  # fontsize of the x and y labels
 plt.rc("xtick", labelsize=SIZE_DEFAULT)  # fontsize of the tick labels
 plt.rc("ytick", labelsize=SIZE_DEFAULT)  # fontsize of the tick labels
 
-import matplotlib.pyplot as plt
-import numpy as np
-
 # Updated color mapping in a similar style as the second example
 color_mapping = {
     "Fixation": "#ED6A5A",  # Bittersweet (reddish-orange)
@@ -98,7 +95,6 @@ def plot_env(env, n_trials):
         # Draw separation lines between trials
         for t in range(num_time_steps, len(time_steps_range), num_time_steps):
             axs[i].axvline(x=t, color="gray", linestyle="--", lw=0.8)
-
 
     # Plot Response
     ax_resp = axs[-1]
