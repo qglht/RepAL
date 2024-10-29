@@ -1,10 +1,43 @@
-# Alignment measurement of RNN models trained on multi neurotasks
+# DYNAMICAL SIMILARITY ANALYSIS UNIQUELY CAPTURES HOW COMPUTATIONS DEVELOP IN RNNS
+
+Code accompanying the paper "DYNAMICAL SIMILARITY ANALYSIS UNIQUELY CAPTURES HOW COMPUTATIONS DEVELOP IN RNNS"
+
+![Figure 1](images/rnn_multitask.jpeg)
+
+Methods for analyzing representations in neural systems have become a popular
+tool in both neuroscience and mechanistic interpretability. Having measures to
+compare how similar activations of neurons are across conditions, architectures,
+and species, gives us a scalable way of learning how information is transformed
+within different neural networks. In contrast to this trend, recent investigations
+have revealed how some metrics can respond to spurious signals and hence give
+misleading results. To identify the most reliable metric and understand how mea-
+sures could be improved, it is going to be important to identify specific test cases
+which can serve as benchmarks. Here we propose that the phenomena of compo-
+sitional learning in recurrent neural networks (RNNs) would allow us to build a
+test case for dynamical representation alignment metrics. By implementing this
+case, we show it allows us to test whether metrics can identify representations
+which gradually develop throughout learning and probe whether representations
+identified by metrics are relevant to the actual computations executed within the
+network. By building both an attractor- and RNN-based test case, we can show
+that the recently proposed Dynamical Similarity Analysis (DSA) is more noise ro-
+bust and identifies behaviorally relevant representations significantly more reliably
+than prior metrics (Procrustes, CKA). We also show how such test cases can be
+used beyond evaluating metrics to study new architectures directly. Specifically,
+we tested DSA in modern (Mamba) state space models, where results suggest that,
+in contrast to RNNs, these models may not exhibit or require changes in their re-
+current dynamics due to their expressive hidden state. Overall, we develop test
+cases that can demonstrate how DSA’s increased ability to detect dynamical mo-
+tifs gives it a superior ability to identify the ongoing computations in RNNs and
+elucidate how tasks are learned in networks.
+
+Code Author: Quentin Guilhot
 
 ## How to install
 
-- install poetry : curl -sSL https://install.python-poetry.org | python3 -
-- run the following command to install necessary dependancies :  
-- create folders for models and data: mkdir models data
+- create new environment : conda create -n repal3 python=3.11.9
+- activate environment : conda activate repal3
+- install dependencies : pip install -r requirements.txt
+- create folders for models, data : mkdir models data
 
 ## How to use
 
@@ -12,53 +45,50 @@ The code is mainly divided into 2 parts:
 
 ### 1 : Simulations
 
-Use 3D attractor dynamics to show if RepAL metric is relevant to capture compositional problem solving and compositional learning. 
+Use 3D attractor dynamics to show if RepAL metrics are relevant to capture compositional problem solving and compositional learning. 
 
 ####  Code Structure
 - dsa_analysis : Folder containing the code to compute the dynamical similarity between the models
-- analysis_lorenz_1.ipynb : Creation of different Lorenz Attractors and similarity analysis between them
-- compositional.ipynb : Creation of compositional motifs and similarity analysis between them
-- analysis_lorenz_2.ipynb : Analysis of the evolution of the similarity between the models during training, simulated by adding noise of different strengths to the motifs
+- notebooks/nalysis_lorenz_{x}.ipynb : Test cases for RepAL metrics to assess ratio-like behavior and noise-robustness
 
 #### How to use
-- select kernel created with poetry
-- change parameters in the config.yaml file
+- change parameters in the config.yaml file (DSA parameters and simulations parameters)
 - run notebook of your choice
 
 ### 2 : Application to RNN models trained on neurotasks
 
-Use the validated metrics to apply them to a known case of compositional learning and problem solving 
+Use the validated metrics to apply them to a known case of compositional learning and problem solving in Recurrent Neural Networks (RNNs) trained on a set of neurotasks
 
 #### Code Structure
 - main: Folder containing the code to train the models on the neurotasks
-- notebooks/analysis_rnn_{x}.ipynb : Analysis of the activity and representation of the models
+- notebooks/analysis_rnn_{x}.ipynb : Analysis of the activity and representation of the models corresponding to paper figures
 - sbatch: Folder containing the scripts to run the training on the cluster
 - config.yaml : Configuration file for the training
 - src: Folder containing the code to train the models and analyze the results
 
 #### How to use (in order of execution)
 - generate the data: sbatch sbatch/generate_data.sh
-- train the models: sbatch sbatch/train.sh
-- compute dissimilarity of computational dynamics of models: sbatch sbatch/dissimilarity.sh
-- compute dissimilarities of learning dynamics of models: sbatch sbatch/dissimilarity_over_learning.sh
-- analysis of the results: notebooks/analysis_rnn.ipynb
+- train the models: sbatch sbatch/train_PDM.sh
+- compute dissimilarity of computational dynamics of models: sbatch sbatch/dissimilarity_PDM.sh
+- compute dissimilarities of learning dynamics of models: sbatch sbatch/dissimilarity_over_learning_PDM.sh
+- analysis of the results: notebooks/analysis_rnn_{x}.ipynb
 
 ### 3 : Application to Mamba models trained on neurotasks
 
-Use the validated metrics to apply them to a known case of compositional learning and problem solving 
+Use the validated metrics to apply them to a known case of compositional learning and problem solving but this time on State Space Models (SSMs) Mamba trained on a set of neurotasks
 
 #### Code Structure
 - main: Folder containing the code to train the models on the neurotasks
-- notebooks/analysis_mamba.ipynb : Analysis of the activity and representation of the models
+- notebooks/analysis_mamba.ipynb : Analysis of the activity and representation of the models corresponding to paper figures
 - sbatch: Folder containing the scripts to run the training on the cluster
 - config.yaml : Configuration file for the training
 - src: Folder containing the code to train the models and analyze the results
 
 #### How to use (in order of execution)
 - generate the data: sbatch sbatch/generate_data.sh
-- train the models: sbatch sbatch/train.sh
-- compute dissimilarity of computational dynamics of models: sbatch sbatch/dissimilarity_mamba.sh
-- compute dissimilarities of learning dynamics of models: sbatch sbatch/dissimilarity_over_learning_mamaba.sh
+- train the models: sbatch sbatch/train_mamba_PDM.sh
+- compute dissimilarity of computational dynamics of models: sbatch sbatch/dissimilarity_mamba_PDM.sh
+- compute dissimilarities of learning dynamics of models: sbatch sbatch/dissimilarity_over_learning_mamba_PDM.sh
 - analysis of the results: notebooks/analysis_mamba.ipynb
 
 ## References
