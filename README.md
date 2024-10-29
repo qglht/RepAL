@@ -36,7 +36,6 @@ Code Author: Quentin Guilhot
 
 - create new environment : `conda env create -f environment.yml -n repal3`
 - activate environment : `conda activate repal3`
-- install dependencies : `pip install -r requirements.txt`
 - create folders for models, data : `mkdir models data`
 
 ## How to use
