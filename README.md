@@ -34,10 +34,10 @@ Code Author: Quentin Guilhot
 
 ## How to install
 
-- create new environment : conda create -n repal3 python=3.11.9
-- activate environment : conda activate repal3
-- install dependencies : pip install -r requirements.txt
-- create folders for models, data : mkdir models data
+- create new environment : `conda env create -f environment.yml -n repal3`
+- activate environment : `conda activate repal3`
+- install dependencies : `pip install -r requirements.txt`
+- create folders for models, data : `mkdir models data`
 
 ## How to use
 
@@ -67,10 +67,10 @@ Use the validated metrics to apply them to a known case of compositional learnin
 - src: Folder containing the code to train the models and analyze the results
 
 #### How to use (in order of execution)
-- generate the data: sbatch sbatch/generate_data.sh
-- train the models: sbatch sbatch/train_PDM.sh
-- compute dissimilarity of computational dynamics of models: sbatch sbatch/dissimilarity_PDM.sh
-- compute dissimilarities of learning dynamics of models: sbatch sbatch/dissimilarity_over_learning_PDM.sh
+- generate the data: `sbatch sbatch/generate_data.sh`
+- train the models: `sbatch sbatch/train_PDM.sh`
+- compute dissimilarity of computational dynamics of models: `sbatch sbatch/dissimilarity_PDM.sh`
+- compute dissimilarities of learning dynamics of models: `sbatch sbatch/dissimilarity_over_learning_PDM.sh`
 - analysis of the results: notebooks/analysis_rnn_{x}.ipynb
 
 ### 3 : Application to Mamba models trained on neurotasks
@@ -85,10 +85,10 @@ Use the validated metrics to apply them to a known case of compositional learnin
 - src: Folder containing the code to train the models and analyze the results
 
 #### How to use (in order of execution)
-- generate the data: sbatch sbatch/generate_data.sh
-- train the models: sbatch sbatch/train_mamba_PDM.sh
-- compute dissimilarity of computational dynamics of models: sbatch sbatch/dissimilarity_mamba_PDM.sh
-- compute dissimilarities of learning dynamics of models: sbatch sbatch/dissimilarity_over_learning_mamba_PDM.sh
+- generate the data: `sbatch sbatch/generate_data.sh`
+- train the models: `sbatch sbatch/train_mamba_PDM.sh`
+- compute dissimilarity of computational dynamics of models: `sbatch sbatch/dissimilarity_mamba_PDM.sh`
+- compute dissimilarities of learning dynamics of models: `sbatch sbatch/dissimilarity_over_learning_mamba_PDM.sh`
 - analysis of the results: notebooks/analysis_mamba.ipynb
 
 ## References

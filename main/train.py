@@ -1,5 +1,5 @@
 """ Main training loop.
-Copied from https://github.com/gyyang/multitask. Modified to work with pytorch instead of tensorflow framework. 
+Adapted from https://github.com/gyyang/multitask. Modified to work with pytorch instead of tensorflow framework. 
 """
 
 from __future__ import division
