@@ -1,18 +1,13 @@
+import os
 from subprocess import call
 import argparse
-from dsa_analysis import load_config
 
 
 def generate_and_submit_scripts(args: argparse.Namespace):
-    config = load_config("config.yaml")
-    groups = config[args.taskset][
-        "groups"
-    ]  # Assuming 'groups' is a key in your YAML file
-
     script_template = """#!/bin/bash
 #SBATCH --nodes=1
-#SBATCH --time=24:00:00
-#SBATCH --job-name=MAMBA_{taskset}_{group}_job
+#SBATCH --time=2:00:00
+#SBATCH --job-name=dissimilarity_within_learning_{taskset}_{group}
 #SBATCH --gres=gpu:8
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=oxfd2547@ox.ac.uk
@@ -24,13 +19,13 @@ module load python/anaconda3
 source activate dsa
 poetry install
 
-(poetry run python -m src.train_group_mamba --taskset {taskset} --group {group}) & 
+(poetry run python -m src.dissimilarity_within_learning_per_group_mamba --taskset {taskset} --group {group}) & 
 
 # PID of the application
 APP_PID=$!
 
 # Log file path
-LOG_FILE=gpu_usage/mamba_{taskset}_{group}_gpu_usage.log
+LOG_FILE=gpu_usage/dissimilarity_within_learning_{taskset}_{group}_gpu_usage.log
 
 # Monitor GPU status every 600 seconds (5 minutes) until the application finishes
 while kill -0 $APP_PID 2>/dev/null; do
@@ -42,11 +37,20 @@ while kill -0 $APP_PID 2>/dev/null; do
 done
 
 wait $APP_PID
-"""
 
-    for group in groups:
+"""
+    groups_within_learning = [
+        "pretrain_frozen",
+        "pretrain_unfrozen",
+        "master",
+        "pretrained_basic_anti_frozen",
+        "pretrained_basic_anti_unfrozen",
+        "untrained",
+    ]
+
+    for group in groups_within_learning:
         script_content = script_template.format(taskset=args.taskset, group=group)
-        script_filename = f"sbatch/groups/mamba_{args.taskset}_{group}_script.sh"
+        script_filename = f"sbatch/dissimilarities_within_learning/mamba/{args.taskset}/{group}_script.sh"
 
         with open(script_filename, "w") as script_file:
             script_file.write(script_content)
@@ -61,7 +65,7 @@ if __name__ == "__main__":
         "--taskset",
         type=str,
         default="PDM",
-        help="The taskset to train the model on",
+        help="taskset to compare dissimilarities on",
     )
     args = parser.parse_args()
     generate_and_submit_scripts(args)

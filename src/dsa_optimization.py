@@ -24,7 +24,7 @@ def dsa_computation(args: argparse.Namespace) -> None:
         else [torch.device("cpu")]
     )
 
-    rank = 50
+    rank = 20
 
     dsa_optimisation_compositionality(
         rank, args.n_delay, args.delay_interval, devices[0], args.ordered

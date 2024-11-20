@@ -3,6 +3,7 @@
 import torch
 from torch import nn, jit
 import numpy as np
+import copy
 from mambapy.mamba_lm import MambaLM, MambaLMConfig
 from mambapy.mamba import Mamba, MambaConfig, RMSNorm
 import ipdb
@@ -60,7 +61,8 @@ class Run_Model(nn.Module):  # (jit.ScriptModule):
     def calculate_loss(self, output, mask, labels, hidden, hp):
         # use mask to calculate loss of crossentropyloss
         loss = self.loss_fnc(output, labels)
-        loss = (loss * mask).sum() / mask.sum()
+        # loss = (loss * mask).sum() / mask.sum()
+        loss = loss.mean()
         loss_reg = (
             hidden.abs().mean() * hp["l1_h"] + hidden.norm() * hp["l2_h"]
         )  #    Regularization cost  (L1 and L2 cost) on hidden activity
@@ -114,9 +116,8 @@ class MambaSupervGym(MambaLM):
         # ipdb.set_trace()
         # predicted_classes = torch.argmax(output, dim=1)
         loss = self.loss_fnc(output, labels)
-        # mask = (mask > 1).float()
-        loss = (loss * mask).sum() / mask.sum()
-        # loss = (loss * mask).mean()
+        loss = loss.mean()
+        # loss = (loss * mask).sum() / mask.sum()
         loss_reg = 0
         for param in self.parameters():
             loss_reg += (
@@ -177,7 +178,7 @@ class MambaSupervGym(MambaLM):
                 None,
                 torch.zeros(
                     (
-                        1,
+                        token.shape[0],
                         int(self.lm_config.d_model * self.lm_config.expand_factor),
                         self.hp["n_input"],
                     )
@@ -185,18 +186,24 @@ class MambaSupervGym(MambaLM):
             )
             for _ in range(self.lm_config.n_layers)
         ]
-        caches_list = [cache_init]
-        x = self.embedding(token[:, 0, :])
-        ipdb.set_trace()
-        x, caches = self.mamba.step(x, cache_init)
-        for i in range(1, token.shape[1]):
+        caches_list = []
+        caches = cache_init
+        for i in range(token.shape[1]):
+            # TODO : check change in cache over caches
             x = self.embedding(token[:, i, :])
             x, caches = self.mamba.step(x, caches)
-            caches_list.append(caches)
+            caches_list.append(copy.deepcopy(caches))
         # concatenate all the caches
-        ipdb.set_trace()
 
-        return caches
+        caches_hidden = torch.stack(
+            [caches_list[i][0][0] for i in range(len(caches_list))], dim=0
+        )
+        hidden = caches_hidden.reshape(
+            caches_hidden.shape[0],
+            caches_hidden.shape[1],
+            caches_hidden.shape[2] * caches_hidden.shape[3],
+        )
+        return hidden
 
     def save(self, path):
         # Check if model is wrapped by DataParallel and save accordingly

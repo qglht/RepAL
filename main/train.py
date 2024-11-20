@@ -41,20 +41,34 @@ def create_directory_if_not_exists(directory):
 
 
 def setup_logging(log_dir):
+    # Ensure the log directory exists
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
-    logging.basicConfig(
-        filename=os.path.join(log_dir, "training.log"),
-        filemode="w",
-        format="%(asctime)s - %(levelname)s - %(message)s",
-        level=logging.INFO,
-    )
-    console = logging.StreamHandler()
-    console.setLevel(logging.INFO)
-    formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-    console.setFormatter(formatter)
-    logging.getLogger("").addHandler(console)
-    return logging
+
+    # Create a logging object and set its level
+    logger = logging.getLogger("")
+    logger.setLevel(logging.INFO)
+
+    # Prevent adding multiple handlers in subsequent calls
+    if not logger.handlers:
+        # Create file handler to write logs to a file
+        file_handler = logging.FileHandler(os.path.join(log_dir, "training.log"))
+        file_handler.setLevel(logging.INFO)
+
+        # Create console handler to print logs to the console
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.INFO)
+
+        # Define log message format
+        formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+        file_handler.setFormatter(formatter)
+        console_handler.setFormatter(formatter)
+
+        # Add handlers to the logger
+        logger.addHandler(file_handler)
+        logger.addHandler(console_handler)
+
+    return logger
 
 
 def find_checkpoints(name):
@@ -244,6 +258,7 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=
     # freeze input weights or not
     # TODO : adapt it to Mamba
     if rnn:
+        ipdb.set_trace()
         if freeze:
             optim = optimizer(
                 [run_model.model.rnn.rnncell.weight_ih], lr=hp["learning_rate"]
@@ -262,9 +277,6 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=
         if checkpoint_files:
             optim.load_state_dict(checkpoint["optimizer_state_dict"])
 
-    # # Create a GradScaler for mixed precision training
-    # scaler = GradScaler()
-
     dataloaders = {
         rule: main.get_dataloader(
             env=rule, batch_size=hp["batch_size_train"], num_workers=0, shuffle=True
@@ -272,18 +284,12 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=
         for rule in hp["rule_trains"]
     }
 
-    t_start = time.time()
     for epoch in range(start_epoch, hp["num_epochs"]):
         print(f"Epoch {epoch} started")
         epoch_loss = 0.0
         t_start_epoch = time.time()
-        times_per_inputs = []
-        times_between_inputs = []
-        current_time = time.time()
         for rule in hp["rule_trains"]:
             for inputs, labels, mask in dataloaders[rule]["train"]:
-                time_input = time.time()
-                times_between_inputs.append(time.time() - current_time)
                 if rnn:
                     inputs, labels, mask = (
                         inputs.permute(1, 0, 2),
@@ -301,30 +307,22 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=
                 c_lsq, c_reg, logits, _, _ = run_model(inputs, labels, mask)
                 loss = c_lsq + c_reg
 
-                # scale the loss and call backward() to create scaled gradients
+                if torch.isnan(loss).any():
+                    logging.error(f"Loss is NaN")
+                    raise ValueError("Loss is NaN")
+
                 optim.zero_grad(set_to_none=True)
                 loss.backward()
                 optim.step()
 
-                # scaler.scale(loss).backward()
-                # scaler.step(optim)
-                # scaler.update()
                 epoch_loss += loss.item()
-                times_per_inputs.append(
-                    time.time() - time_input
-                )  # time to process one input
-                current_time = time.time()
 
         # doing evaluation
         log["trials"].append(epoch)
-        log["times"].append(time.time() - t_start)
         # timing do_eval
-        t_start_eval = time.time()
         log, logging = do_eval(
             run_model, log, logging, hp["rule_trains"], dataloaders, rnn
         )
-        t_end_eval = time.time() - t_start_eval
-        t_end_epoch = time.time() - t_start_epoch
         if log["perf_min"][-1] > hp["target_perf"]:
             break
 
@@ -335,13 +333,9 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=
             rule_name_print = " & ".join(rule_train)
 
         logging.info(
-            f"Time per input {np.median(times_per_inputs):0.6f} s | Time between inputs {np.median(times_between_inputs):0.6f} s | Time for evaluation {t_end_eval:0.2f} s"
-        )
-        logging.info(
-            f"Training {rule_name_print} Epoch {epoch:7d} | Loss {epoch_loss:0.6f} | Perf {log['perf_avg'][-1]:0.2f} | Min {log['perf_min'][-1]:0.2f} | Time {t_end_epoch:0.2f} s"
+            f"Training {rule_name_print} Epoch {epoch:7d} | Loss {epoch_loss:0.6f} | Perf {log['perf_avg'][-1]:0.2f} | Min {log['perf_min'][-1]:0.2f} | Time {time.time()-t_start_epoch:0.2f} s"
         )
 
-        start_save_time = time.time()
         # saving model checkpoint
         checkpoint_dir = name
         create_directory_if_not_exists(checkpoint_dir)
@@ -356,8 +350,6 @@ def train(run_model, optimizer, hp, log, name, freeze=False, retrain=False, rnn=
             },
             checkpoint_path,
         )
-        end_save_time = time.time() - start_save_time
-        logging.info(f"Time saving model :  {end_save_time:0.2f}s")
 
     logging.info("Optimization finished!")
 
@@ -366,17 +358,11 @@ def do_eval(run_model, log, logging, rule_train, dataloaders, rnn):
     hp = run_model.hp
     device = run_model.device
 
-    # Lists to store times for all rules
-    data_loading_times = []
-    computation_times = []
-
     for rule_test in hp["rules"]:
         clsq_tmp, creg_tmp, perf_tmp = [], [], []
         dataloader = dataloaders[rule_test]["test"]
 
         for inputs, labels, mask in dataloader:
-            # Record start time for data loading
-            data_start_time = time.time()
             with torch.no_grad():
                 if rnn:
                     inputs, labels, mask = (
@@ -389,12 +375,7 @@ def do_eval(run_model, log, logging, rule_train, dataloaders, rnn):
                     labels.to(device, non_blocking=True).flatten().long(),
                     mask.to(device, non_blocking=True).flatten().long(),
                 )
-            # Record data loading time
-            data_loading_time = time.time() - data_start_time
-            data_loading_times.append(data_loading_time)
 
-            # Record start time for computation
-            computation_start_time = time.time()
             with torch.no_grad():  # , autocast():
                 c_lsq, c_reg, y_hat_test, _, labels = run_model(inputs, labels, mask)
 
@@ -403,10 +384,6 @@ def do_eval(run_model, log, logging, rule_train, dataloaders, rnn):
 
                 perf_test = get_perf(y_hat_test, labels, mask)
                 perf_tmp.append(perf_test)
-
-            # Record computation time
-            computation_time = time.time() - computation_start_time
-            computation_times.append(computation_time)
 
         clsq_mean = torch.mean(torch.stack(clsq_tmp))
         creg_mean = torch.mean(torch.stack(creg_tmp))
@@ -418,11 +395,13 @@ def do_eval(run_model, log, logging, rule_train, dataloaders, rnn):
 
         # test if nan
         is_nan = math.isnan(clsq_mean.item())
-        if is_nan:
-            raise ValueError("Loss is NaN")
         logging.info(
             f"{rule_test:15s}| cost {clsq_mean.item():0.6f}| c_reg {creg_mean.item():0.6f} | perf {perf_mean.item():0.2f}"
         )
+        if is_nan:
+            logging.error(f"Loss is NaN")
+            raise ValueError("Loss is NaN")
+
         sys.stdout.flush()
 
     perf_tests_mean = torch.mean(
@@ -449,14 +428,6 @@ def do_eval(run_model, log, logging, rule_train, dataloaders, rnn):
     log["perf_avg"].append(perf_tests_mean.item())
     log["perf_min"].append(perf_tests_min.item())
 
-    # Calculate median times
-    median_data_loading_time = np.median(data_loading_times)
-    median_computation_time = np.median(computation_times)
-
-    logging.info(
-        f"Median data loading time: {median_data_loading_time:.2f}s, Median computation time: {median_computation_time:.2f}s"
-    )
-
     return log, logging
 
 
@@ -470,7 +441,7 @@ def accuracy(logits, true_class_indices, mask):
     # Reshape mask to shape [(batch * images)]
     mask_flat = mask.flatten()
 
-    # put 1 when mask >1, 0 otherwise
+    # # put 1 when mask >1, 0 otherwise
     mask_flat = (mask_flat > 1).float()
 
     # Get the predicted classes by taking the argmax over the classes dimension

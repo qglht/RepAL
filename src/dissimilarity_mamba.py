@@ -14,7 +14,7 @@ from src.dsa_optimization import dsa_computation
 def generate_and_submit_scripts(args: argparse.Namespace):
     script_template = """#!/bin/bash
 #SBATCH --nodes=1
-#SBATCH --time=2:00:00
+#SBATCH --time=5:00:00
 #SBATCH --job-name=Mamba_{taskset}_{group1}_VS_{group2}_job
 #SBATCH --gres=gpu:1
 #SBATCH --ntasks-per-node=1
@@ -58,6 +58,7 @@ wait $APP_PID
         "master",
         "untrained",
         "basic",
+        "anti",
     ]
 
     for i in range(len(groups)):
@@ -70,9 +71,7 @@ wait $APP_PID
                 script_content = script_template.format(
                     taskset=args.taskset, group1=group_i, group2=group_j
                 )
-                script_filename = (
-                    f"sbatch/dissimilarity/{args.taskset}/mamba_{group_i}_{group_j}_script.sh"
-                )
+                script_filename = f"sbatch/dissimilarity/{args.taskset}/mamba_{group_i}_{group_j}_script.sh"
 
                 with open(script_filename, "w") as script_file:
                     script_file.write(script_content)

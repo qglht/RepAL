@@ -15,8 +15,8 @@ rnn:
       - 0.01
       - 0.001
     batch_size_train:
-      - 16
-      - 32
+      - 64
+      - 128
     freeze:
       - True
       - False
@@ -32,15 +32,12 @@ mamba:
       - 64
     n_layers:
       - 1
-      - 2
-      - 3
-      - 4
     learning_rate:
       - 0.01
       - 0.001
     batch_size_train:
-      - 16
-      - 32
+      - 64
+      - 128
     
 PDM:
   all_rules: [AntiPerceptualDecisionMakingT, PerceptualDecisionMakingT, PerceptualDecisionMakingDelayResponseT, AntiPerceptualDecisionMakingDelayResponseT]
@@ -159,9 +156,9 @@ GoNogo:
         ruleset: [AntiGoNogoDelayResponseT]
         frozen: True
 dsa:
-  n_delays: 40
-  delay_interval: 5
-  rank: 100
+  n_delays: 50
+  delay_interval: 1
+  rank: 20
   device: cuda
 simulations:
   dt: 0.01 # 20 ms
